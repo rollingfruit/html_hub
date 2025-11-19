@@ -1,6 +1,8 @@
 import { FileRequest, ProjectResponse, RequestType } from './types';
 
-const API_BASE = import.meta.env.VITE_API_BASE || '/api';
+const API_BASE =
+  import.meta.env.VITE_API_BASE ||
+  (import.meta.env.DEV ? 'http://127.0.0.1:3000/api' : '/api');
 
 const handleResponse = async (response: Response) => {
   const data = await response.json().catch(() => ({}));
@@ -16,20 +18,30 @@ export const fetchProjects = async (): Promise<ProjectResponse> => {
   return handleResponse(resp);
 };
 
-interface UploadPayload {
-  file: File;
-  path?: string;
-  token?: string;
-}
+type UploadPayload =
+  | {
+      file: File;
+      path?: string;
+      token?: string;
+    }
+  | {
+      content: string;
+      filename: string;
+      path?: string;
+      token?: string;
+    };
 
-export const uploadHtml = async ({ file, path, token }: UploadPayload) => {
+export const uploadHtml = async (payload: UploadPayload) => {
   const formData = new FormData();
-  formData.append('file', file);
-  if (path) {
-    formData.append('path', path);
-  }
-  if (token) {
-    formData.append('token', token);
+  if ('file' in payload) {
+    formData.append('file', payload.file);
+    if (payload.path) formData.append('path', payload.path);
+    if (payload.token) formData.append('token', payload.token);
+  } else {
+    formData.append('content', payload.content);
+    formData.append('filename', payload.filename);
+    if (payload.path) formData.append('path', payload.path);
+    if (payload.token) formData.append('token', payload.token);
   }
   const resp = await fetch(`${API_BASE}/upload`, {
     method: 'POST',

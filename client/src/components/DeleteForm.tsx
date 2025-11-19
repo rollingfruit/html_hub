@@ -1,12 +1,20 @@
-import { FormEvent, useState } from 'react';
+import { FormEvent, useEffect, useState } from 'react';
 import { deleteFile } from '../api';
 
-const DeleteForm = () => {
-  const [path, setPath] = useState('');
+type Props = {
+  defaultPath?: string;
+};
+
+const DeleteForm = ({ defaultPath = '' }: Props) => {
+  const [path, setPath] = useState(defaultPath);
   const [token, setToken] = useState('');
   const [status, setStatus] = useState<string | null>(null);
   const [isError, setIsError] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    setPath(defaultPath);
+  }, [defaultPath]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -21,7 +29,9 @@ const DeleteForm = () => {
       const result = await deleteFile({ path, token });
       setIsError(false);
       setStatus(result.message || '删除成功');
-      setPath('');
+      if (!defaultPath) {
+        setPath('');
+      }
       setToken('');
     } catch (error) {
       setIsError(true);

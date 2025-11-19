@@ -1,15 +1,23 @@
-import { FormEvent, useState } from 'react';
+import { FormEvent, useEffect, useState } from 'react';
 import { requestPermission } from '../api';
 import { RequestType } from '../types';
 
-const PermissionRequestForm = () => {
-  const [path, setPath] = useState('');
+type Props = {
+  defaultPath?: string;
+};
+
+const PermissionRequestForm = ({ defaultPath = '' }: Props) => {
+  const [path, setPath] = useState(defaultPath);
   const [type, setType] = useState<RequestType>('MODIFY');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [feedback, setFeedback] = useState<string | null>(null);
   const [isError, setIsError] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    setPath(defaultPath);
+  }, [defaultPath]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -24,7 +32,9 @@ const PermissionRequestForm = () => {
       const result = await requestPermission({ path, type, name, email });
       setIsError(false);
       setFeedback(`申请成功，请记录请求号：${result.requestId}`);
-      setPath('');
+      if (!defaultPath) {
+        setPath('');
+      }
     } catch (error) {
       setIsError(true);
       setFeedback(error instanceof Error ? error.message : '申请失败');

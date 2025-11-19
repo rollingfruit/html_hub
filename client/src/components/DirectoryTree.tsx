@@ -1,5 +1,6 @@
 import { FC } from 'react';
 import { TreeNode } from '../types';
+import { buildSiteUrl } from '../lib/url';
 
 type Props = {
   nodes: TreeNode[];
@@ -24,7 +25,7 @@ const TreeBranch: FC<{ node: TreeNode }> = ({ node }) => (
     <div className="tree-row">
       <span>{node.isFile ? '📄' : '📁'}</span>
       {node.isFile && node.project ? (
-        <a href={node.project.url} target="_blank" rel="noreferrer">
+        <a href={buildSiteUrl(node.project.url)} target="_blank" rel="noreferrer">
           {node.name}
         </a>
       ) : (
