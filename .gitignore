@@ -1,0 +1,17 @@
+node_modules/
+client/node_modules/
+server/node_modules/
+client/dist/
+server/dist/
+server/prisma/dev.db
+server/db/*.db
+server/uploads/*
+!server/uploads/.gitkeep
+server/tmp/*
+!server/tmp/.gitkeep
+server/.env
+server_data/
+.DS_Store
+.local_zone/
+digest.txt
+*.log

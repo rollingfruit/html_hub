@@ -1,0 +1,419 @@
+import express from 'express';
+import cors from 'cors';
+import multer from 'multer';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import fs from 'fs';
+import fsp from 'fs/promises';
+import dotenv from 'dotenv';
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
+import { v4 as uuidv4 } from 'uuid';
+import { PrismaClient } from '@prisma/client';
+
+dotenv.config();
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const PORT = Number(process.env.PORT || 3000);
+const HOST = process.env.HOST || '0.0.0.0';
+const UPLOAD_DIR = path.resolve(process.env.UPLOAD_DIR || path.join(__dirname, '../uploads'));
+const TMP_DIR = path.resolve(process.env.TMP_DIR || path.join(__dirname, '../tmp'));
+const JWT_SECRET = process.env.JWT_SECRET || 'dev_secret';
+const TOKEN_EXPIRATION_MINUTES = Number(process.env.TOKEN_EXPIRATION_MINUTES || 10);
+const ADMIN_USERNAME = process.env.ADMIN_USERNAME || 'admin';
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'Admin123!';
+
+const ROLE = Object.freeze({
+  ADMIN: 'admin',
+  USER: 'user',
+});
+
+const REQUEST_TYPE = Object.freeze({
+  MODIFY: 'MODIFY',
+  DELETE: 'DELETE',
+});
+
+const REQUEST_STATUS = Object.freeze({
+  PENDING: 'PENDING',
+  APPROVED: 'APPROVED',
+  REJECTED: 'REJECTED',
+});
+
+const prisma = new PrismaClient();
+const app = express();
+
+app.use(cors());
+app.use(express.json({ limit: '2mb' }));
+app.use(express.urlencoded({ extended: true }));
+
+app.use(
+  '/sites',
+  express.static(UPLOAD_DIR, {
+    index: false,
+    extensions: ['html', 'htm'],
+  }),
+);
+
+const upload = multer({
+  dest: TMP_DIR,
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    if (!file.originalname.toLowerCase().match(/\.html?$/)) {
+      return cb(new Error('仅允许上传 HTML 文件'));
+    }
+    cb(null, true);
+  },
+});
+
+const ensureDir = async (dir) => {
+  await fsp.mkdir(dir, { recursive: true });
+};
+
+const normalizeInputPath = (input = '') => input.replace(/\\/g, '/');
+
+const sanitizeDirectoryPath = (inputPath = '') => {
+  const normalized = normalizeInputPath(inputPath);
+  const segments = normalized
+    .split('/')
+    .map((segment) => segment.trim())
+    .filter(Boolean)
+    .map((segment) => segment.replace(/[^a-zA-Z0-9-_]/g, '-'));
+  return segments.join('/');
+};
+
+const sanitizeFileName = (name) => {
+  const base = path.basename(name);
+  const safe = base.replace(/[^a-zA-Z0-9-_.]/g, '-');
+  const ext = path.extname(safe).toLowerCase();
+  if (!['.html', '.htm'].includes(ext)) {
+    return `${safe}.html`;
+  }
+  return safe;
+};
+
+const fileExists = async (targetPath) => {
+  try {
+    await fsp.access(targetPath, fs.constants.F_OK);
+    return true;
+  } catch (error) {
+    return false;
+  }
+};
+
+const buildPathFromRequest = (dirPath, fileName) => {
+  const sanitizedDir = sanitizeDirectoryPath(dirPath);
+  const sanitizedFile = sanitizeFileName(fileName);
+  return sanitizedDir ? `${sanitizedDir}/${sanitizedFile}` : sanitizedFile;
+};
+
+const sanitizeRelativeFilePath = (inputPath = '') => {
+  const normalized = normalizeInputPath(inputPath);
+  const segments = normalized
+    .split('/')
+    .map((segment) => segment.trim())
+    .filter(Boolean);
+  if (segments.length === 0) {
+    return '';
+  }
+  const dirSegments = segments.slice(0, -1).map((segment) => segment.replace(/[^a-zA-Z0-9-_]/g, '-'));
+  const file = sanitizeFileName(segments[segments.length - 1]);
+  return [...dirSegments, file].join('/');
+};
+
+const mapProject = (project) => ({
+  id: project.id,
+  path: project.path,
+  owner: project.owner ? project.owner.username : 'anonymous',
+  url: `/sites/${project.path}`,
+  createdAt: project.createdAt.toISOString(),
+});
+
+const buildTree = (projects) => {
+  const root = {};
+  projects.forEach((project) => {
+    const segments = project.path.split('/');
+    let cursor = root;
+    segments.forEach((segment, index) => {
+      if (!cursor[segment]) {
+        cursor[segment] = { children: {}, isFile: false, path: segments.slice(0, index + 1).join('/') };
+      }
+      if (index === segments.length - 1) {
+        cursor[segment].isFile = true;
+        cursor[segment].project = mapProject(project);
+      }
+      cursor = cursor[segment].children;
+    });
+  });
+
+  const walk = (node) =>
+    Object.entries(node).map(([name, value]) => ({
+      name,
+      path: value.path,
+      isFile: value.isFile,
+      project: value.project,
+      children: walk(value.children),
+    }));
+
+  return walk(root);
+};
+
+const createJwt = (user) =>
+  jwt.sign(
+    {
+      sub: user.id,
+      role: user.role,
+      username: user.username,
+    },
+    JWT_SECRET,
+    { expiresIn: '4h' },
+  );
+
+const authenticateAdmin = async (req, res, next) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader) {
+    return res.status(401).json({ message: '未授权' });
+  }
+  const [, token] = authHeader.split(' ');
+  try {
+    const payload = jwt.verify(token, JWT_SECRET);
+    if (payload.role !== ROLE.ADMIN) {
+      return res.status(403).json({ message: '权限不足' });
+    }
+    req.user = payload;
+    next();
+  } catch (error) {
+    res.status(401).json({ message: '令牌无效' });
+  }
+};
+
+const ensureSeeds = async () => {
+  await ensureDir(UPLOAD_DIR);
+  await ensureDir(TMP_DIR);
+  const admin = await prisma.user.findUnique({ where: { username: ADMIN_USERNAME } });
+  if (!admin) {
+    const hashed = await bcrypt.hash(ADMIN_PASSWORD, 10);
+    await prisma.user.create({
+      data: {
+        username: ADMIN_USERNAME,
+        password: hashed,
+        role: ROLE.ADMIN,
+      },
+    });
+    console.log(`创建管理员 ${ADMIN_USERNAME}`);
+  }
+  const guest = await prisma.user.findUnique({ where: { username: 'guest_uploader' } });
+  if (!guest) {
+    const hashed = await bcrypt.hash('guest', 10);
+    await prisma.user.create({
+      data: {
+        username: 'guest_uploader',
+        password: hashed,
+        role: ROLE.USER,
+      },
+    });
+  }
+};
+
+const validateAccessToken = async (relativePath, token, type) => {
+  if (!token) {
+    return null;
+  }
+  return prisma.fileRequest.findFirst({
+    where: {
+      projectPath: relativePath,
+      requestType: type,
+      accessToken: token,
+      status: REQUEST_STATUS.APPROVED,
+      expiresAt: { gt: new Date() },
+    },
+  });
+};
+
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', time: new Date().toISOString() });
+});
+
+app.get('/api/projects', async (req, res) => {
+  const projects = await prisma.project.findMany({ include: { owner: true }, orderBy: { createdAt: 'desc' } });
+  res.json({ projects: projects.map(mapProject), tree: buildTree(projects) });
+});
+
+app.post('/api/upload', upload.single('file'), async (req, res) => {
+  const { path: dirPath = '', token, content, filename } = req.body;
+  const hasFileUpload = Boolean(req.file);
+  const hasTextUpload = !req.file && typeof content === 'string' && typeof filename === 'string';
+
+  if (!hasFileUpload && !hasTextUpload) {
+    return res.status(400).json({ message: '请上传文件或粘贴 HTML 内容' });
+  }
+
+  const originalName = hasFileUpload ? req.file.originalname : filename;
+  const relativePath = buildPathFromRequest(dirPath, originalName);
+  const absolutePath = path.join(UPLOAD_DIR, relativePath);
+  const absoluteDir = path.dirname(absolutePath);
+
+  try {
+    const exists = await fileExists(absolutePath);
+    if (exists) {
+      const approvedRequest = await validateAccessToken(relativePath, token, REQUEST_TYPE.MODIFY);
+      if (!approvedRequest) {
+        return res.status(403).json({ message: '文件已存在，请先申请修改权限' });
+      }
+    }
+
+    await ensureDir(absoluteDir);
+
+    if (hasFileUpload) {
+      await fsp.rename(req.file.path, absolutePath);
+    } else if (hasTextUpload) {
+      await fsp.writeFile(absolutePath, content, 'utf-8');
+    }
+
+    const project = await prisma.project.upsert({
+      where: { path: relativePath },
+      update: {},
+      create: {
+        path: relativePath,
+        owner: {
+          connect: { username: 'guest_uploader' },
+        },
+      },
+      include: { owner: true },
+    });
+
+    res.json({
+      message: exists ? '文件已更新' : '上传成功',
+      project: mapProject(project),
+    });
+  } catch (error) {
+    console.error(error);
+    if (req.file && req.file.path) {
+      await fsp.rm(req.file.path, { force: true });
+    }
+    res.status(500).json({ message: '上传失败', detail: error.message });
+  }
+});
+
+app.delete('/api/files', async (req, res) => {
+  const { path: filePath, token } = req.body;
+  if (!filePath) {
+    return res.status(400).json({ message: '缺少路径' });
+  }
+  const relativePath = sanitizeRelativeFilePath(filePath);
+  if (!relativePath) {
+    return res.status(400).json({ message: '路径格式不正确' });
+  }
+  const absolutePath = path.join(UPLOAD_DIR, relativePath);
+  const exists = await fileExists(absolutePath);
+  if (!exists) {
+    return res.status(404).json({ message: '文件不存在' });
+  }
+  const approvedRequest = await validateAccessToken(relativePath, token, REQUEST_TYPE.DELETE);
+  if (!approvedRequest) {
+    return res.status(403).json({ message: '请先申请删除权限' });
+  }
+  await fsp.rm(absolutePath, { force: true });
+  await prisma.project.delete({ where: { path: relativePath } }).catch(() => null);
+  res.json({ message: '删除成功' });
+});
+
+app.post('/api/request-permission', async (req, res) => {
+  const { path: targetPath, type, name, email } = req.body;
+  const normalizedType = typeof type === 'string' ? type.toUpperCase() : type;
+  if (!targetPath || !normalizedType || !Object.values(REQUEST_TYPE).includes(normalizedType)) {
+    return res.status(400).json({ message: '参数错误' });
+  }
+  const relativePath = sanitizeRelativeFilePath(targetPath);
+  if (!relativePath) {
+    return res.status(400).json({ message: '路径格式不正确' });
+  }
+  const request = await prisma.fileRequest.create({
+    data: {
+      projectPath: relativePath,
+      requestType: normalizedType,
+      requesterName: name,
+      requesterEmail: email,
+    },
+  });
+  res.json({ requestId: request.id });
+});
+
+app.post('/api/auth/login', async (req, res) => {
+  const { username, password } = req.body;
+  if (!username || !password) {
+    return res.status(400).json({ message: '请输入用户名和密码' });
+  }
+  const user = await prisma.user.findUnique({ where: { username } });
+  if (!user) {
+    return res.status(401).json({ message: '用户名或密码错误' });
+  }
+  const match = await bcrypt.compare(password, user.password);
+  if (!match || user.role !== ROLE.ADMIN) {
+    return res.status(401).json({ message: '用户名或密码错误' });
+  }
+  const token = createJwt(user);
+  res.json({ token });
+});
+
+app.get('/api/admin/requests', authenticateAdmin, async (req, res) => {
+  const requests = await prisma.fileRequest.findMany({
+    orderBy: { createdAt: 'desc' },
+    take: 100,
+  });
+  res.json({ requests });
+});
+
+app.post('/api/admin/approve', authenticateAdmin, async (req, res) => {
+  const { requestId, action } = req.body;
+  if (!requestId || !['APPROVE', 'REJECT'].includes(action)) {
+    return res.status(400).json({ message: '参数错误' });
+  }
+  const numericId = Number(requestId);
+  if (Number.isNaN(numericId)) {
+    return res.status(400).json({ message: '请求 ID 无效' });
+  }
+  const request = await prisma.fileRequest.findUnique({ where: { id: numericId } });
+  if (!request) {
+    return res.status(404).json({ message: '请求不存在' });
+  }
+  if (action === 'REJECT') {
+    const updated = await prisma.fileRequest.update({
+      where: { id: numericId },
+      data: { status: REQUEST_STATUS.REJECTED, accessToken: null, expiresAt: null },
+    });
+    return res.json({ message: '已拒绝', request: updated });
+  }
+  const token = uuidv4();
+  const expiresAt = new Date(Date.now() + TOKEN_EXPIRATION_MINUTES * 60 * 1000);
+  const updated = await prisma.fileRequest.update({
+    where: { id: numericId },
+    data: { status: REQUEST_STATUS.APPROVED, accessToken: token, expiresAt },
+  });
+  res.json({ message: '已批准', token, expiresAt, request: updated });
+});
+
+// 全局错误处理，确保上传异常返回友好信息
+// eslint-disable-next-line no-unused-vars
+app.use((err, req, res, next) => {
+  if (err instanceof multer.MulterError) {
+    return res.status(400).json({ message: `上传失败: ${err.message}` });
+  }
+  if (err) {
+    return res.status(400).json({ message: err.message || '请求失败' });
+  }
+  return next();
+});
+
+const start = async () => {
+  await ensureSeeds();
+  app.listen(PORT, HOST, () => {
+    console.log(`Server listening on http://${HOST}:${PORT}`);
+  });
+};
+
+start().catch((error) => {
+  console.error('启动失败', error);
+  process.exit(1);
+});

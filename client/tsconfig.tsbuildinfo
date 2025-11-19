@@ -1,0 +1,1 @@
+{"root":["./src/app.tsx","./src/api.ts","./src/main.tsx","./src/types.ts","./src/components/adminlogin.tsx","./src/components/adminrequestslist.tsx","./src/components/deleteform.tsx","./src/components/directorytree.tsx","./src/components/permissionrequestform.tsx","./src/components/uploadform.tsx","./src/pages/adminpage.tsx","./src/pages/userhome.tsx"],"version":"5.9.3"}
