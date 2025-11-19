@@ -1,64 +1,53 @@
-import { MouseEvent as ReactMouseEvent, useEffect, useMemo, useState } from 'react';
-import DirectoryTree from './DirectoryTree';
+import { MouseEvent as ReactMouseEvent, useMemo, useState } from 'react';
 import { TreeNode } from '../types';
 import { buildSiteUrl } from '../lib/url';
 
 type Props = {
   tree: TreeNode[];
+  currentPath: string;
+  onPathChange: (path: string) => void;
+  searchTerm: string;
   onFileMenuClick: (node: TreeNode, position: { x: number; y: number }) => void;
 };
 
-const pathExists = (nodes: TreeNode[], segments: string[]) => {
+const getNodesAtPath = (tree: TreeNode[], segments: string[]) => {
   if (!segments.length) {
-    return true;
+    return tree;
   }
-  let current = nodes;
+  let nodes = tree;
   for (const segment of segments) {
-    const match = current.find((node) => !node.isFile && node.name === segment);
+    const match = nodes.find((node) => !node.isFile && node.name === segment);
     if (!match) {
-      return false;
-    }
-    current = match.children || [];
-  }
-  return true;
-};
-
-const FileExplorer = ({ tree, onFileMenuClick }: Props) => {
-  const [viewMode, setViewMode] = useState<'gallery' | 'tree'>('gallery');
-  const [currentPath, setCurrentPath] = useState('');
-
-  const pathSegments = useMemo(() => (currentPath ? currentPath.split('/') : []), [currentPath]);
-
-  const currentItems = useMemo(() => {
-    if (!pathSegments.length) {
       return tree;
     }
-    let nodes = tree;
-    let target: TreeNode | undefined;
-    for (const segment of pathSegments) {
-      target = nodes.find((node) => !node.isFile && node.name === segment);
-      if (!target) {
-        return tree;
-      }
-      nodes = target.children || [];
+    nodes = match.children || [];
+  }
+  return nodes;
+};
+
+const FileExplorer = ({ tree, currentPath, onPathChange, searchTerm, onFileMenuClick }: Props) => {
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const segments = useMemo(() => (currentPath ? currentPath.split('/') : []), [currentPath]);
+  const currentItems = useMemo(() => getNodesAtPath(tree, segments), [tree, segments]);
+
+  const directories = currentItems.filter((node) => !node.isFile);
+  const files = currentItems.filter((node) => node.isFile && node.project);
+  const filteredFiles = useMemo(() => {
+    if (!searchTerm.trim()) {
+      return files;
     }
-    return target?.children || [];
-  }, [pathSegments, tree]);
+    const keyword = searchTerm.toLowerCase();
+    return files.filter((file) => file.name.toLowerCase().includes(keyword) || file.path.toLowerCase().includes(keyword));
+  }, [files, searchTerm]);
 
   const breadcrumbs = useMemo(() => {
     const crumbs = [{ label: '全部内容', path: '' }];
-    if (!pathSegments.length) {
-      return crumbs;
-    }
-    pathSegments.forEach((segment, index) => {
-      const path = pathSegments.slice(0, index + 1).join('/');
+    segments.forEach((segment, index) => {
+      const path = segments.slice(0, index + 1).join('/');
       crumbs.push({ label: segment, path });
     });
     return crumbs;
-  }, [pathSegments]);
-
-  const directories = currentItems.filter((item) => !item.isFile);
-  const files = currentItems.filter((item) => item.isFile && item.project);
+  }, [segments]);
 
   const handleMenuClick = (event: ReactMouseEvent<HTMLButtonElement>, node: TreeNode) => {
     event.stopPropagation();
@@ -66,126 +55,91 @@ const FileExplorer = ({ tree, onFileMenuClick }: Props) => {
     onFileMenuClick(node, { x: rect.right, y: rect.bottom });
   };
 
-  useEffect(() => {
-    if (!currentPath) {
-      return;
-    }
-    if (!pathExists(tree, pathSegments)) {
-      setCurrentPath('');
-    }
-  }, [tree, currentPath, pathSegments]);
-
   return (
     <div className="file-explorer">
-      <div className="explorer-header">
-        <div>
-          <p className="eyebrow">当前托管内容</p>
-          <h2>共创 HTML 画廊</h2>
-          <p className="muted">
-            在这里以文件夹或层级视图探索所有托管的 HTML 作品，点击可在新标签页预览效果。
-          </p>
+      <div className="canvas-toolbar">
+        <div className="breadcrumbs">
+          {breadcrumbs.map((crumb, index) => (
+            <button
+              key={crumb.path || 'root'}
+              type="button"
+              className={index === breadcrumbs.length - 1 ? 'crumb active' : 'crumb'}
+              onClick={() => onPathChange(crumb.path)}
+            >
+              {crumb.label}
+            </button>
+          ))}
         </div>
         <div className="view-toggle">
           <button
             type="button"
-            className={viewMode === 'gallery' ? 'toggle active' : 'toggle'}
-            onClick={() => setViewMode('gallery')}
+            className={viewMode === 'grid' ? 'toggle active' : 'toggle'}
+            onClick={() => setViewMode('grid')}
           >
-            文件夹
+            网格
           </button>
           <button
             type="button"
-            className={viewMode === 'tree' ? 'toggle active' : 'toggle'}
-            onClick={() => setViewMode('tree')}
+            className={viewMode === 'list' ? 'toggle active' : 'toggle'}
+            onClick={() => setViewMode('list')}
           >
-            目录
+            列表
           </button>
         </div>
       </div>
 
-      {viewMode === 'tree' ? (
-        <div className="tree-view-panel">
-          <DirectoryTree nodes={tree} />
-        </div>
-      ) : (
-        <div className="gallery-view-panel">
-          <div className="breadcrumbs">
-            {breadcrumbs.map((crumb, index) => (
-              <button
-                type="button"
-                key={crumb.path || 'root'}
-                onClick={() => setCurrentPath(crumb.path)}
-                className={index === breadcrumbs.length - 1 ? 'crumb active' : 'crumb'}
-              >
-                {crumb.label}
-              </button>
-            ))}
-          </div>
-
-          <div className="folder-grid">
-            {directories.map((dir) => (
-              <button
-                key={dir.path}
-                type="button"
-                className="folder-card"
-                onClick={() => setCurrentPath(dir.path)}
-              >
-                <span className="folder-icon">📁</span>
-                <div>
-                  <p className="folder-name">{dir.name}</p>
-                  <p className="muted">{dir.children?.length || 0} 个条目</p>
-                </div>
-              </button>
-            ))}
-            {directories.length === 0 && (
-              <div className="empty-placeholder">该文件夹下暂无子文件夹</div>
-            )}
-          </div>
-
-          <div className="file-grid">
-            {files.map((file) => (
-              <div key={file.path} className="file-card">
-                <button
-                  type="button"
-                  aria-label="更多操作"
-                  className="file-menu-button"
-                  onClick={(event) => handleMenuClick(event, file)}
-                >
-                  ☰
-                </button>
-                <div className="file-preview">
-                  {file.project?.url ? (
-                    <iframe
-                      title={file.name}
-                      src={buildSiteUrl(file.project.url)}
-                      loading="lazy"
-                      sandbox="allow-same-origin allow-scripts allow-forms"
-                    />
-                  ) : (
-                    <div className="file-preview-fallback">HTML</div>
-                  )}
-                </div>
-                <div className="file-meta">
-                  <div>
-                    <p className="file-name" title={file.path}>
-                      {file.name}
-                    </p>
-                    <p className="muted">{file.path}</p>
-                  </div>
-                  {file.project?.url && (
-                    <a className="open-link" href={buildSiteUrl(file.project.url)} target="_blank" rel="noreferrer">
-                      预览
-                    </a>
-                  )}
-                </div>
-              </div>
-            ))}
-            {files.length === 0 && (
-              <div className="empty-placeholder">该目录暂无 HTML 文件，快来成为第一个创作者！</div>
-            )}
-          </div>
+      {directories.length > 0 && (
+        <div className="directory-chips">
+          {directories.map((dir) => (
+            <button key={dir.path} type="button" onClick={() => onPathChange(dir.path)}>
+              📁 {dir.name}
+            </button>
+          ))}
         </div>
       )}
+
+      <div className={viewMode === 'grid' ? 'file-grid' : 'file-list'}>
+        {filteredFiles.map((file) => (
+          <article key={file.path} className={viewMode === 'grid' ? 'file-card grid' : 'file-card list'}>
+            <button
+              type="button"
+              aria-label="更多操作"
+              className="file-menu-button"
+              onClick={(event) => handleMenuClick(event, file)}
+            >
+              ⋯
+            </button>
+            <div className="file-preview">
+              {file.project?.url ? (
+                <iframe
+                  title={file.name}
+                  src={buildSiteUrl(file.project.url)}
+                  loading="lazy"
+                  sandbox="allow-same-origin allow-scripts allow-forms"
+                />
+              ) : (
+                <div className="file-preview-fallback">HTML</div>
+              )}
+            </div>
+            <footer className="file-meta">
+              <div>
+                <p className="file-name" title={file.path}>
+                  {file.name}
+                </p>
+                <p className="muted">{file.path}</p>
+              </div>
+              {file.project?.url && (
+                <a className="open-link" href={buildSiteUrl(file.project.url)} target="_blank" rel="noreferrer">
+                  预览
+                </a>
+              )}
+            </footer>
+          </article>
+        ))}
+        {filteredFiles.length === 0 && (
+          <div className="empty-placeholder">未找到匹配的 HTML，试试其它关键词。</div>
+        )}
+      </div>
     </div>
   );
 };
