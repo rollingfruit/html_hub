@@ -17,10 +17,10 @@ services:
       - ./server_data/uploads:/app/uploads
       - ./server_data/db:/app/db
     ports:
-      - '3000:3000'
+      - '3001:3000'
 
   nginx:
-    image: nginx:alpine
+    image: docker.m.daocloud.io/library/nginx:alpine
     container_name: hosting_nginx
     restart: unless-stopped
     ports:
