@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useRef, useState } from 'react';
+import { FormEvent, useEffect, useId, useRef, useState } from 'react';
 import { uploadHtml } from '../api';
 import { Project } from '../types';
 
@@ -6,9 +6,17 @@ type Props = {
   onUploaded: (project: Project) => void;
   defaultPath?: string;
   defaultFilename?: string;
+  availablePaths?: string[];
+  autoFocusToken?: boolean;
 };
 
-const UploadForm = ({ onUploaded, defaultPath = '', defaultFilename = '' }: Props) => {
+const UploadForm = ({
+  onUploaded,
+  defaultPath = '',
+  defaultFilename = '',
+  availablePaths = [],
+  autoFocusToken = false,
+}: Props) => {
   const [mode, setMode] = useState<'file' | 'paste'>('file');
   const [path, setPath] = useState(defaultPath);
   const [token, setToken] = useState('');
@@ -18,6 +26,8 @@ const UploadForm = ({ onUploaded, defaultPath = '', defaultFilename = '' }: Prop
   const [message, setMessage] = useState<string | null>(null);
   const [isError, setIsError] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const tokenInputRef = useRef<HTMLInputElement>(null);
+  const datalistId = useId();
 
   useEffect(() => {
     setPath(defaultPath);
@@ -28,6 +38,12 @@ const UploadForm = ({ onUploaded, defaultPath = '', defaultFilename = '' }: Prop
       setFilename(defaultFilename);
     }
   }, [defaultFilename]);
+
+  useEffect(() => {
+    if (autoFocusToken && tokenInputRef.current) {
+      tokenInputRef.current.focus();
+    }
+  }, [autoFocusToken]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -90,13 +106,20 @@ const UploadForm = ({ onUploaded, defaultPath = '', defaultFilename = '' }: Prop
       </div>
 
       <div className="input-group">
-        <label htmlFor="path">目录路径（例：team/demo）</label>
+        <label htmlFor="path">目录路径</label>
         <input
           id="path"
+          list={datalistId}
           placeholder="可留空，表示根目录"
           value={path}
           onChange={(event) => setPath(event.target.value)}
         />
+        <datalist id={datalistId}>
+          <option value="" label="根目录" />
+          {availablePaths.map((dir) => (
+            <option key={dir} value={dir} />
+          ))}
+        </datalist>
       </div>
 
       {mode === 'file' ? (
@@ -132,10 +155,12 @@ const UploadForm = ({ onUploaded, defaultPath = '', defaultFilename = '' }: Prop
         <label htmlFor="token">权限 Token（如需覆盖）</label>
         <input
           id="token"
+          ref={tokenInputRef}
           placeholder="管理员审批后会发放"
           value={token}
           onChange={(event) => setToken(event.target.value)}
         />
+        <small className="muted">仅在覆盖已存在的 HTML 时需要填写 Token</small>
       </div>
 
       <button type="submit" className="primary" disabled={loading}>
