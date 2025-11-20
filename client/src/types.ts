@@ -11,6 +11,7 @@ export interface TreeNode {
   path: string;
   isFile: boolean;
   project?: Project;
+  meta?: DirectoryMeta;
   children: TreeNode[];
 }
 
@@ -33,4 +34,15 @@ export interface FileRequest {
 export interface ProjectResponse {
   projects: Project[];
   tree: TreeNode[];
+  directories: string[];
+  directoryMeta: DirectoryMeta[];
+}
+
+export interface DirectoryMeta {
+  id?: number;
+  path: string;
+  systemPrompt: string;
+  description?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
 }

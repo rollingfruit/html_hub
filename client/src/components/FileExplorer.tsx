@@ -179,8 +179,13 @@ const FileExplorer = ({
       {!isSearchMode && directories.length > 0 && (
         <div className="directory-chips">
           {directories.map((dir) => (
-            <button key={dir.path} type="button" onClick={() => onPathChange(dir.path)}>
-              📁 {dir.name}
+            <button key={dir.path} type="button" className="folder-chip" onClick={() => onPathChange(dir.path)}>
+              <div className="chip-header">
+                <span>📁 {dir.name}</span>
+                <span className="muted">{dir.children?.length || 0} 个文件</span>
+              </div>
+              {dir.meta?.systemPrompt && <p className="chip-prompt">{dir.meta.systemPrompt}</p>}
+              {!dir.meta?.systemPrompt && <p className="chip-prompt empty">添加 System Prompt 帮助创作者</p>}
             </button>
           ))}
         </div>

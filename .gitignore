@@ -16,3 +16,6 @@ server_data/
 .local_zone/
 digest.txt
 *.log
+nginx/default.conf
+server/prisma/server/db/dev.db
+server/prisma/db/

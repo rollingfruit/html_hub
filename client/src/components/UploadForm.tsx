@@ -6,28 +6,35 @@ type Props = {
   onUploaded: (project: Project) => void;
   defaultPath?: string;
   defaultFilename?: string;
-  availablePaths?: string[];
   autoFocusToken?: boolean;
 };
 
-const UploadForm = ({
-  onUploaded,
-  defaultPath = '',
-  defaultFilename = '',
-  availablePaths = [],
-  autoFocusToken = false,
-}: Props) => {
-  const [mode, setMode] = useState<'file' | 'paste'>('file');
+const sanitizeTitle = (title: string) =>
+  title
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9-_]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '') || 'untitled';
+
+const extractTitle = (markup: string) => {
+  const match = markup.match(/<title>(.*?)<\/title>/i);
+  return match ? match[1] : '';
+};
+
+const UploadForm = ({ onUploaded, defaultPath = '', defaultFilename = '', autoFocusToken = false }: Props) => {
+  const [mode, setMode] = useState<'file' | 'paste'>('paste');
   const [path, setPath] = useState(defaultPath);
   const [token, setToken] = useState('');
   const [content, setContent] = useState('');
-  const [filename, setFilename] = useState(defaultFilename || 'index.html');
+  const [filename, setFilename] = useState(defaultFilename || 'untitled.html');
+  const [manualFilename, setManualFilename] = useState(Boolean(defaultFilename));
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [isError, setIsError] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const tokenInputRef = useRef<HTMLInputElement>(null);
-  const datalistId = useId();
+  const locationId = useId();
 
   useEffect(() => {
     setPath(defaultPath);
@@ -36,6 +43,9 @@ const UploadForm = ({
   useEffect(() => {
     if (defaultFilename) {
       setFilename(defaultFilename);
+      setManualFilename(true);
+    } else {
+      setManualFilename(false);
     }
   }, [defaultFilename]);
 
@@ -44,6 +54,19 @@ const UploadForm = ({
       tokenInputRef.current.focus();
     }
   }, [autoFocusToken]);
+
+  useEffect(() => {
+    if (mode !== 'paste' || manualFilename) {
+      return;
+    }
+    const extractedTitle = extractTitle(content);
+    if (extractedTitle) {
+      const safe = sanitizeTitle(extractedTitle);
+      setFilename(`${safe}.html`);
+    } else if (!content.trim()) {
+      setFilename('untitled.html');
+    }
+  }, [content, manualFilename, mode]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -91,11 +114,11 @@ const UploadForm = ({
       <div className="segmented-control">
         <button
           type="button"
-          className={mode === 'file' ? 'segment active' : 'segment'}
-          onClick={() => setMode('file')}
-        >
-          上传文件
-        </button>
+            className={mode === 'file' ? 'segment active' : 'segment'}
+            onClick={() => setMode('file')}
+          >
+            上传文件
+          </button>
         <button
           type="button"
           className={mode === 'paste' ? 'segment active' : 'segment'}
@@ -106,20 +129,8 @@ const UploadForm = ({
       </div>
 
       <div className="input-group">
-        <label htmlFor="path">目录路径</label>
-        <input
-          id="path"
-          list={datalistId}
-          placeholder="可留空，表示根目录"
-          value={path}
-          onChange={(event) => setPath(event.target.value)}
-        />
-        <datalist id={datalistId}>
-          <option value="" label="根目录" />
-          {availablePaths.map((dir) => (
-            <option key={dir} value={dir} />
-          ))}
-        </datalist>
+        <label htmlFor={locationId}>保存位置</label>
+        <input id={locationId} value={path || '根目录'} readOnly />
       </div>
 
       {mode === 'file' ? (
@@ -135,7 +146,10 @@ const UploadForm = ({
               id="filename"
               value={filename}
               placeholder="example.html"
-              onChange={(event) => setFilename(event.target.value)}
+              onChange={(event) => {
+                setManualFilename(true);
+                setFilename(event.target.value);
+              }}
             />
           </div>
           <div className="input-group">

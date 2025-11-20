@@ -136,6 +136,61 @@
   box-shadow: 0 20px 50px rgba(15, 23, 42, 0.05);
 }
 
+.directory-context-card {
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  border-radius: 1.5rem;
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 1.5rem;
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 25px 60px rgba(15, 23, 42, 0.08);
+}
+
+.prompt-panel {
+  margin-top: 1rem;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  border-radius: 1rem;
+  padding: 0.85rem;
+  background: #f8fafc;
+}
+
+.prompt-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.prompt-header span {
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.prompt-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.prompt-body {
+  max-height: 180px;
+  overflow: auto;
+  border-radius: 0.75rem;
+  background: #fff;
+  padding: 0.75rem;
+  font-size: 0.9rem;
+  color: #0f172a;
+}
+
+.prompt-body pre {
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.prompt-body.empty {
+  color: #94a3b8;
+  font-style: italic;
+}
+
 .file-explorer {
   display: flex;
   flex-direction: column;
@@ -169,16 +224,38 @@
 }
 
 .directory-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 0.75rem;
 }
 
-.directory-chips button {
+.folder-chip {
   border: 1px solid #e2e8f0;
-  border-radius: 999px;
-  padding: 0.25rem 0.75rem;
+  border-radius: 1rem;
+  padding: 0.75rem;
+  text-align: left;
   background: #fff;
+  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.05);
+}
+
+.folder-chip .chip-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.45rem;
+  font-weight: 600;
+}
+
+.chip-prompt {
+  font-size: 0.85rem;
+  color: #475569;
+  max-height: 3.6em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.chip-prompt.empty {
+  color: #94a3b8;
+  font-style: italic;
 }
 
 .view-toggle {

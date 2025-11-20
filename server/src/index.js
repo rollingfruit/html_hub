@@ -130,8 +130,27 @@ const mapProject = (project) => ({
   createdAt: project.createdAt.toISOString(),
 });
 
-const buildTree = (projects) => {
+const mapDirectoryMeta = (meta) => ({
+  id: meta.id,
+  path: meta.path,
+  systemPrompt: meta.systemPrompt || '',
+  description: meta.description || '',
+  createdAt: meta.createdAt.toISOString(),
+  updatedAt: meta.updatedAt.toISOString(),
+});
+
+const buildTree = (projects, directories = []) => {
   const root = {};
+  const touchNode = (segments) => {
+    let cursor = root;
+    segments.forEach((segment, index) => {
+      if (!cursor[segment]) {
+        cursor[segment] = { children: {}, isFile: false, path: segments.slice(0, index + 1).join('/') };
+      }
+      cursor = cursor[segment].children;
+    });
+  };
+
   projects.forEach((project) => {
     const segments = project.path.split('/');
     let cursor = root;
@@ -147,16 +166,54 @@ const buildTree = (projects) => {
     });
   });
 
+  directories.forEach((meta) => {
+    if (!meta.path) {
+      return;
+    }
+    const segments = meta.path.split('/');
+    touchNode(segments);
+    let cursor = root;
+    segments.forEach((segment, index) => {
+      if (!cursor[segment]) {
+        cursor[segment] = { children: {}, isFile: false, path: segments.slice(0, index + 1).join('/') };
+      }
+      if (index === segments.length - 1) {
+        cursor[segment].meta = mapDirectoryMeta(meta);
+      }
+      cursor = cursor[segment].children;
+    });
+  });
+
   const walk = (node) =>
-    Object.entries(node).map(([name, value]) => ({
-      name,
-      path: value.path,
-      isFile: value.isFile,
-      project: value.project,
-      children: walk(value.children),
-    }));
+    Object.entries(node)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([name, value]) => ({
+        name,
+        path: value.path,
+        isFile: value.isFile,
+        project: value.project,
+        meta: value.meta,
+        children: walk(value.children),
+      }));
 
   return walk(root);
+};
+
+const collectKnownDirectories = (projects, directories = []) => {
+  const set = new Set();
+  projects.forEach((project) => {
+    const segments = project.path.split('/');
+    if (segments.length <= 1) return;
+    for (let i = 1; i < segments.length; i += 1) {
+      set.add(segments.slice(0, i).join('/'));
+    }
+  });
+  directories.forEach((meta) => {
+    if (meta.path) {
+      set.add(meta.path);
+    }
+  });
+  return Array.from(set).sort();
 };
 
 const createJwt = (user) =>
@@ -236,8 +293,76 @@ app.get('/api/health', (req, res) => {
 });
 
 app.get('/api/projects', async (req, res) => {
-  const projects = await prisma.project.findMany({ include: { owner: true }, orderBy: { createdAt: 'desc' } });
-  res.json({ projects: projects.map(mapProject), tree: buildTree(projects) });
+  const [projects, directoryMetas] = await Promise.all([
+    prisma.project.findMany({ include: { owner: true }, orderBy: { createdAt: 'desc' } }),
+    prisma.directoryMeta.findMany({ orderBy: { updatedAt: 'desc' } }),
+  ]);
+  const tree = buildTree(projects, directoryMetas);
+  const directories = collectKnownDirectories(projects, directoryMetas);
+  res.json({
+    projects: projects.map(mapProject),
+    tree,
+    directories,
+    directoryMeta: directoryMetas.map(mapDirectoryMeta),
+  });
+});
+
+app.get('/api/directory', async (req, res) => {
+  const rawPath = req.query.path ?? '';
+  const pathValue = sanitizeDirectoryPath(rawPath);
+  const record = await prisma.directoryMeta.findUnique({ where: { path: pathValue } });
+  if (!record) {
+    return res.json({
+      directory: {
+        path: pathValue,
+        systemPrompt: '',
+        description: '',
+      },
+    });
+  }
+  return res.json({ directory: mapDirectoryMeta(record) });
+});
+
+app.post('/api/directory', async (req, res) => {
+  const { path: rawPath = '', systemPrompt = '', description = '' } = req.body;
+  const pathValue = sanitizeDirectoryPath(rawPath);
+  if (pathValue === undefined) {
+    return res.status(400).json({ message: '路径无效' });
+  }
+  const directory = await prisma.directoryMeta.upsert({
+    where: { path: pathValue },
+    update: { systemPrompt, description },
+    create: { path: pathValue, systemPrompt, description },
+  });
+  res.json({ directory: mapDirectoryMeta(directory) });
+});
+
+app.post('/api/mkdir', async (req, res) => {
+  const { parentPath = '', name = '', systemPrompt = '', description = '' } = req.body;
+  let targetPath = req.body.path || '';
+  if (!targetPath) {
+    const combined = [parentPath, name].filter(Boolean).join('/');
+    targetPath = combined;
+  }
+  const sanitized = sanitizeDirectoryPath(targetPath);
+  if (!sanitized) {
+    return res.status(400).json({ message: '目录名不可为空' });
+  }
+  const absoluteDir = path.join(UPLOAD_DIR, sanitized);
+  await ensureDir(absoluteDir);
+  const directory = await prisma.directoryMeta.upsert({
+    where: { path: sanitized },
+    update: {
+      systemPrompt,
+      description,
+    },
+    create: {
+      path: sanitized,
+      systemPrompt,
+      description,
+    },
+  });
+  res.json({ directory: mapDirectoryMeta(directory) });
 });
 
 app.post('/api/upload', upload.single('file'), async (req, res) => {

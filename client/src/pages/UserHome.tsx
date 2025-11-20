@@ -1,14 +1,15 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import UploadForm from '../components/UploadForm';
 import PermissionRequestForm from '../components/PermissionRequestForm';
 import DeleteForm from '../components/DeleteForm';
 import FileExplorer from '../components/FileExplorer';
 import DirectoryTree from '../components/DirectoryTree';
 import ContextMenu, { ContextAction } from '../components/ContextMenu';
-import { fetchProjects } from '../api';
-import { Project, TreeNode } from '../types';
+import DirectoryContextCard from '../components/DirectoryContextCard';
+import { createDirectory, fetchDirectoryMeta, fetchProjects, saveDirectoryMeta } from '../api';
+import { DirectoryMeta, Project, TreeNode } from '../types';
 
-type ModalType = 'UPLOAD' | 'REQUEST' | 'DELETE' | null;
+type ModalType = 'UPLOAD' | 'REQUEST' | 'DELETE' | 'PROMPT' | 'FOLDER' | null;
 
 type ContextMenuState = {
   x: number;
@@ -28,6 +29,8 @@ const splitPath = (path: string) => {
 const UserHome = () => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [tree, setTree] = useState<TreeNode[]>([]);
+  const [directories, setDirectories] = useState<string[]>([]);
+  const [directoryMetaMap, setDirectoryMetaMap] = useState<Record<string, DirectoryMeta>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentPath, setCurrentPath] = useState('');
@@ -44,6 +47,12 @@ const UserHome = () => {
   const [sidebarWidth, setSidebarWidth] = useState(260);
   const [cachedSidebarWidth, setCachedSidebarWidth] = useState(260);
   const [isSidebarOpen, setSidebarOpen] = useState(true);
+  const [promptDraft, setPromptDraft] = useState('');
+  const [promptDescription, setPromptDescription] = useState('');
+  const [newFolderName, setNewFolderName] = useState('');
+  const [newFolderPrompt, setNewFolderPrompt] = useState('');
+  const [newFolderDescription, setNewFolderDescription] = useState('');
+  const [modalError, setModalError] = useState<string | null>(null);
 
   const loadProjects = useCallback(async () => {
     setLoading(true);
@@ -51,6 +60,13 @@ const UserHome = () => {
       const data = await fetchProjects();
       setProjects(data.projects);
       setTree(data.tree);
+       setDirectories(data.directories || []);
+      const metas = data.directoryMeta || [];
+      const metaMap = metas.reduce<Record<string, DirectoryMeta>>((acc, meta) => {
+        acc[meta.path || ''] = meta;
+        return acc;
+      }, {});
+      setDirectoryMetaMap(metaMap);
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : '加载失败');
@@ -64,17 +80,6 @@ const UserHome = () => {
   }, [loadProjects]);
 
   const latestUploads = useMemo(() => projects.slice(0, 3), [projects]);
-  const directoryOptions = useMemo(() => {
-    const set = new Set<string>();
-    projects.forEach((project) => {
-      const segments = project.path.split('/');
-      if (segments.length > 1) {
-        set.add(segments.slice(0, -1).join('/'));
-      }
-    });
-    return Array.from(set).sort();
-  }, [projects]);
-
   const searchResults = useMemo(() => {
     if (!search.trim()) {
       return [];
@@ -88,6 +93,7 @@ const UserHome = () => {
   }, [projects, search]);
 
   const openModal = (type: ModalType) => {
+    setModalError(null);
     setModalType(type);
   };
 
@@ -105,6 +111,20 @@ const UserHome = () => {
   const handleRequestAction = () => {
     setPrefill((prev) => ({ ...prev, requestPath: currentPath }));
     openModal('REQUEST');
+  };
+
+  const handlePromptAction = () => {
+    const meta = directoryMetaMap[currentPath || ''];
+    setPromptDraft(meta?.systemPrompt || '');
+    setPromptDescription(meta?.description || '');
+    openModal('PROMPT');
+  };
+
+  const handleCreateFolderAction = () => {
+    setNewFolderName('');
+    setNewFolderPrompt('');
+    setNewFolderDescription('');
+    openModal('FOLDER');
   };
 
   const handleContextAction = (action: ContextAction, node: TreeNode) => {
@@ -164,16 +184,70 @@ const UserHome = () => {
     window.addEventListener('mouseup', handleMouseUp);
   };
 
+  const currentMeta = directoryMetaMap[currentPath || ''];
+
+  useEffect(() => {
+    const key = currentPath || '';
+    if (directoryMetaMap[key]) {
+      return;
+    }
+    const loadMeta = async () => {
+      try {
+        const data = await fetchDirectoryMeta(key);
+        setDirectoryMetaMap((prev) => ({ ...prev, [key]: data.directory }));
+      } catch (err) {
+        // ignore
+      }
+    };
+    loadMeta();
+  }, [currentPath, directoryMetaMap]);
+
+  const handlePromptSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    try {
+      await saveDirectoryMeta({
+        path: currentPath,
+        systemPrompt: promptDraft,
+        description: promptDescription,
+      });
+      await loadProjects();
+      closeModal();
+    } catch (err) {
+      setModalError(err instanceof Error ? err.message : '保存失败');
+    }
+  };
+
+  const handleFolderSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setModalError(null);
+    if (!newFolderName.trim()) {
+      setModalError('请输入文件夹名称');
+      return;
+    }
+    const nextPath = [currentPath, newFolderName.trim()].filter(Boolean).join('/');
+    try {
+      await createDirectory({
+        path: nextPath,
+        systemPrompt: newFolderPrompt,
+        description: newFolderDescription,
+      });
+      await loadProjects();
+      setCurrentPath(nextPath);
+      closeModal();
+    } catch (err) {
+      setModalError(err instanceof Error ? err.message : '创建失败');
+    }
+  };
+
   let modalTitle = '';
   let modalContent: JSX.Element | null = null;
   if (modalType === 'UPLOAD') {
-    modalTitle = prefill.uploadFilename ? '编辑 / 覆盖 HTML' : '上传 HTML';
+    modalTitle = prefill.uploadFilename ? '编辑 / 覆盖 HTML' : '新建 HTML 页面';
     modalContent = (
       <UploadForm
         onUploaded={handleUploadSuccess}
         defaultPath={prefill.uploadPath || currentPath}
         defaultFilename={prefill.uploadFilename}
-        availablePaths={directoryOptions}
         autoFocusToken={focusToken}
       />
     );
@@ -183,6 +257,55 @@ const UserHome = () => {
   } else if (modalType === 'DELETE') {
     modalTitle = '使用 Token 删除文件';
     modalContent = <DeleteForm defaultPath={prefill.deletePath} />;
+  } else if (modalType === 'PROMPT') {
+    modalTitle = '编辑目录提示';
+    modalContent = (
+      <form className="form-grid" onSubmit={handlePromptSubmit}>
+        <div className="input-group">
+          <label>System Prompt</label>
+          <textarea rows={6} value={promptDraft} onChange={(event) => setPromptDraft(event.target.value)} />
+        </div>
+        <div className="input-group">
+          <label>描述</label>
+          <input value={promptDescription} onChange={(event) => setPromptDescription(event.target.value)} />
+        </div>
+        {modalError && <p className="status-error">{modalError}</p>}
+        <button type="submit" className="primary">
+          保存
+        </button>
+      </form>
+    );
+  } else if (modalType === 'FOLDER') {
+    modalTitle = '新建文件夹';
+    modalContent = (
+      <form className="form-grid" onSubmit={handleFolderSubmit}>
+        <div className="input-group">
+          <label>位置</label>
+          <input value={currentPath || '根目录'} readOnly />
+        </div>
+        <div className="input-group">
+          <label>文件夹名称</label>
+          <input value={newFolderName} onChange={(event) => setNewFolderName(event.target.value)} />
+        </div>
+        <div className="input-group">
+          <label>System Prompt（可选）</label>
+          <textarea
+            rows={4}
+            placeholder="例如：这里存放周报，请写明日期与项目进度"
+            value={newFolderPrompt}
+            onChange={(event) => setNewFolderPrompt(event.target.value)}
+          />
+        </div>
+        <div className="input-group">
+          <label>描述（可选）</label>
+          <input value={newFolderDescription} onChange={(event) => setNewFolderDescription(event.target.value)} />
+        </div>
+        {modalError && <p className="status-error">{modalError}</p>}
+        <button type="submit" className="primary">
+          创建文件夹
+        </button>
+      </form>
+    );
   }
 
   return (
@@ -195,7 +318,7 @@ const UserHome = () => {
           <h2>工作台</h2>
           <p className="muted">下午好，Admin。今天想创作什么？</p>
           <button type="button" className="primary full" onClick={handlePrimaryAction}>
-            + 上传作品
+            + 新建页面
           </button>
         </div>
         <div className="sidebar-section">
@@ -230,6 +353,9 @@ const UserHome = () => {
               value={search}
               onChange={(event) => setSearch(event.target.value)}
             />
+            <button type="button" className="secondary" onClick={handleCreateFolderAction}>
+              新建文件夹
+            </button>
             <button type="button" className="secondary" onClick={handleRequestAction}>
               申请权限
             </button>
@@ -240,14 +366,17 @@ const UserHome = () => {
           {loading && <p>正在加载托管内容...</p>}
           {error && <p className="status-error">{error}</p>}
           {!loading && !error && (
-            <FileExplorer
-              tree={tree}
-              currentPath={currentPath}
-              onPathChange={setCurrentPath}
-              searchTerm={search}
-              flatResults={searchResults}
-              onFileMenuClick={handleFileMenuClick}
-            />
+            <>
+              <DirectoryContextCard path={currentPath} meta={currentMeta} onEdit={handlePromptAction} />
+              <FileExplorer
+                tree={tree}
+                currentPath={currentPath}
+                onPathChange={setCurrentPath}
+                searchTerm={search}
+                flatResults={searchResults}
+                onFileMenuClick={handleFileMenuClick}
+              />
+            </>
           )}
         </div>
       </section>

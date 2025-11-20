@@ -26,6 +26,15 @@ model Project {
   createdAt DateTime  @default(now())
 }
 
+model DirectoryMeta {
+  id            Int      @id @default(autoincrement())
+  path          String   @unique
+  systemPrompt  String?
+  description   String?
+  updatedAt     DateTime @updatedAt
+  createdAt     DateTime @default(now())
+}
+
 model FileRequest {
   id            Int           @id @default(autoincrement())
   projectPath   String

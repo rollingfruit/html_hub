@@ -1,4 +1,4 @@
-import { FileRequest, ProjectResponse, RequestType } from './types';
+import { DirectoryMeta, FileRequest, ProjectResponse, RequestType } from './types';
 
 const API_BASE =
   import.meta.env.VITE_API_BASE ||
@@ -46,6 +46,41 @@ export const uploadHtml = async (payload: UploadPayload) => {
   const resp = await fetch(`${API_BASE}/upload`, {
     method: 'POST',
     body: formData,
+  });
+  return handleResponse(resp);
+};
+
+export const fetchDirectoryMeta = async (path = ''): Promise<{ directory: DirectoryMeta }> => {
+  const params = new URLSearchParams();
+  params.set('path', path);
+  const resp = await fetch(`${API_BASE}/directory?${params.toString()}`);
+  return handleResponse(resp);
+};
+
+export const saveDirectoryMeta = async (payload: {
+  path: string;
+  systemPrompt: string;
+  description?: string;
+}): Promise<{ directory: DirectoryMeta }> => {
+  const resp = await fetch(`${API_BASE}/directory`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  return handleResponse(resp);
+};
+
+export const createDirectory = async (payload: {
+  path?: string;
+  parentPath?: string;
+  name?: string;
+  systemPrompt?: string;
+  description?: string;
+}): Promise<{ directory: DirectoryMeta }> => {
+  const resp = await fetch(`${API_BASE}/mkdir`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
   });
   return handleResponse(resp);
 };

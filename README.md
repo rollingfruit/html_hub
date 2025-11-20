@@ -49,6 +49,9 @@ ecs-hosting-platform/
   - 浏览当前所有托管目录与文件。
   - 上传 HTML，选择或新建目录路径。
   - 若需覆盖/删除已存在的 HTML，先提交权限申请。
+- 目录共创：
+  - 每个目录可维护 System Prompt 及描述，用于指导合作者在该主题下创作。
+  - 支持一键新建文件夹、粘贴 HTML 代码生成页面，构建 HTML Wiki 式知识库。
 - 管理端：
   - 登录专属页面。
   - 查看审批请求并同意或拒绝，生成临时 Token。
@@ -61,6 +64,9 @@ ecs-hosting-platform/
 | `GET /api/projects` | 返回所有托管条目及目录树。 |
 | `POST /api/upload` | 上传 HTML，支持 `path`（相对目录）与 `token`（覆盖时必填）。 |
 | `DELETE /api/files` | 通过审批 Token 删除指定 HTML。 |
+| `GET /api/directory` | 查询目录元数据（System Prompt / 描述）。 |
+| `POST /api/directory` | 新建或更新目录元数据。 |
+| `POST /api/mkdir` | 新建目录，自动在文件系统中创建文件夹。 |
 | `POST /api/request-permission` | 申请 `MODIFY` / `DELETE` 权限，返回请求号。 |
 | `POST /api/auth/login` | 管理员登录，返回 JWT。 |
 | `GET /api/admin/requests` | 管理员查看最新审批请求。 |
