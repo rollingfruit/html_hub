@@ -92,6 +92,16 @@ const UserHome = () => {
     );
   }, [projects, search]);
 
+  const breadcrumbs = useMemo(() => {
+    const segments = currentPath ? currentPath.split('/') : [];
+    const crumbs = [{ label: '全部内容', path: '' }];
+    segments.forEach((segment, index) => {
+      const path = segments.slice(0, index + 1).join('/');
+      crumbs.push({ label: segment, path });
+    });
+    return crumbs;
+  }, [currentPath]);
+
   const openModal = (type: ModalType) => {
     setModalError(null);
     setModalType(type);
@@ -242,7 +252,7 @@ const UserHome = () => {
   let modalTitle = '';
   let modalContent: JSX.Element | null = null;
   if (modalType === 'UPLOAD') {
-    modalTitle = prefill.uploadFilename ? '编辑 / 覆盖 HTML' : '新建 HTML 页面';
+    modalTitle = prefill.uploadFilename ? '编辑 HTML' : '新建 HTML 页面';
     modalContent = (
       <UploadForm
         onUploaded={handleUploadSuccess}
@@ -252,22 +262,22 @@ const UserHome = () => {
       />
     );
   } else if (modalType === 'REQUEST') {
-    modalTitle = '申请修改 / 删除权限';
+    modalTitle = '申请权限';
     modalContent = <PermissionRequestForm defaultPath={prefill.requestPath || currentPath} />;
   } else if (modalType === 'DELETE') {
-    modalTitle = '使用 Token 删除文件';
+    modalTitle = '删除文件';
     modalContent = <DeleteForm defaultPath={prefill.deletePath} />;
   } else if (modalType === 'PROMPT') {
-    modalTitle = '编辑目录提示';
+    modalTitle = '编辑目录 Prompt';
     modalContent = (
       <form className="form-grid" onSubmit={handlePromptSubmit}>
         <div className="input-group">
           <label>System Prompt</label>
-          <textarea rows={6} value={promptDraft} onChange={(event) => setPromptDraft(event.target.value)} />
+          <textarea rows={6} value={promptDraft} onChange={(event) => setPromptDraft(event.target.value)} placeholder="描述这个目录的内容风格，AI将据此生成..." />
         </div>
         <div className="input-group">
           <label>描述</label>
-          <input value={promptDescription} onChange={(event) => setPromptDescription(event.target.value)} />
+          <input value={promptDescription} onChange={(event) => setPromptDescription(event.target.value)} placeholder="简短描述这个目录" />
         </div>
         {modalError && <p className="status-error">{modalError}</p>}
         <button type="submit" className="primary">
@@ -279,30 +289,30 @@ const UserHome = () => {
     modalTitle = '新建文件夹';
     modalContent = (
       <form className="form-grid" onSubmit={handleFolderSubmit}>
-        <div className="input-group">
-          <label>位置</label>
-          <input value={currentPath || '根目录'} readOnly />
+        <div className="location-badge">
+          <span className="badge-icon">📂</span>
+          <span className="badge-text">创建于：{currentPath || '根目录'}</span>
         </div>
         <div className="input-group">
           <label>文件夹名称</label>
-          <input value={newFolderName} onChange={(event) => setNewFolderName(event.target.value)} />
+          <input value={newFolderName} onChange={(event) => setNewFolderName(event.target.value)} placeholder="输入文件夹名称" autoFocus />
         </div>
         <div className="input-group">
           <label>System Prompt（可选）</label>
           <textarea
-            rows={4}
-            placeholder="例如：这里存放周报，请写明日期与项目进度"
+            rows={3}
+            placeholder="描述这个目录的内容定位..."
             value={newFolderPrompt}
             onChange={(event) => setNewFolderPrompt(event.target.value)}
           />
         </div>
         <div className="input-group">
           <label>描述（可选）</label>
-          <input value={newFolderDescription} onChange={(event) => setNewFolderDescription(event.target.value)} />
+          <input value={newFolderDescription} onChange={(event) => setNewFolderDescription(event.target.value)} placeholder="一句话描述" />
         </div>
         {modalError && <p className="status-error">{modalError}</p>}
         <button type="submit" className="primary">
-          创建文件夹
+          创建
         </button>
       </form>
     );
@@ -315,11 +325,8 @@ const UserHome = () => {
         style={{ width: isSidebarOpen ? sidebarWidth : 0 }}
       >
         <div className="sidebar-header">
-          <h2>工作台</h2>
-          <p className="muted">下午好，Admin。今天想创作什么？</p>
-          <button type="button" className="primary full" onClick={handlePrimaryAction}>
-            + 新建页面
-          </button>
+          <h2>HTML Hub</h2>
+          <p className="muted">粘贴你的 HTML，分享给所有人</p>
         </div>
         <div className="sidebar-section">
           <p className="section-title">目录</p>
@@ -337,33 +344,39 @@ const UserHome = () => {
 
       <section className={`canvas ${isSidebarOpen ? '' : 'full'}`}>
         <header className="canvas-header">
-          <div className="header-controls">
-            <button type="button" className="ghost-icon" onClick={toggleSidebar}>
-              ☰
-            </button>
-            <div>
-              <h1>我的画廊</h1>
-              <p className="muted">浏览或管理所有托管在 ECS 的 HTML 作品</p>
-            </div>
+          <button type="button" className="ghost-icon" onClick={toggleSidebar}>
+            ☰
+          </button>
+          <div className="breadcrumbs">
+            {breadcrumbs.map((crumb, index) => (
+              <button
+                key={crumb.path || 'root'}
+                type="button"
+                className={index === breadcrumbs.length - 1 ? 'crumb active' : 'crumb'}
+                onClick={() => setCurrentPath(crumb.path)}
+              >
+                {crumb.label}
+              </button>
+            ))}
           </div>
           <div className="canvas-actions">
             <input
               type="search"
-              placeholder="搜索文件..."
+              placeholder="搜索..."
               value={search}
               onChange={(event) => setSearch(event.target.value)}
             />
             <button type="button" className="secondary" onClick={handleCreateFolderAction}>
               新建文件夹
             </button>
-            <button type="button" className="secondary" onClick={handleRequestAction}>
-              申请权限
+            <button type="button" className="primary" onClick={handlePrimaryAction}>
+              + 新建页面
             </button>
           </div>
         </header>
 
         <div className="canvas-body">
-          {loading && <p>正在加载托管内容...</p>}
+          {loading && <p>加载中...</p>}
           {error && <p className="status-error">{error}</p>}
           {!loading && !error && (
             <>
@@ -400,7 +413,7 @@ const UserHome = () => {
                 ✕
               </button>
             </header>
-            <div className="drawer-panel">{modalContent}</div>
+            <div className="modal-body">{modalContent}</div>
           </div>
         </div>
       )}

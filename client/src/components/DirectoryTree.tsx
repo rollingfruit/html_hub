@@ -1,4 +1,5 @@
 import { FC, useEffect, useState } from 'react';
+import { Folder, FolderOpen, FileCode } from 'lucide-react';
 import { TreeNode } from '../types';
 import { buildSiteUrl } from '../lib/url';
 
@@ -83,7 +84,17 @@ const TreeBranch: FC<BranchProps> = ({ node, activePath, expanded, onToggle, onS
   return (
     <li>
       <div className={isActive ? 'tree-row active' : 'tree-row'}>
-        <span>{isFolder ? (isExpanded ? '📂' : '📁') : '📄'}</span>
+        <span className="tree-icon">
+          {isFolder ? (
+            isExpanded ? (
+              <FolderOpen size={16} strokeWidth={2} />
+            ) : (
+              <Folder size={16} strokeWidth={2} />
+            )
+          ) : (
+            <FileCode size={16} strokeWidth={2} />
+          )}
+        </span>
         {isFolder ? (
           <button type="button" className="tree-folder" onClick={handleFolderClick}>
             {node.name}

@@ -110,15 +110,6 @@ const FileExplorer = ({
       });
   }, [flatResults, isSearchMode, searchTerm]);
 
-  const breadcrumbs = useMemo(() => {
-    const crumbs = [{ label: '全部内容', path: '' }];
-    segments.forEach((segment, index) => {
-      const path = segments.slice(0, index + 1).join('/');
-      crumbs.push({ label: segment, path });
-    });
-    return crumbs;
-  }, [segments]);
-
   const handleMenuClick = (event: ReactMouseEvent<HTMLButtonElement>, item: FileItem) => {
     event.stopPropagation();
     const rect = event.currentTarget.getBoundingClientRect();
@@ -145,19 +136,7 @@ const FileExplorer = ({
 
   return (
     <div className="file-explorer">
-      <div className="canvas-toolbar">
-        <div className="breadcrumbs">
-          {breadcrumbs.map((crumb, index) => (
-            <button
-              key={crumb.path || 'root'}
-              type="button"
-              className={index === breadcrumbs.length - 1 ? 'crumb active' : 'crumb'}
-              onClick={() => onPathChange(crumb.path)}
-            >
-              {crumb.label}
-            </button>
-          ))}
-        </div>
+      <div className="explorer-toolbar">
         <div className="view-toggle">
           <button
             type="button"
@@ -174,6 +153,11 @@ const FileExplorer = ({
             列表
           </button>
         </div>
+        {isSearchMode && (
+          <p className="search-result-hint">
+            找到 {itemsToRender.length} 个匹配
+          </p>
+        )}
       </div>
 
       {!isSearchMode && directories.length > 0 && (
@@ -182,20 +166,12 @@ const FileExplorer = ({
             <button key={dir.path} type="button" className="folder-chip" onClick={() => onPathChange(dir.path)}>
               <div className="chip-header">
                 <span>📁 {dir.name}</span>
-                <span className="muted">{dir.children?.length || 0} 个文件</span>
+                <span className="muted">{dir.children?.length || 0} 项</span>
               </div>
               {dir.meta?.systemPrompt && <p className="chip-prompt">{dir.meta.systemPrompt}</p>}
-              {!dir.meta?.systemPrompt && <p className="chip-prompt empty">添加 System Prompt 帮助创作者</p>}
             </button>
           ))}
         </div>
-      )}
-
-      {isSearchMode && (
-        <p className="muted">
-          搜索结果：{itemsToRender.length} 个匹配
-          {itemsToRender.length === 0 && '，尝试更短的关键字'}
-        </p>
       )}
 
       <div className={viewMode === 'grid' ? 'file-grid' : 'file-list'}>
@@ -222,14 +198,9 @@ const FileExplorer = ({
               )}
             </div>
             <footer className="file-meta">
-              <div>
-                <p className="file-name" title={item.path}>
-                  <HighlightedText text={item.name} highlight={searchTerm} />
-                </p>
-                <p className="muted">
-                  <HighlightedText text={item.path} highlight={searchTerm} />
-                </p>
-              </div>
+              <p className="file-name" title={item.path}>
+                <HighlightedText text={item.name} highlight={searchTerm} />
+              </p>
               {item.url && (
                 <a className="open-link" href={buildSiteUrl(item.url)} target="_blank" rel="noreferrer">
                   预览
@@ -238,8 +209,14 @@ const FileExplorer = ({
             </footer>
           </article>
         ))}
-        {itemsToRender.length === 0 && (
-          <div className="empty-placeholder">未找到匹配的 HTML，试试其它关键词。</div>
+        {itemsToRender.length === 0 && !isSearchMode && directories.length === 0 && (
+          <div className="empty-placeholder">
+            <p>此目录为空</p>
+            <p className="muted">点击右上角"+ 新建页面"开始创作</p>
+          </div>
+        )}
+        {itemsToRender.length === 0 && isSearchMode && (
+          <div className="empty-placeholder">未找到匹配的 HTML</div>
         )}
       </div>
     </div>

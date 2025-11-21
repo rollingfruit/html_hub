@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useId, useRef, useState } from 'react';
+import { FormEvent, useEffect, useRef, useState } from 'react';
 import { uploadHtml } from '../api';
 import { Project } from '../types';
 
@@ -24,7 +24,7 @@ const extractTitle = (markup: string) => {
 
 const UploadForm = ({ onUploaded, defaultPath = '', defaultFilename = '', autoFocusToken = false }: Props) => {
   const [mode, setMode] = useState<'file' | 'paste'>('paste');
-  const [path, setPath] = useState(defaultPath);
+  const [path] = useState(defaultPath);
   const [token, setToken] = useState('');
   const [content, setContent] = useState('');
   const [filename, setFilename] = useState(defaultFilename || 'untitled.html');
@@ -32,13 +32,12 @@ const UploadForm = ({ onUploaded, defaultPath = '', defaultFilename = '', autoFo
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [isError, setIsError] = useState(false);
+  const [filenameHighlight, setFilenameHighlight] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const tokenInputRef = useRef<HTMLInputElement>(null);
-  const locationId = useId();
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  useEffect(() => {
-    setPath(defaultPath);
-  }, [defaultPath]);
+  const isEditMode = Boolean(defaultFilename);
 
   useEffect(() => {
     if (defaultFilename) {
@@ -52,8 +51,10 @@ const UploadForm = ({ onUploaded, defaultPath = '', defaultFilename = '', autoFo
   useEffect(() => {
     if (autoFocusToken && tokenInputRef.current) {
       tokenInputRef.current.focus();
+    } else if (!autoFocusToken && textareaRef.current && mode === 'paste') {
+      textareaRef.current.focus();
     }
-  }, [autoFocusToken]);
+  }, [autoFocusToken, mode]);
 
   useEffect(() => {
     if (mode !== 'paste' || manualFilename) {
@@ -63,6 +64,8 @@ const UploadForm = ({ onUploaded, defaultPath = '', defaultFilename = '', autoFo
     if (extractedTitle) {
       const safe = sanitizeTitle(extractedTitle);
       setFilename(`${safe}.html`);
+      setFilenameHighlight(true);
+      setTimeout(() => setFilenameHighlight(false), 1000);
     } else if (!content.trim()) {
       setFilename('untitled.html');
     }
@@ -109,16 +112,23 @@ const UploadForm = ({ onUploaded, defaultPath = '', defaultFilename = '', autoFo
     }
   };
 
+  const displayPath = path ? path.split('/').join(' / ') : '根目录';
+
   return (
-    <form className="form-grid" onSubmit={handleSubmit}>
+    <form className="upload-form" onSubmit={handleSubmit}>
+      <div className="location-badge">
+        <span className="badge-icon">📂</span>
+        <span className="badge-text">保存至：{displayPath}</span>
+      </div>
+
       <div className="segmented-control">
         <button
           type="button"
-            className={mode === 'file' ? 'segment active' : 'segment'}
-            onClick={() => setMode('file')}
-          >
-            上传文件
-          </button>
+          className={mode === 'file' ? 'segment active' : 'segment'}
+          onClick={() => setMode('file')}
+        >
+          上传文件
+        </button>
         <button
           type="button"
           className={mode === 'paste' ? 'segment active' : 'segment'}
@@ -128,19 +138,25 @@ const UploadForm = ({ onUploaded, defaultPath = '', defaultFilename = '', autoFo
         </button>
       </div>
 
-      <div className="input-group">
-        <label htmlFor={locationId}>保存位置</label>
-        <input id={locationId} value={path || '根目录'} readOnly />
-      </div>
-
       {mode === 'file' ? (
         <div className="input-group">
-          <label htmlFor="file">HTML 文件</label>
+          <label htmlFor="file">选择 HTML 文件</label>
           <input ref={fileInputRef} id="file" type="file" accept=".html,.htm,.txt" />
         </div>
       ) : (
         <>
-          <div className="input-group">
+          <div className="code-editor-wrapper">
+            <textarea
+              ref={textareaRef}
+              id="content"
+              className="code-editor"
+              placeholder="在此粘贴你的 HTML 代码..."
+              rows={12}
+              value={content}
+              onChange={(event) => setContent(event.target.value)}
+            />
+          </div>
+          <div className={`input-group ${filenameHighlight ? 'highlight-pulse' : ''}`}>
             <label htmlFor="filename">文件名</label>
             <input
               id="filename"
@@ -151,34 +167,29 @@ const UploadForm = ({ onUploaded, defaultPath = '', defaultFilename = '', autoFo
                 setFilename(event.target.value);
               }}
             />
-          </div>
-          <div className="input-group">
-            <label htmlFor="content">HTML 内容</label>
-            <textarea
-              id="content"
-              placeholder="直接粘贴 HTML 代码..."
-              rows={10}
-              value={content}
-              onChange={(event) => setContent(event.target.value)}
-            />
+            {filenameHighlight && <small className="auto-fill-hint">已从 &lt;title&gt; 自动提取</small>}
           </div>
         </>
       )}
 
-      <div className="input-group">
-        <label htmlFor="token">权限 Token（如需覆盖）</label>
-        <input
-          id="token"
-          ref={tokenInputRef}
-          placeholder="管理员审批后会发放"
-          value={token}
-          onChange={(event) => setToken(event.target.value)}
-        />
-        <small className="muted">仅在覆盖已存在的 HTML 时需要填写 Token</small>
-      </div>
+      {isEditMode && (
+        <div className="token-section">
+          <div className="input-group">
+            <label htmlFor="token">权限 Token</label>
+            <input
+              id="token"
+              ref={tokenInputRef}
+              placeholder="输入管理员发放的 Token"
+              value={token}
+              onChange={(event) => setToken(event.target.value)}
+            />
+            <small className="muted">覆盖已存在的文件需要提供 Token</small>
+          </div>
+        </div>
+      )}
 
-      <button type="submit" className="primary" disabled={loading}>
-        {loading ? '处理中...' : mode === 'file' ? '上传 HTML' : '保存为 HTML'}
+      <button type="submit" className="primary submit-btn" disabled={loading}>
+        {loading ? '处理中...' : mode === 'file' ? '上传' : '保存'}
       </button>
       {message && <p className={isError ? 'status-error' : 'status-success'}>{message}</p>}
     </form>

@@ -21,27 +21,46 @@ const DirectoryContextCard = ({ path, meta, onEdit }: Props) => {
     }
   };
 
+  const displayName = path ? path.split('/').pop() || path : '全部内容';
+  const hasPrompt = Boolean(meta?.systemPrompt);
+
+  // 简化版：没有 prompt 时显示精简提示条
+  if (!hasPrompt && !meta?.description) {
+    return (
+      <div className="directory-context-compact">
+        <div className="compact-info">
+          <h2>{displayName}</h2>
+          <span className="muted">为此目录配置 Prompt，让 AI 理解创作风格</span>
+        </div>
+        <div className="compact-actions">
+          <button type="button" className="primary-compact" onClick={onEdit}>
+            + 配置 Prompt
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="directory-context-card">
-      <div>
-        <p className="eyebrow">当前主题</p>
-        <h2>{path || '根目录'}</h2>
-        <p className="muted">{meta?.description || '为该目录添加一句描述，帮助创作者理解内容定位。'}</p>
+      <div className="context-info">
+        <h2>{displayName}</h2>
+        {meta?.description && <p className="context-desc">{meta.description}</p>}
       </div>
       <div className="prompt-panel">
         <div className="prompt-header">
           <span>System Prompt</span>
           <div className="prompt-actions">
-            <button type="button" className="secondary" onClick={handleCopy} disabled={!meta?.systemPrompt}>
-              {copied ? '已复制' : '复制提示'}
+            <button type="button" className="ghost-compact" onClick={handleCopy} disabled={!hasPrompt}>
+              {copied ? '已复制' : '复制'}
             </button>
-            <button type="button" className="primary" onClick={onEdit}>
-              {meta?.systemPrompt ? '编辑' : '创建'}提示
+            <button type="button" className="primary-compact" onClick={onEdit}>
+              编辑
             </button>
           </div>
         </div>
-        <div className={meta?.systemPrompt ? 'prompt-body' : 'prompt-body empty'}>
-          {meta?.systemPrompt ? <pre>{meta.systemPrompt}</pre> : <span>尚未设置该主题的生成指南</span>}
+        <div className="prompt-body">
+          <pre>{meta?.systemPrompt}</pre>
         </div>
       </div>
     </div>
