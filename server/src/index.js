@@ -227,12 +227,39 @@ const createJwt = (user) =>
     { expiresIn: '4h' },
   );
 
-const authenticateAdmin = async (req, res, next) => {
+const extractBearerToken = (req) => {
   const authHeader = req.headers.authorization;
   if (!authHeader) {
+    return null;
+  }
+  const [scheme, token] = authHeader.split(' ');
+  if (!token || scheme?.toLowerCase() !== 'bearer') {
+    return null;
+  }
+  return token;
+};
+
+const resolveAdminFromRequest = (req) => {
+  const token = extractBearerToken(req);
+  if (!token) {
+    return null;
+  }
+  try {
+    const payload = jwt.verify(token, JWT_SECRET);
+    if (payload.role === ROLE.ADMIN) {
+      return payload;
+    }
+    return null;
+  } catch (error) {
+    return null;
+  }
+};
+
+const authenticateAdmin = async (req, res, next) => {
+  const token = extractBearerToken(req);
+  if (!token) {
     return res.status(401).json({ message: '未授权' });
   }
-  const [, token] = authHeader.split(' ');
   try {
     const payload = jwt.verify(token, JWT_SECRET);
     if (payload.role !== ROLE.ADMIN) {
@@ -369,6 +396,8 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
   const { path: dirPath = '', token, content, filename } = req.body;
   const hasFileUpload = Boolean(req.file);
   const hasTextUpload = !req.file && typeof content === 'string' && typeof filename === 'string';
+  const adminUser = resolveAdminFromRequest(req);
+  const isAdminRequest = Boolean(adminUser);
 
   if (!hasFileUpload && !hasTextUpload) {
     return res.status(400).json({ message: '请上传文件或粘贴 HTML 内容' });
@@ -381,7 +410,7 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
 
   try {
     const exists = await fileExists(absolutePath);
-    if (exists) {
+    if (exists && !isAdminRequest) {
       const approvedRequest = await validateAccessToken(relativePath, token, REQUEST_TYPE.MODIFY);
       if (!approvedRequest) {
         return res.status(403).json({ message: '文件已存在，请先申请修改权限' });
@@ -401,9 +430,13 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
       update: {},
       create: {
         path: relativePath,
-        owner: {
-          connect: { username: 'guest_uploader' },
-        },
+        owner: isAdminRequest
+          ? {
+              connect: { id: adminUser.sub },
+            }
+          : {
+              connect: { username: 'guest_uploader' },
+            },
       },
       include: { owner: true },
     });
@@ -423,6 +456,8 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
 
 app.delete('/api/files', async (req, res) => {
   const { path: filePath, token } = req.body;
+  const adminUser = resolveAdminFromRequest(req);
+  const isAdminRequest = Boolean(adminUser);
   if (!filePath) {
     return res.status(400).json({ message: '缺少路径' });
   }
@@ -435,9 +470,11 @@ app.delete('/api/files', async (req, res) => {
   if (!exists) {
     return res.status(404).json({ message: '文件不存在' });
   }
-  const approvedRequest = await validateAccessToken(relativePath, token, REQUEST_TYPE.DELETE);
-  if (!approvedRequest) {
-    return res.status(403).json({ message: '请先申请删除权限' });
+  if (!isAdminRequest) {
+    const approvedRequest = await validateAccessToken(relativePath, token, REQUEST_TYPE.DELETE);
+    if (!approvedRequest) {
+      return res.status(403).json({ message: '请先申请删除权限' });
+    }
   }
   await fsp.rm(absolutePath, { force: true });
   await prisma.project.delete({ where: { path: relativePath } }).catch(() => null);
@@ -445,7 +482,7 @@ app.delete('/api/files', async (req, res) => {
 });
 
 app.post('/api/request-permission', async (req, res) => {
-  const { path: targetPath, type, name, email } = req.body;
+  const { path: targetPath, type, name, email, reason = '', clientSecret } = req.body;
   const normalizedType = typeof type === 'string' ? type.toUpperCase() : type;
   if (!targetPath || !normalizedType || !Object.values(REQUEST_TYPE).includes(normalizedType)) {
     return res.status(400).json({ message: '参数错误' });
@@ -454,15 +491,69 @@ app.post('/api/request-permission', async (req, res) => {
   if (!relativePath) {
     return res.status(400).json({ message: '路径格式不正确' });
   }
+  if (!clientSecret || typeof clientSecret !== 'string') {
+    return res.status(400).json({ message: '缺少客户端密钥' });
+  }
+  const trimmedReason = typeof reason === 'string' ? reason.trim() : '';
+  if (!trimmedReason) {
+    return res.status(400).json({ message: '请填写申请理由' });
+  }
+  const clientSecretHash = await bcrypt.hash(clientSecret, 10);
   const request = await prisma.fileRequest.create({
     data: {
       projectPath: relativePath,
       requestType: normalizedType,
       requesterName: name,
       requesterEmail: email,
+      reason: trimmedReason,
+      clientSecretHash,
     },
   });
   res.json({ requestId: request.id });
+});
+
+app.post('/api/claim-token', async (req, res) => {
+  const { requestId } = req.body;
+  const clientSecretHeader = req.get('x-client-secret');
+  const clientSecretBody = typeof req.body?.clientSecret === 'string' ? req.body.clientSecret : '';
+  const clientSecretRaw = typeof clientSecretHeader === 'string' && clientSecretHeader.trim()
+    ? clientSecretHeader
+    : clientSecretBody;
+  const clientSecret = typeof clientSecretRaw === 'string' ? clientSecretRaw.trim() : '';
+  const numericId = Number(requestId);
+  if (Number.isNaN(numericId)) {
+    return res.status(400).json({ message: '请求 ID 无效' });
+  }
+  if (!clientSecret) {
+    return res.status(400).json({ message: '缺少客户端密钥' });
+  }
+  const request = await prisma.fileRequest.findUnique({ where: { id: numericId } });
+  if (!request) {
+    return res.status(404).json({ message: '请求不存在' });
+  }
+  if (!request.clientSecretHash) {
+    return res.status(400).json({ message: '请求缺少密钥信息，请重新申请' });
+  }
+  const match = await bcrypt.compare(clientSecret, request.clientSecretHash);
+  const baseResponse = {
+    status: request.status,
+    expiresAt: request.expiresAt ? request.expiresAt.toISOString() : null,
+  };
+  if (!match) {
+    return res.json(baseResponse);
+  }
+  if (
+    request.status === REQUEST_STATUS.APPROVED &&
+    request.accessToken &&
+    request.expiresAt &&
+    request.expiresAt > new Date()
+  ) {
+    return res.json({
+      ...baseResponse,
+      accessToken: request.accessToken,
+    });
+  }
+  return res.json(baseResponse);
 });
 
 app.post('/api/auth/login', async (req, res) => {

@@ -1,16 +1,20 @@
 import { useCallback, useEffect, useState } from 'react';
 import AdminLogin from '../components/AdminLogin';
 import AdminRequestsList from '../components/AdminRequestsList';
+import AdminFileManager from '../components/AdminFileManager';
 import { fetchAdminRequests } from '../api';
 import { FileRequest } from '../types';
 
 const TOKEN_KEY = 'ecs_admin_token';
+
+const AUTH_ERROR_PATTERN = /(未授权|令牌|权限不足)/;
 
 const AdminPage = () => {
   const [token, setToken] = useState<string | null>(() => localStorage.getItem(TOKEN_KEY));
   const [requests, setRequests] = useState<FileRequest[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [authMessage, setAuthMessage] = useState<string | null>(null);
 
   const loadRequests = useCallback(async () => {
     if (!token) {
@@ -21,11 +25,19 @@ const AdminPage = () => {
       const data = await fetchAdminRequests(token);
       setRequests(data.requests);
       setError(null);
+      setAuthMessage(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : '加载失败');
-      if (err instanceof Error && err.message.includes('未授权')) {
+      const message = err instanceof Error ? err.message : '加载失败';
+      const status = typeof err === 'object' && err && 'status' in err ? Number((err as { status?: number }).status) : null;
+      const isAuthError = status === 401 || AUTH_ERROR_PATTERN.test(message);
+      if (isAuthError) {
         localStorage.removeItem(TOKEN_KEY);
         setToken(null);
+        setRequests([]);
+        setAuthMessage('管理员令牌已失效，请重新登录');
+        setError(null);
+      } else {
+        setError(message);
       }
     } finally {
       setLoading(false);
@@ -39,18 +51,22 @@ const AdminPage = () => {
   const handleLogin = (newToken: string) => {
     localStorage.setItem(TOKEN_KEY, newToken);
     setToken(newToken);
+    setAuthMessage(null);
+    setError(null);
   };
 
   const handleLogout = () => {
     localStorage.removeItem(TOKEN_KEY);
     setToken(null);
     setRequests([]);
+    setError(null);
   };
 
   if (!token) {
     return (
       <section className="card">
         <h2>管理员登录</h2>
+        {authMessage && <p className="status-error">{authMessage}</p>}
         <AdminLogin onLogin={handleLogin} />
       </section>
     );
@@ -73,6 +89,7 @@ const AdminPage = () => {
         {error && <p className="status-error">{error}</p>}
         <AdminRequestsList token={token} requests={requests} onRefresh={loadRequests} />
       </section>
+      <AdminFileManager token={token} />
     </div>
   );
 };

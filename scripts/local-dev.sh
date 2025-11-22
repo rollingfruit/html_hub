@@ -61,6 +61,7 @@ run_client() {
   log "安装前端依赖"
   npm install >/dev/null
   log "启动前端 (http://$CLIENT_HOST:$CLIENT_PORT)"
+  log "管理员页面 (http://$CLIENT_HOST:$CLIENT_PORT/admin)"
   npm run dev -- --host "$CLIENT_HOST" --port "$CLIENT_PORT"
 }
 

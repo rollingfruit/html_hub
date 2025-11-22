@@ -163,6 +163,11 @@ const UserHome = () => {
     closeModal();
   };
 
+  const handleDeleteSuccess = () => {
+    loadProjects();
+    closeModal();
+  };
+
   const toggleSidebar = () => {
     if (isSidebarOpen) {
       setCachedSidebarWidth(sidebarWidth);
@@ -266,7 +271,7 @@ const UserHome = () => {
     modalContent = <PermissionRequestForm defaultPath={prefill.requestPath || currentPath} />;
   } else if (modalType === 'DELETE') {
     modalTitle = '删除文件';
-    modalContent = <DeleteForm defaultPath={prefill.deletePath} />;
+    modalContent = <DeleteForm defaultPath={prefill.deletePath} onDeleted={handleDeleteSuccess} />;
   } else if (modalType === 'PROMPT') {
     modalTitle = '编辑目录 Prompt';
     modalContent = (
@@ -325,7 +330,7 @@ const UserHome = () => {
         style={{ width: isSidebarOpen ? sidebarWidth : 0 }}
       >
         <div className="sidebar-header">
-          <h2>HTML Hub</h2>
+          <h2>HTML 网盘</h2>
           <p className="muted">粘贴你的 HTML，分享给所有人</p>
         </div>
         <div className="sidebar-section">

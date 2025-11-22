@@ -1,14 +1,31 @@
-import { DirectoryMeta, FileRequest, ProjectResponse, RequestType } from './types';
+import { DirectoryMeta, FileRequest, ProjectResponse, RequestStatus, RequestType } from './types';
+
+type ApiError = Error & { status?: number; payload?: unknown };
 
 const API_BASE =
   import.meta.env.VITE_API_BASE ||
   (import.meta.env.DEV ? 'http://127.0.0.1:3000/api' : '/api');
 
+const parseResponseBody = async (response: Response) => {
+  const text = await response.text();
+  if (!text) {
+    return {};
+  }
+  try {
+    return JSON.parse(text);
+  } catch (error) {
+    return {};
+  }
+};
+
 const handleResponse = async (response: Response) => {
-  const data = await response.json().catch(() => ({}));
+  const data = await parseResponseBody(response);
   if (!response.ok) {
     const message = data?.message || '请求失败';
-    throw new Error(message);
+    const error = new Error(message) as ApiError;
+    error.status = response.status;
+    error.payload = data;
+    throw error;
   }
   return data;
 };
@@ -23,29 +40,33 @@ type UploadPayload =
       file: File;
       path?: string;
       token?: string;
+      adminToken?: string;
     }
   | {
       content: string;
       filename: string;
       path?: string;
       token?: string;
+      adminToken?: string;
     };
 
 export const uploadHtml = async (payload: UploadPayload) => {
   const formData = new FormData();
   if ('file' in payload) {
     formData.append('file', payload.file);
-    if (payload.path) formData.append('path', payload.path);
-    if (payload.token) formData.append('token', payload.token);
   } else {
     formData.append('content', payload.content);
     formData.append('filename', payload.filename);
-    if (payload.path) formData.append('path', payload.path);
-    if (payload.token) formData.append('token', payload.token);
   }
+  if (payload.path) formData.append('path', payload.path);
+  if (payload.token) formData.append('token', payload.token);
+
+  const headers = payload.adminToken ? { Authorization: `Bearer ${payload.adminToken}` } : undefined;
+
   const resp = await fetch(`${API_BASE}/upload`, {
     method: 'POST',
     body: formData,
+    headers,
   });
   return handleResponse(resp);
 };
@@ -90,6 +111,8 @@ interface PermissionPayload {
   type: RequestType;
   name?: string;
   email?: string;
+  reason: string;
+  clientSecret: string;
 }
 
 export const requestPermission = async (payload: PermissionPayload) => {
@@ -101,11 +124,44 @@ export const requestPermission = async (payload: PermissionPayload) => {
   return handleResponse(resp);
 };
 
-export const deleteFile = async ({ path, token }: { path: string; token: string }) => {
+export const claimAccessToken = async ({
+  requestId,
+  clientSecret,
+}: {
+  requestId: number;
+  clientSecret: string;
+}): Promise<{ status: RequestStatus; accessToken?: string; expiresAt?: string | null }> => {
+  const resp = await fetch(`${API_BASE}/claim-token`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-client-secret': clientSecret,
+    },
+    body: JSON.stringify({ requestId }),
+  });
+  return handleResponse(resp);
+};
+
+export const deleteFile = async ({
+  path,
+  token,
+  adminToken,
+}: {
+  path: string;
+  token?: string;
+  adminToken?: string;
+}) => {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (adminToken) {
+    headers.Authorization = `Bearer ${adminToken}`;
+  }
   const resp = await fetch(`${API_BASE}/files`, {
     method: 'DELETE',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ path, token }),
+    headers,
+    body: JSON.stringify({
+      path,
+      token: token || undefined,
+    }),
   });
   return handleResponse(resp);
 };

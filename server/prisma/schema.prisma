@@ -43,8 +43,10 @@ model FileRequest {
   requester     User?         @relation("RequestUser", fields: [requesterId], references: [id])
   requesterName String?
   requesterEmail String?
+  reason        String?
   status        String        @default("PENDING")
   accessToken   String?       @unique
+  clientSecretHash String?
   expiresAt     DateTime?
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt

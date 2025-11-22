@@ -19,7 +19,7 @@ const AdminRequestsList = ({ token, requests, onRefresh }: Props) => {
     try {
       const result = await approveRequest(token, { requestId, action });
       setIsError(false);
-      setMessage(action === 'APPROVE' ? `Token: ${result.token}` : '已拒绝');
+      setMessage(action === 'APPROVE' ? '已批准，用户刷新票据后将自动获取权限' : '已拒绝');
       await onRefresh();
     } catch (error) {
       setIsError(true);
@@ -41,8 +41,14 @@ const AdminRequestsList = ({ token, requests, onRefresh }: Props) => {
             <strong>{request.projectPath}</strong>
             <p>
               类型：{request.requestType} · 状态：{request.status}
-              {request.accessToken && request.status === 'APPROVED' && ` · Token: ${request.accessToken}`}
             </p>
+            {request.reason && <p className="muted">理由：{request.reason}</p>}
+            {(request.requesterName || request.requesterEmail) && (
+              <p className="muted">
+                联系人：{request.requesterName || '未填写'}
+                {request.requesterEmail && ` · ${request.requesterEmail}`}
+              </p>
+            )}
           </div>
           <div className="request-actions">
             <button
