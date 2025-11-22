@@ -15,7 +15,9 @@ const sanitizeTitle = (title: string) =>
   title
     .trim()
     .toLowerCase()
-    .replace(/[^a-z0-9-_]+/g, '-')
+    // 替换空格和其他分隔符为连字符，同时保留中文字符
+    .replace(/\s+/g, '-')
+    .replace(/[\[\](){}.,;:!@#$%^&+=<>:"\/\\|?*\x00-\x1f]/g, '-')
     .replace(/-+/g, '-')
     .replace(/^-|-$/g, '') || 'untitled';
 

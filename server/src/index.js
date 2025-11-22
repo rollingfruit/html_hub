@@ -79,13 +79,14 @@ const sanitizeDirectoryPath = (inputPath = '') => {
     .split('/')
     .map((segment) => segment.trim())
     .filter(Boolean)
-    .map((segment) => segment.replace(/[^a-zA-Z0-9-_]/g, '-'));
+    .map((segment) => segment.replace(/[<>:"|?*\x00-\x1f]/g, '-'));
   return segments.join('/');
 };
 
 const sanitizeFileName = (name) => {
   const base = path.basename(name);
-  const safe = base.replace(/[^a-zA-Z0-9-_.]/g, '-');
+  // 只替换掉文件系统不安全的字符，保留中文和其他Unicode字符
+  const safe = base.replace(/[<>:"/\\|?*\x00-\x1f]/g, '-');
   const ext = path.extname(safe).toLowerCase();
   if (!['.html', '.htm'].includes(ext)) {
     return `${safe}.html`;
@@ -117,7 +118,7 @@ const sanitizeRelativeFilePath = (inputPath = '') => {
   if (segments.length === 0) {
     return '';
   }
-  const dirSegments = segments.slice(0, -1).map((segment) => segment.replace(/[^a-zA-Z0-9-_]/g, '-'));
+  const dirSegments = segments.slice(0, -1).map((segment) => segment.replace(/[<>:"|?*\x00-\x1f]/g, '-'));
   const file = sanitizeFileName(segments[segments.length - 1]);
   return [...dirSegments, file].join('/');
 };
