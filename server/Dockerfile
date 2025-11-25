@@ -1,5 +1,9 @@
 FROM docker.m.daocloud.io/library/node:20-bullseye-slim
 
+# 设置 UTF-8 环境变量，确保支持中文文件名
+ENV LANG=C.UTF-8
+ENV LC_ALL=C.UTF-8
+
 WORKDIR /app
 
 RUN sed -i 's|deb.debian.org|mirrors.aliyun.com|g' /etc/apt/sources.list \

@@ -258,8 +258,13 @@ const UploadForm = ({
 
       {mode === 'file' ? (
         <div className="input-group">
-          <label htmlFor="file">选择 HTML 文件</label>
-          <input ref={fileInputRef} id="file" type="file" accept=".html,.htm,.txt" />
+          <label htmlFor="file">选择 Web 资源文件</label>
+          <input
+            ref={fileInputRef}
+            id="file"
+            type="file"
+            accept=".html,.htm,.css,.js,.jsx,.ts,.tsx,.json,.txt,.md,.jpg,.jpeg,.png,.gif,.svg,.webp,.ico"
+          />
         </div>
       ) : (
         <>
@@ -272,6 +277,21 @@ const UploadForm = ({
               rows={12}
               value={content}
               onChange={(event) => setContent(event.target.value)}
+              onKeyDown={(event) => {
+                // 支持 Tab 键缩进
+                if (event.key === 'Tab') {
+                  event.preventDefault();
+                  const textarea = event.currentTarget;
+                  const start = textarea.selectionStart;
+                  const end = textarea.selectionEnd;
+                  const newContent = content.substring(0, start) + '  ' + content.substring(end);
+                  setContent(newContent);
+                  // 设置光标位置
+                  setTimeout(() => {
+                    textarea.selectionStart = textarea.selectionEnd = start + 2;
+                  }, 0);
+                }
+              }}
             />
           </div>
           <div className={`input-group ${filenameHighlight ? 'highlight-pulse' : ''}`}>

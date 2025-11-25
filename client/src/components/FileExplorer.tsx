@@ -1,4 +1,5 @@
 import { MouseEvent as ReactMouseEvent, useMemo, useState } from 'react';
+import { FileCode, FileImage, FileText, File } from 'lucide-react';
 import { Project, TreeNode } from '../types';
 import { buildSiteUrl } from '../lib/url';
 
@@ -36,6 +37,39 @@ type FileItem = {
 };
 
 const escapeRegExp = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+const getFileExtension = (filename: string): string => {
+  const parts = filename.split('.');
+  return parts.length > 1 ? parts.pop()?.toLowerCase() || '' : '';
+};
+
+const isImageFile = (filename: string): boolean => {
+  const ext = getFileExtension(filename);
+  return ['jpg', 'jpeg', 'png', 'gif', 'svg', 'webp', 'ico'].includes(ext);
+};
+
+const isCodeFile = (filename: string): boolean => {
+  const ext = getFileExtension(filename);
+  return ['html', 'htm', 'css', 'js', 'jsx', 'ts', 'tsx', 'json'].includes(ext);
+};
+
+const isTextFile = (filename: string): boolean => {
+  const ext = getFileExtension(filename);
+  return ['txt', 'md'].includes(ext);
+};
+
+const FileTypeIcon = ({ filename }: { filename: string }) => {
+  if (isImageFile(filename)) {
+    return <FileImage size={18} strokeWidth={2} className="file-type-icon" />;
+  }
+  if (isCodeFile(filename)) {
+    return <FileCode size={18} strokeWidth={2} className="file-type-icon" />;
+  }
+  if (isTextFile(filename)) {
+    return <FileText size={18} strokeWidth={2} className="file-type-icon" />;
+  }
+  return <File size={18} strokeWidth={2} className="file-type-icon" />;
+};
 
 const HighlightedText = ({ text, highlight }: { text: string; highlight: string }) => {
   if (!highlight) {
@@ -175,40 +209,56 @@ const FileExplorer = ({
       )}
 
       <div className={viewMode === 'grid' ? 'file-grid' : 'file-list'}>
-        {itemsToRender.map((item) => (
-          <article key={item.key} className={viewMode === 'grid' ? 'file-card grid' : 'file-card list'}>
-            <button
-              type="button"
-              aria-label="更多操作"
-              className="file-menu-button"
-              onClick={(event) => handleMenuClick(event, item)}
-            >
-              ⋯
-            </button>
-            <div className="file-preview">
-              {item.url ? (
-                <iframe
-                  title={item.name}
-                  src={buildSiteUrl(item.url)}
-                  loading="lazy"
-                  sandbox="allow-same-origin allow-scripts allow-forms"
-                />
-              ) : (
-                <div className="file-preview-fallback">HTML</div>
-              )}
-            </div>
-            <footer className="file-meta">
-              <p className="file-name" title={item.path}>
-                <HighlightedText text={item.name} highlight={searchTerm} />
-              </p>
-              {item.url && (
-                <a className="open-link" href={buildSiteUrl(item.url)} target="_blank" rel="noreferrer">
-                  预览
-                </a>
-              )}
-            </footer>
-          </article>
-        ))}
+        {itemsToRender.map((item) => {
+          const isImage = isImageFile(item.name);
+          const shouldShowIframe = !isImage && isCodeFile(item.name);
+
+          return (
+            <article key={item.key} className={viewMode === 'grid' ? 'file-card grid' : 'file-card list'}>
+              <button
+                type="button"
+                aria-label="更多操作"
+                className="file-menu-button"
+                onClick={(event) => handleMenuClick(event, item)}
+              >
+                ⋯
+              </button>
+              <div className="file-preview">
+                {isImage && item.url ? (
+                  <img
+                    src={buildSiteUrl(item.url)}
+                    alt={item.name}
+                    loading="lazy"
+                    style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                  />
+                ) : shouldShowIframe && item.url ? (
+                  <iframe
+                    title={item.name}
+                    src={buildSiteUrl(item.url)}
+                    loading="lazy"
+                    sandbox="allow-same-origin allow-scripts allow-forms"
+                  />
+                ) : (
+                  <div className="file-preview-fallback">
+                    <FileTypeIcon filename={item.name} />
+                    <span className="file-ext">{getFileExtension(item.name).toUpperCase()}</span>
+                  </div>
+                )}
+              </div>
+              <footer className="file-meta">
+                <p className="file-name" title={item.path}>
+                  <FileTypeIcon filename={item.name} />
+                  <HighlightedText text={item.name} highlight={searchTerm} />
+                </p>
+                {item.url && (
+                  <a className="open-link" href={buildSiteUrl(item.url)} target="_blank" rel="noreferrer">
+                    {isImage ? '查看' : '预览'}
+                  </a>
+                )}
+              </footer>
+            </article>
+          );
+        })}
         {itemsToRender.length === 0 && !isSearchMode && directories.length === 0 && (
           <div className="empty-placeholder">
             <p>此目录为空</p>

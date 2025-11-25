@@ -142,6 +142,33 @@ export const claimAccessToken = async ({
   return handleResponse(resp);
 };
 
+export const renameFile = async ({
+  oldPath,
+  newPath,
+  token,
+  adminToken,
+}: {
+  oldPath: string;
+  newPath: string;
+  token?: string;
+  adminToken?: string;
+}) => {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (adminToken) {
+    headers.Authorization = `Bearer ${adminToken}`;
+  }
+  const resp = await fetch(`${API_BASE}/files`, {
+    method: 'PUT',
+    headers,
+    body: JSON.stringify({
+      oldPath,
+      newPath,
+      token: token || undefined,
+    }),
+  });
+  return handleResponse(resp);
+};
+
 export const deleteFile = async ({
   path,
   token,

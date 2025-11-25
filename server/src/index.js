@@ -60,8 +60,9 @@ const upload = multer({
   dest: TMP_DIR,
   limits: { fileSize: 5 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
-    if (!file.originalname.toLowerCase().match(/\.html?$/)) {
-      return cb(new Error('仅允许上传 HTML 文件'));
+    const allowedExtensions = /\.(html?|css|js|jsx|ts|tsx|json|txt|md|jpg|jpeg|png|gif|svg|webp|ico)$/i;
+    if (!file.originalname.toLowerCase().match(allowedExtensions)) {
+      return cb(new Error('不支持的文件类型，仅允许：HTML, CSS, JS, 图片, 文本等 Web 资源'));
     }
     cb(null, true);
   },
@@ -88,7 +89,13 @@ const sanitizeFileName = (name) => {
   // 只替换掉文件系统不安全的字符，保留中文和其他Unicode字符
   const safe = base.replace(/[<>:"/\\|?*\x00-\x1f]/g, '-');
   const ext = path.extname(safe).toLowerCase();
-  if (!['.html', '.htm'].includes(ext)) {
+  const allowedExtensions = [
+    '.html', '.htm', '.css', '.js', '.jsx', '.ts', '.tsx',
+    '.json', '.txt', '.md', '.jpg', '.jpeg', '.png', '.gif',
+    '.svg', '.webp', '.ico'
+  ];
+  // 如果没有扩展名或扩展名不在允许列表中，默认添加 .html
+  if (!ext || !allowedExtensions.includes(ext)) {
     return `${safe}.html`;
   }
   return safe;
@@ -452,6 +459,63 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
       await fsp.rm(req.file.path, { force: true });
     }
     res.status(500).json({ message: '上传失败', detail: error.message });
+  }
+});
+
+app.put('/api/files', async (req, res) => {
+  const { oldPath, newPath, token } = req.body;
+  const adminUser = resolveAdminFromRequest(req);
+  const isAdminRequest = Boolean(adminUser);
+
+  if (!oldPath || !newPath) {
+    return res.status(400).json({ message: '缺少路径参数' });
+  }
+
+  const oldRelativePath = sanitizeRelativeFilePath(oldPath);
+  const newRelativePath = sanitizeRelativeFilePath(newPath);
+
+  if (!oldRelativePath || !newRelativePath) {
+    return res.status(400).json({ message: '路径格式不正确' });
+  }
+
+  const oldAbsolutePath = path.join(UPLOAD_DIR, oldRelativePath);
+  const newAbsolutePath = path.join(UPLOAD_DIR, newRelativePath);
+
+  const oldExists = await fileExists(oldAbsolutePath);
+  if (!oldExists) {
+    return res.status(404).json({ message: '源文件不存在' });
+  }
+
+  const newExists = await fileExists(newAbsolutePath);
+  if (newExists) {
+    return res.status(409).json({ message: '目标文件已存在' });
+  }
+
+  if (!isAdminRequest) {
+    const approvedRequest = await validateAccessToken(oldRelativePath, token, REQUEST_TYPE.MODIFY);
+    if (!approvedRequest) {
+      return res.status(403).json({ message: '请先申请修改权限' });
+    }
+  }
+
+  try {
+    // 确保目标目录存在
+    const newDir = path.dirname(newAbsolutePath);
+    await ensureDir(newDir);
+
+    // 重命名文件
+    await fsp.rename(oldAbsolutePath, newAbsolutePath);
+
+    // 更新数据库记录
+    await prisma.project.update({
+      where: { path: oldRelativePath },
+      data: { path: newRelativePath },
+    });
+
+    res.json({ message: '重命名成功', newPath: newRelativePath });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: '重命名失败', detail: error.message });
   }
 });
 

@@ -59,16 +59,16 @@ if [[ -z "$SSH_ALIAS" ]]; then
   exit 1
 fi
 
-echo "[deploy] 1/6 构建前端产物"
+echo "[deploy] 1/7 构建前端产物"
 pushd "$PROJECT_ROOT/client" >/dev/null
 npm install
 npm run build
 popd >/dev/null
 
-echo "[deploy] 2/6 确保远程目录存在: $REMOTE_DIR"
+echo "[deploy] 2/7 确保远程目录存在: $REMOTE_DIR"
 ssh "$SSH_ALIAS" "mkdir -p $REMOTE_DIR"
 
-echo "[deploy] 3/6 同步项目文件"
+echo "[deploy] 3/7 同步项目文件"
 RSYNC_EXCLUDES=(
   '--exclude=.git/'
   '--exclude=.idea/'
@@ -135,14 +135,45 @@ apply_db_strategy() {
   esac
 }
 
-echo "[deploy] 4/6 处理数据库策略 ($DB_STRATEGY)"
+echo "[deploy] 4/7 处理数据库策略 ($DB_STRATEGY)"
 apply_db_strategy
 
-echo "[deploy] 5/6 远程执行 docker compose 部署"
-ssh "$SSH_ALIAS" "REMOTE_DIR=$REMOTE_DIR bash -s" <<'EOF_REMOTE'
+echo "[deploy] 4.5/7 检查远程数据完整性"
+ssh "$SSH_ALIAS" "REMOTE_DIR=$REMOTE_DIR bash -s" <<'EOF_CHECK'
 set -euo pipefail
 cd "$REMOTE_DIR"
 mkdir -p server_data/uploads server_data/db
+
+# 检查生产数据库是否存在
+if [[ ! -f server_data/db/prod.db ]]; then
+  echo "[警告] 未找到生产数据库文件 server_data/db/prod.db"
+
+  # 尝试从其他位置恢复
+  if [[ -f server/prisma/db/dev.db ]]; then
+    echo "[恢复] 发现 server/prisma/db/dev.db，正在恢复..."
+    cp server/prisma/db/dev.db server_data/db/prod.db
+    echo "[恢复] 数据库已恢复到 server_data/db/prod.db"
+  else
+    echo "[提示] 这将创建一个新的空数据库"
+  fi
+fi
+
+# 显示当前数据状态
+if [[ -f server_data/db/prod.db ]]; then
+  DB_SIZE=$(du -h server_data/db/prod.db | awk '{print $1}')
+  echo "[状态] 数据库文件存在，大小: $DB_SIZE"
+else
+  echo "[状态] 数据库文件不存在，将创建新数据库"
+fi
+
+UPLOAD_COUNT=$(find server_data/uploads -type f 2>/dev/null | wc -l | tr -d ' ')
+echo "[状态] 上传文件数量: $UPLOAD_COUNT"
+EOF_CHECK
+
+echo "[deploy] 5/7 远程执行 docker compose 部署"
+ssh "$SSH_ALIAS" "REMOTE_DIR=$REMOTE_DIR bash -s" <<'EOF_REMOTE'
+set -euo pipefail
+cd "$REMOTE_DIR"
 if [[ ! -f server/.env ]]; then
   cp server/.env.example server/.env
 fi
@@ -157,7 +188,22 @@ RUN_COMPOSE down || true
 RUN_COMPOSE up -d --build
 EOF_REMOTE
 
-echo "[deploy] 6/6 清理无用镜像并输出访问地址"
+echo "[deploy] 6/7 验证部署状态"
+ssh "$SSH_ALIAS" "REMOTE_DIR=$REMOTE_DIR bash -s" <<'EOF_VERIFY'
+set -euo pipefail
+cd "$REMOTE_DIR"
+echo "[验证] 等待容器启动..."
+sleep 5
+docker ps | grep hosting || echo "[警告] 容器未运行"
+if [[ -f server_data/db/prod.db ]]; then
+  DB_SIZE=$(du -h server_data/db/prod.db | awk '{print $1}')
+  echo "[验证] 数据库文件: $DB_SIZE"
+else
+  echo "[警告] 数据库文件不存在"
+fi
+EOF_VERIFY
+
+echo "[deploy] 7/7 清理无用镜像并输出访问地址"
 ssh "$SSH_ALIAS" "docker system prune -f >/dev/null"
 PUBLIC_IP=$(ssh "$SSH_ALIAS" "curl -s ipinfo.io/ip 2>/dev/null || curl -s ifconfig.me 2>/dev/null || hostname -I | awk '{print \$1}'")
 echo "[deploy] 部署完成，可访问: http://$PUBLIC_IP"
