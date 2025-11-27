@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Copy, Sparkles, ArrowDown } from 'lucide-react';
 import { DirectoryMeta } from '../types';
 
 type Props = {
@@ -9,13 +10,18 @@ type Props = {
 
 const DirectoryContextCard = ({ path, meta, onEdit }: Props) => {
   const [copied, setCopied] = useState(false);
+  const [showGuide, setShowGuide] = useState(false);
 
   const handleCopy = async () => {
     if (!meta?.systemPrompt) return;
     try {
       await navigator.clipboard.writeText(meta.systemPrompt);
       setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      setShowGuide(true);
+      setTimeout(() => {
+        setCopied(false);
+        setShowGuide(false);
+      }, 3000);
     } catch (error) {
       setCopied(false);
     }
@@ -46,12 +52,22 @@ const DirectoryContextCard = ({ path, meta, onEdit }: Props) => {
       <div className="context-info">
         <h2>{displayName}</h2>
         {meta?.description && <p className="context-desc">{meta.description}</p>}
+        {hasPrompt && (
+          <div className="context-guide">
+            <Sparkles size={16} />
+            <span>这是该分类的创作模板。复制 Prompt 后，选择底部 AI 平台开始生成</span>
+          </div>
+        )}
       </div>
       <div className="prompt-panel">
         <div className="prompt-header">
-          <span>System Prompt</span>
+          <div className="prompt-header-left">
+            <span>System Prompt</span>
+            {hasPrompt && <span className="prompt-badge">创作母题</span>}
+          </div>
           <div className="prompt-actions">
             <button type="button" className="ghost-compact" onClick={handleCopy} disabled={!hasPrompt}>
+              <Copy size={14} />
               {copied ? '已复制' : '复制'}
             </button>
             <button type="button" className="primary-compact" onClick={onEdit}>
@@ -62,6 +78,12 @@ const DirectoryContextCard = ({ path, meta, onEdit }: Props) => {
         <div className="prompt-body">
           <pre>{meta?.systemPrompt}</pre>
         </div>
+        {showGuide && (
+          <div className="copy-guide">
+            <ArrowDown size={16} className="guide-arrow" />
+            <span>现在可以前往底部选择 AI 平台生成内容了！</span>
+          </div>
+        )}
       </div>
     </div>
   );

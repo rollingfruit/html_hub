@@ -103,6 +103,7 @@ const FileExplorer = ({
   flatResults = [],
   onFileMenuClick,
 }: Props) => {
+  // 默认使用网格视图，更像应用商店
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const segments = useMemo(() => (currentPath ? currentPath.split('/') : []), [currentPath]);
   const currentItems = useMemo(() => getNodesAtPath(tree, segments), [tree, segments]);
@@ -195,16 +196,19 @@ const FileExplorer = ({
       </div>
 
       {!isSearchMode && directories.length > 0 && (
-        <div className="directory-chips">
-          {directories.map((dir) => (
-            <button key={dir.path} type="button" className="folder-chip" onClick={() => onPathChange(dir.path)}>
-              <div className="chip-header">
-                <span>📁 {dir.name}</span>
-                <span className="muted">{dir.children?.length || 0} 项</span>
-              </div>
-              {dir.meta?.systemPrompt && <p className="chip-prompt">{dir.meta.systemPrompt}</p>}
-            </button>
-          ))}
+        <div className="directory-chips-wrapper">
+          <div className="directory-chips">
+            {directories.map((dir) => (
+              <button key={dir.path} type="button" className="folder-chip" onClick={() => onPathChange(dir.path)}>
+                <div className="chip-header">
+                  <span>📁 {dir.name}</span>
+                  <span className="muted">{dir.children?.length || 0} 项</span>
+                </div>
+                {dir.meta?.systemPrompt && <p className="chip-prompt">{dir.meta.systemPrompt}</p>}
+                {dir.meta?.description && <p className="chip-desc">{dir.meta.description}</p>}
+              </button>
+            ))}
+          </div>
         </div>
       )}
 

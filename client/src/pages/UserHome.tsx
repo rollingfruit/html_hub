@@ -1,4 +1,5 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
+import { Lightbulb, ArrowRight } from 'lucide-react';
 import UploadForm from '../components/UploadForm';
 import PermissionRequestForm from '../components/PermissionRequestForm';
 import DeleteForm from '../components/DeleteForm';
@@ -6,6 +7,7 @@ import FileExplorer from '../components/FileExplorer';
 import DirectoryTree from '../components/DirectoryTree';
 import ContextMenu, { ContextAction } from '../components/ContextMenu';
 import DirectoryContextCard from '../components/DirectoryContextCard';
+import AIDock from '../components/AIDock';
 import { createDirectory, fetchDirectoryMeta, fetchProjects, saveDirectoryMeta } from '../api';
 import { DirectoryMeta, Project, TreeNode } from '../types';
 
@@ -53,6 +55,7 @@ const UserHome = () => {
   const [newFolderPrompt, setNewFolderPrompt] = useState('');
   const [newFolderDescription, setNewFolderDescription] = useState('');
   const [modalError, setModalError] = useState<string | null>(null);
+  const [showGuide, setShowGuide] = useState(true);
 
   const loadProjects = useCallback(async () => {
     setLoading(true);
@@ -325,6 +328,7 @@ const UserHome = () => {
 
   return (
     <div className="workspace">
+      {isSidebarOpen && <div className="sidebar-overlay" onClick={toggleSidebar} />}
       <aside
         className={`sidebar ${isSidebarOpen ? '' : 'collapsed'}`}
         style={{ width: isSidebarOpen ? sidebarWidth : 0 }}
@@ -385,6 +389,50 @@ const UserHome = () => {
           {error && <p className="status-error">{error}</p>}
           {!loading && !error && (
             <>
+              {showGuide && (
+                <div className="usage-guide">
+                  <div className="guide-header">
+                    <Lightbulb size={20} />
+                    <h3>欢迎来到 AI 创作集散地</h3>
+                    <button type="button" className="ghost-icon" onClick={() => setShowGuide(false)}>
+                      ✕
+                    </button>
+                  </div>
+                  <div className="guide-steps">
+                    <div className="guide-step">
+                      <span className="step-number">1</span>
+                      <div className="step-content">
+                        <strong>浏览灵感</strong>
+                        <p>探索分类目录，查看精品作品</p>
+                      </div>
+                    </div>
+                    <ArrowRight size={18} className="step-arrow" />
+                    <div className="guide-step">
+                      <span className="step-number">2</span>
+                      <div className="step-content">
+                        <strong>复制 Prompt</strong>
+                        <p>点击目录卡片的"复制"按钮</p>
+                      </div>
+                    </div>
+                    <ArrowRight size={18} className="step-arrow" />
+                    <div className="guide-step">
+                      <span className="step-number">3</span>
+                      <div className="step-content">
+                        <strong>跳转 AI 生成</strong>
+                        <p>选择底部 AI 平台开始创作</p>
+                      </div>
+                    </div>
+                    <ArrowRight size={18} className="step-arrow" />
+                    <div className="guide-step">
+                      <span className="step-number">4</span>
+                      <div className="step-content">
+                        <strong>粘贴回来分享</strong>
+                        <p>点击"新建页面"发布你的作品</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
               <DirectoryContextCard path={currentPath} meta={currentMeta} onEdit={handlePromptAction} />
               <FileExplorer
                 tree={tree}
@@ -398,6 +446,8 @@ const UserHome = () => {
           )}
         </div>
       </section>
+
+      <AIDock currentPrompt={currentMeta?.systemPrompt} />
 
       {contextMenu && (
         <ContextMenu

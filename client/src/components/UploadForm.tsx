@@ -26,6 +26,27 @@ const extractTitle = (markup: string) => {
   return match ? match[1] : '';
 };
 
+/**
+ * 清洗从 AI 平台复制来的 Markdown 代码块
+ * 支持的格式：
+ * - ```html ... ```
+ * - ```HTML ... ```
+ * - ``` ... ``` (无语言标识)
+ */
+const cleanMarkdownCodeBlock = (text: string): string => {
+  const trimmed = text.trim();
+
+  // 匹配 Markdown 代码块：```语言标识（可选）\n内容\n```
+  const codeBlockRegex = /^```(?:html|HTML)?\s*\n([\s\S]*?)\n```$/;
+  const match = trimmed.match(codeBlockRegex);
+
+  if (match) {
+    return match[1].trim();
+  }
+
+  return text;
+};
+
 const UploadForm = ({
   onUploaded,
   defaultPath = '',
@@ -46,6 +67,7 @@ const UploadForm = ({
   const [ticket, setTicket] = useState<Ticket | null>(null);
   const [manualTokenMode, setManualTokenMode] = useState(false);
   const [ticketRefreshing, setTicketRefreshing] = useState(false);
+  const [pasteHint, setPasteHint] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const tokenInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -140,6 +162,18 @@ const UploadForm = ({
       setFilename('untitled.html');
     }
   }, [content, manualFilename, mode]);
+
+  const handlePaste = (event: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const pastedText = event.clipboardData.getData('text');
+    const cleaned = cleanMarkdownCodeBlock(pastedText);
+
+    if (cleaned !== pastedText) {
+      event.preventDefault();
+      setContent(cleaned);
+      setPasteHint('已自动清洗 Markdown 代码块标记');
+      setTimeout(() => setPasteHint(null), 3000);
+    }
+  };
 
   const handleTicketRefresh = async () => {
     if (!ticket) {
@@ -269,14 +303,21 @@ const UploadForm = ({
       ) : (
         <>
           <div className="code-editor-wrapper">
+            {pasteHint && (
+              <div className="paste-hint">
+                ✨ {pasteHint}
+              </div>
+            )}
             <textarea
               ref={textareaRef}
               id="content"
               className="code-editor"
-              placeholder="在此粘贴你的 HTML 代码..."
+              placeholder="在此粘贴你的 HTML 代码...
+支持自动清洗 Markdown 代码块（```html...```）"
               rows={12}
               value={content}
               onChange={(event) => setContent(event.target.value)}
+              onPaste={handlePaste}
               onKeyDown={(event) => {
                 // 支持 Tab 键缩进
                 if (event.key === 'Tab') {
