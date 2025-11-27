@@ -218,15 +218,12 @@ const FileExplorer = ({
           const shouldShowIframe = !isImage && isCodeFile(item.name);
 
           return (
-            <article key={item.key} className={viewMode === 'grid' ? 'file-card grid' : 'file-card list'}>
-              <button
-                type="button"
-                aria-label="更多操作"
-                className="file-menu-button"
-                onClick={(event) => handleMenuClick(event, item)}
-              >
-                ⋯
-              </button>
+            <article
+              key={item.key}
+              className={viewMode === 'grid' ? 'file-card grid' : 'file-card list'}
+              onClick={() => item.url && window.open(buildSiteUrl(item.url), '_blank', 'noopener,noreferrer')}
+              style={{ cursor: item.url ? 'pointer' : 'default' }}
+            >
               <div className="file-preview">
                 {isImage && item.url ? (
                   <img
@@ -254,11 +251,17 @@ const FileExplorer = ({
                   <FileTypeIcon filename={item.name} />
                   <HighlightedText text={item.name} highlight={searchTerm} />
                 </p>
-                {item.url && (
-                  <a className="open-link" href={buildSiteUrl(item.url)} target="_blank" rel="noreferrer">
-                    {isImage ? '查看' : '预览'}
-                  </a>
-                )}
+                <button
+                  type="button"
+                  aria-label="更多操作"
+                  className="file-menu-button-footer"
+                  onClick={(event) => {
+                    event.stopPropagation(); // 阻止事件冒泡，避免触发卡片点击
+                    handleMenuClick(event, item);
+                  }}
+                >
+                  ⋯
+                </button>
               </footer>
             </article>
           );

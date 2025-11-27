@@ -334,9 +334,40 @@ const UserHome = () => {
         style={{ width: isSidebarOpen ? sidebarWidth : 0 }}
       >
         <div className="sidebar-header">
-          <h2>HTML 网盘</h2>
-          <p className="muted">粘贴你的 HTML，分享给所有人</p>
+          <h2>AI 创作集散地</h2>
+          <p className="muted">本站托管了用户的HTML代码，打开对应页面分享给其他人</p>
         </div>
+
+        <div className="usage-guide-sidebar">
+          <div className="guide-sidebar-header">
+            <Lightbulb size={14} />
+            <strong>AI 创作流程</strong>
+            <button type="button" className="ghost-icon-mini" onClick={() => setShowGuide(!showGuide)}>
+              {showGuide ? '−' : '+'}
+            </button>
+          </div>
+          {showGuide && (
+            <div className="guide-sidebar-steps">
+              <div className="guide-sidebar-step">
+                <span className="step-num">1</span>
+                <span>浏览灵感</span>
+              </div>
+              <div className="guide-sidebar-step">
+                <span className="step-num">2</span>
+                <span>复制 Prompt</span>
+              </div>
+              <div className="guide-sidebar-step">
+                <span className="step-num">3</span>
+                <span>跳转 AI 生成</span>
+              </div>
+              <div className="guide-sidebar-step">
+                <span className="step-num">4</span>
+                <span>粘贴回来分享</span>
+              </div>
+            </div>
+          )}
+        </div>
+
         <div className="sidebar-section">
           <p className="section-title">目录</p>
           <DirectoryTree nodes={tree} activePath={currentPath} onSelectPath={setCurrentPath} />
@@ -389,51 +420,7 @@ const UserHome = () => {
           {error && <p className="status-error">{error}</p>}
           {!loading && !error && (
             <>
-              {showGuide && (
-                <div className="usage-guide">
-                  <div className="guide-header">
-                    <Lightbulb size={20} />
-                    <h3>欢迎来到 AI 创作集散地</h3>
-                    <button type="button" className="ghost-icon" onClick={() => setShowGuide(false)}>
-                      ✕
-                    </button>
-                  </div>
-                  <div className="guide-steps">
-                    <div className="guide-step">
-                      <span className="step-number">1</span>
-                      <div className="step-content">
-                        <strong>浏览灵感</strong>
-                        <p>探索分类目录，查看精品作品</p>
-                      </div>
-                    </div>
-                    <ArrowRight size={18} className="step-arrow" />
-                    <div className="guide-step">
-                      <span className="step-number">2</span>
-                      <div className="step-content">
-                        <strong>复制 Prompt</strong>
-                        <p>点击目录卡片的"复制"按钮</p>
-                      </div>
-                    </div>
-                    <ArrowRight size={18} className="step-arrow" />
-                    <div className="guide-step">
-                      <span className="step-number">3</span>
-                      <div className="step-content">
-                        <strong>跳转 AI 生成</strong>
-                        <p>选择底部 AI 平台开始创作</p>
-                      </div>
-                    </div>
-                    <ArrowRight size={18} className="step-arrow" />
-                    <div className="guide-step">
-                      <span className="step-number">4</span>
-                      <div className="step-content">
-                        <strong>粘贴回来分享</strong>
-                        <p>点击"新建页面"发布你的作品</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-              <DirectoryContextCard path={currentPath} meta={currentMeta} onEdit={handlePromptAction} />
+              {currentPath && <DirectoryContextCard path={currentPath} meta={currentMeta} onEdit={handlePromptAction} />}
               <FileExplorer
                 tree={tree}
                 currentPath={currentPath}
