@@ -1,0 +1,1973 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MD → PPTX | 华为风格智能排版</title>
+  <script src="https://cdn.jsdelivr.net/gh/gitbrent/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&family=Source+Han+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --huawei-red: #C7000B;
+      --huawei-red-light: #E8323A;
+      --huawei-red-dark: #A00008;
+      --huawei-gray-100: #F8F9FA;
+      --huawei-gray-200: #E9ECEF;
+      --huawei-gray-300: #DEE2E6;
+      --huawei-gray-400: #CED4DA;
+      --huawei-gray-500: #ADB5BD;
+      --huawei-gray-600: #6C757D;
+      --huawei-gray-700: #495057;
+      --huawei-gray-800: #343A40;
+      --huawei-gray-900: #212529;
+      --slide-width: 960px;
+      --slide-height: 540px;
+      --font-primary: 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: var(--font-primary);
+      background: var(--huawei-gray-100);
+      color: var(--huawei-gray-800);
+      min-height: 100vh;
+      overflow: hidden;
+    }
+
+    /* Header */
+    .header {
+      height: 56px;
+      background: white;
+      border-bottom: 1px solid var(--huawei-gray-200);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: 700;
+      font-size: 18px;
+      color: var(--huawei-gray-800);
+    }
+
+    .logo-icon {
+      width: 32px;
+      height: 32px;
+      background: var(--huawei-red);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: 700;
+      font-size: 14px;
+    }
+
+    .toolbar {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .toolbar-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0 12px;
+      border-right: 1px solid var(--huawei-gray-200);
+    }
+
+    .toolbar-group:last-child {
+      border-right: none;
+    }
+
+    .toolbar-label {
+      font-size: 12px;
+      color: var(--huawei-gray-500);
+      margin-right: 4px;
+    }
+
+    .toolbar-select {
+      padding: 6px 12px;
+      border: 1px solid var(--huawei-gray-300);
+      border-radius: 6px;
+      font-size: 13px;
+      background: white;
+      color: var(--huawei-gray-700);
+      cursor: pointer;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .toolbar-select:hover {
+      border-color: var(--huawei-red);
+    }
+
+    .btn {
+      padding: 8px 20px;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: none;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn-primary {
+      background: var(--huawei-red);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: var(--huawei-red-dark);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(199, 0, 11, 0.3);
+    }
+
+    .btn-secondary {
+      background: white;
+      color: var(--huawei-gray-700);
+      border: 1px solid var(--huawei-gray-300);
+    }
+
+    .btn-secondary:hover {
+      border-color: var(--huawei-red);
+      color: var(--huawei-red);
+    }
+
+    /* Main Layout */
+    .main {
+      display: flex;
+      height: calc(100vh - 56px);
+      margin-top: 56px;
+    }
+
+    /* Editor Panel */
+    .editor-panel {
+      width: 320px;
+      background: white;
+      border-right: 1px solid var(--huawei-gray-200);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .panel-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--huawei-gray-200);
+      font-weight: 500;
+      font-size: 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .page-indicator {
+      font-size: 12px;
+      color: var(--huawei-gray-500);
+      background: var(--huawei-gray-100);
+      padding: 4px 10px;
+      border-radius: 12px;
+    }
+
+    .editor-wrapper {
+      flex: 1;
+      overflow: hidden;
+    }
+
+    #markdown-editor {
+      width: 100%;
+      height: 100%;
+      border: none;
+      resize: none;
+      padding: 20px;
+      font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+      font-size: 13px;
+      line-height: 1.6;
+      color: var(--huawei-gray-800);
+      outline: none;
+    }
+
+    #markdown-editor::placeholder {
+      color: var(--huawei-gray-400);
+    }
+
+    /* Preview Panel */
+    .preview-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background: var(--huawei-gray-100);
+      overflow: hidden;
+    }
+
+    .preview-header {
+      padding: 12px 24px;
+      background: white;
+      border-bottom: 1px solid var(--huawei-gray-200);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .preview-nav {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .nav-btn {
+      width: 32px;
+      height: 32px;
+      border: 1px solid var(--huawei-gray-300);
+      background: white;
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+    }
+
+    .nav-btn:hover:not(:disabled) {
+      border-color: var(--huawei-red);
+      color: var(--huawei-red);
+    }
+
+    .nav-btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    .page-info {
+      font-size: 14px;
+      color: var(--huawei-gray-600);
+      min-width: 80px;
+      text-align: center;
+    }
+
+    .zoom-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .zoom-btn {
+      padding: 4px 12px;
+      font-size: 12px;
+      border: 1px solid var(--huawei-gray-300);
+      background: white;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .zoom-btn:hover {
+      border-color: var(--huawei-red);
+      color: var(--huawei-red);
+    }
+
+    .zoom-btn.active {
+      background: var(--huawei-red);
+      color: white;
+      border-color: var(--huawei-red);
+    }
+
+    .preview-content {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      overflow: auto;
+    }
+
+    .slide-container {
+      background: white;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+      border-radius: 4px;
+      overflow: hidden;
+      transition: transform 0.3s;
+    }
+
+    .slide-canvas {
+      width: var(--slide-width);
+      height: var(--slide-height);
+      position: relative;
+      background: white;
+      overflow: hidden;
+    }
+
+    /* Scheme Panel */
+    .scheme-panel {
+      width: 200px;
+      background: white;
+      border-left: 1px solid var(--huawei-gray-200);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .scheme-header {
+      padding: 16px 16px 12px;
+      border-bottom: 1px solid var(--huawei-gray-200);
+    }
+
+    .scheme-title {
+      font-size: 14px;
+      font-weight: 500;
+      margin-bottom: 4px;
+    }
+
+    .scheme-subtitle {
+      font-size: 11px;
+      color: var(--huawei-gray-500);
+    }
+
+    .scheme-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .scheme-item {
+      border: 2px solid var(--huawei-gray-200);
+      border-radius: 8px;
+      overflow: hidden;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .scheme-item:hover {
+      border-color: var(--huawei-gray-400);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    }
+
+    .scheme-item.active {
+      border-color: var(--huawei-red);
+      box-shadow: 0 4px 12px rgba(199, 0, 11, 0.15);
+    }
+
+    .scheme-preview {
+      aspect-ratio: 16/9;
+      background: white;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .scheme-preview .mini-slide {
+      transform: scale(0.18);
+      transform-origin: top left;
+      width: var(--slide-width);
+      height: var(--slide-height);
+      position: absolute;
+      top: 0;
+      left: 0;
+    }
+
+    .scheme-meta {
+      padding: 8px 10px;
+      background: var(--huawei-gray-50);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .scheme-name {
+      font-size: 12px;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .scheme-badge {
+      font-size: 9px;
+      padding: 2px 6px;
+      border-radius: 10px;
+      background: var(--huawei-red);
+      color: white;
+    }
+
+    .scheme-score {
+      font-size: 10px;
+      color: var(--huawei-gray-500);
+    }
+
+    /* Slide Elements */
+    .slide-top-line {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: var(--huawei-red);
+    }
+
+    .slide-title {
+      position: absolute;
+      font-weight: 700;
+      color: var(--huawei-gray-900);
+      line-height: 1.2;
+    }
+
+    .slide-section {
+      position: absolute;
+      font-weight: 500;
+      color: var(--huawei-gray-800);
+    }
+
+    .slide-text {
+      position: absolute;
+      color: var(--huawei-gray-700);
+      line-height: 1.5;
+    }
+
+    .slide-bullet {
+      position: absolute;
+      color: var(--huawei-gray-700);
+    }
+
+    .slide-bullet-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+
+    .slide-bullet-item::before {
+      content: '';
+      width: 6px;
+      height: 6px;
+      background: var(--huawei-red);
+      border-radius: 50%;
+      margin-top: 7px;
+      flex-shrink: 0;
+    }
+
+    .slide-quote {
+      position: absolute;
+      background: var(--huawei-gray-100);
+      border-left: 4px solid var(--huawei-red);
+      padding: 16px 20px;
+      color: var(--huawei-gray-700);
+      font-style: italic;
+    }
+
+    .slide-code {
+      position: absolute;
+      background: var(--huawei-gray-900);
+      color: #E0E0E0;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 12px;
+      padding: 16px;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .slide-image-placeholder {
+      position: absolute;
+      background: linear-gradient(135deg, var(--huawei-gray-100) 0%, var(--huawei-gray-200) 100%);
+      border: 2px dashed var(--huawei-gray-300);
+      border-radius: 8px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: var(--huawei-gray-500);
+    }
+
+    .placeholder-icon {
+      width: 48px;
+      height: 48px;
+      background: var(--huawei-gray-300);
+      border-radius: 8px;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .placeholder-text {
+      font-size: 12px;
+    }
+
+    .slide-page-number {
+      position: absolute;
+      bottom: 20px;
+      right: 32px;
+      font-size: 12px;
+      color: var(--huawei-gray-400);
+    }
+
+    /* Card Style for Scheme C */
+    .slide-card {
+      position: absolute;
+      background: white;
+      border: 1px solid var(--huawei-gray-300);
+      border-radius: 4px;
+      padding: 0;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+      overflow: hidden;
+    }
+
+    .slide-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 60px;
+      height: 4px;
+      background: var(--huawei-red);
+    }
+
+    .slide-card-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--huawei-red);
+      margin: 0;
+      padding: 16px 20px 8px 20px;
+      line-height: 1.4;
+    }
+
+    .slide-card-content {
+      font-size: 13px;
+      color: var(--huawei-gray-700);
+      line-height: 1.6;
+      padding: 0 20px 16px 20px;
+    }
+
+    /* Animation */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .slide-canvas > * {
+      animation: fadeIn 0.3s ease-out;
+    }
+
+    /* Page Thumbnails */
+    .page-thumbnails {
+      padding: 12px;
+      border-top: 1px solid var(--huawei-gray-200);
+      background: var(--huawei-gray-50);
+    }
+
+    .thumbnails-scroll {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding-bottom: 4px;
+    }
+
+    .thumbnail-item {
+      flex-shrink: 0;
+      width: 80px;
+      aspect-ratio: 16/9;
+      background: white;
+      border: 2px solid var(--huawei-gray-200);
+      border-radius: 4px;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+      transition: all 0.2s;
+    }
+
+    .thumbnail-item:hover {
+      border-color: var(--huawei-gray-400);
+    }
+
+    .thumbnail-item.active {
+      border-color: var(--huawei-red);
+    }
+
+    .thumbnail-number {
+      position: absolute;
+      bottom: 2px;
+      right: 4px;
+      font-size: 9px;
+      color: var(--huawei-gray-500);
+    }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(100px);
+      background: var(--huawei-gray-800);
+      color: white;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 14px;
+      opacity: 0;
+      transition: all 0.3s;
+      z-index: 1000;
+    }
+
+    .toast.show {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+    }
+  </style>
+</head>
+<body>
+  <header class="header">
+    <div class="logo">
+      <div class="logo-icon">MD</div>
+      <span>MD → PPTX 智能排版</span>
+    </div>
+    <div class="toolbar">
+      <div class="toolbar-group">
+        <span class="toolbar-label">主题</span>
+        <select class="toolbar-select" id="theme-select" disabled>
+          <option value="huawei">华为 白底红线</option>
+        </select>
+      </div>
+      <div class="toolbar-group">
+        <span class="toolbar-label">密度</span>
+        <select class="toolbar-select" id="density-select">
+          <option value="balanced">均衡</option>
+          <option value="spacious">舒展</option>
+          <option value="compact">紧凑</option>
+        </select>
+      </div>
+      <div class="toolbar-group">
+        <span class="toolbar-label">偏好</span>
+        <select class="toolbar-select" id="preference-select">
+          <option value="auto">自动</option>
+          <option value="text">偏文字</option>
+          <option value="visual">偏图表</option>
+        </select>
+      </div>
+      <div class="toolbar-group">
+        <span class="toolbar-label">标题</span>
+        <select class="toolbar-select" id="title-align-select">
+          <option value="left">居左</option>
+          <option value="center">居中</option>
+        </select>
+      </div>
+      <div class="toolbar-group">
+        <button class="btn btn-secondary" id="apply-all-scheme">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+            <rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>
+          </svg>
+          全局应用方案
+        </button>
+        <button class="btn btn-primary" id="export-btn">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+          导出 PPTX
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="main">
+    <!-- Editor Panel -->
+    <aside class="editor-panel">
+      <div class="panel-header">
+        <span>Markdown 编辑器</span>
+        <span class="page-indicator" id="page-count">0 页</span>
+      </div>
+      <div class="editor-wrapper">
+        <textarea id="markdown-editor" placeholder="在此输入 Markdown...
+
+使用 --- 分隔页面
+
+示例:
+# 第一页标题
+这是第一页内容
+
+---
+
+# 第二页标题
+- 要点一
+- 要点二"></textarea>
+      </div>
+      <div class="page-thumbnails">
+        <div class="thumbnails-scroll" id="thumbnails"></div>
+      </div>
+    </aside>
+
+    <!-- Preview Panel -->
+    <section class="preview-panel">
+      <div class="preview-header">
+        <div class="preview-nav">
+          <button class="nav-btn" id="prev-page" disabled>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="15 18 9 12 15 6"/>
+            </svg>
+          </button>
+          <span class="page-info" id="page-info">1 / 1</span>
+          <button class="nav-btn" id="next-page" disabled>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="9 18 15 12 9 6"/>
+            </svg>
+          </button>
+        </div>
+        <div class="zoom-controls">
+          <button class="zoom-btn" data-zoom="0.5">50%</button>
+          <button class="zoom-btn" data-zoom="0.75">75%</button>
+          <button class="zoom-btn active" data-zoom="1">100%</button>
+          <button class="zoom-btn" data-zoom="fit">适应</button>
+        </div>
+      </div>
+      <div class="preview-content">
+        <div class="slide-container" id="slide-container">
+          <div class="slide-canvas" id="slide-canvas"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Scheme Panel -->
+    <aside class="scheme-panel">
+      <div class="scheme-header">
+        <div class="scheme-title">排版方案</div>
+        <div class="scheme-subtitle">点击切换当前页布局</div>
+      </div>
+      <div class="scheme-list" id="scheme-list"></div>
+    </aside>
+  </main>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    // ==================== 常量与配置 ====================
+    const SLIDE_WIDTH = 960;
+    const SLIDE_HEIGHT = 540;
+    const PPTX_WIDTH = 10;  // 英寸
+    const PPTX_HEIGHT = 5.625; // 16:9
+
+    const HUAWEI_THEME = {
+      red: 'C7000B',
+      redLight: 'E8323A',
+      gray100: 'F8F9FA',
+      gray200: 'E9ECEF',
+      gray300: 'DEE2E6',
+      gray500: 'ADB5BD',
+      gray600: '6C757D',
+      gray700: '495057',
+      gray800: '343A40',
+      gray900: '212529',
+    };
+
+    const DENSITY_CONFIG = {
+      spacious: { titleSize: 40, bodySize: 18, lineHeight: 1.4, margin: 48 },
+      balanced: { titleSize: 36, bodySize: 16, lineHeight: 1.35, margin: 40 },
+      compact: { titleSize: 32, bodySize: 14, lineHeight: 1.25, margin: 32 },
+    };
+
+    // ==================== 状态管理 ====================
+    const state = {
+      slides: [],
+      currentPage: 0,
+      zoom: 1,
+      density: 'balanced',
+      preference: 'auto',
+      titleAlign: 'left',
+      pageSchemes: {}, // { pageIndex: 'A' | 'B' | 'C' }
+    };
+
+    // ==================== DOM 引用 ====================
+    const dom = {
+      editor: document.getElementById('markdown-editor'),
+      slideCanvas: document.getElementById('slide-canvas'),
+      slideContainer: document.getElementById('slide-container'),
+      schemeList: document.getElementById('scheme-list'),
+      thumbnails: document.getElementById('thumbnails'),
+      pageCount: document.getElementById('page-count'),
+      pageInfo: document.getElementById('page-info'),
+      prevBtn: document.getElementById('prev-page'),
+      nextBtn: document.getElementById('next-page'),
+      exportBtn: document.getElementById('export-btn'),
+      applyAllBtn: document.getElementById('apply-all-scheme'),
+      densitySelect: document.getElementById('density-select'),
+      preferenceSelect: document.getElementById('preference-select'),
+      titleAlignSelect: document.getElementById('title-align-select'),
+      toast: document.getElementById('toast'),
+    };
+
+    // ==================== Markdown 解析器 ====================
+    function parseMarkdown(markdown) {
+      const pages = markdown.split(/^---$/m).map(s => s.trim()).filter(s => s);
+      return pages.map(pageContent => parsePageContent(pageContent));
+    }
+
+    function parsePageContent(content) {
+      const blocks = [];
+      const lines = content.split('\n');
+      let i = 0;
+      const images = [];
+
+      // 提取图片
+      const imgRegex = /!\[([^\]]*)\]\(([^)]+)\)/g;
+      let match;
+      while ((match = imgRegex.exec(content)) !== null) {
+        images.push({ alt: match[1], url: match[2] });
+      }
+      content = content.replace(imgRegex, '').trim();
+
+      const cleanLines = content.split('\n');
+      i = 0;
+
+      while (i < cleanLines.length) {
+        const line = cleanLines[i];
+
+        // 标题 #
+        if (/^# /.test(line)) {
+          blocks.push({ type: 'title', content: line.replace(/^# /, '').trim() });
+          i++;
+          continue;
+        }
+
+        // 小节 ##
+        if (/^## /.test(line)) {
+          blocks.push({ type: 'section', content: line.replace(/^## /, '').trim() });
+          i++;
+          continue;
+        }
+
+        // 引用 >
+        if (/^> /.test(line)) {
+          let quoteContent = [];
+          while (i < cleanLines.length && /^> /.test(cleanLines[i])) {
+            quoteContent.push(cleanLines[i].replace(/^> /, ''));
+            i++;
+          }
+          blocks.push({ type: 'quote', content: quoteContent.join('\n') });
+          continue;
+        }
+
+        // 代码块 ```
+        if (/^```/.test(line)) {
+          const lang = line.replace(/^```/, '').trim();
+          i++;
+          let codeContent = [];
+          while (i < cleanLines.length && !/^```/.test(cleanLines[i])) {
+            codeContent.push(cleanLines[i]);
+            i++;
+          }
+          i++; // skip closing ```
+          blocks.push({ type: 'code', content: codeContent.join('\n'), lang });
+          continue;
+        }
+
+        // 无序列表 - 或 *
+        if (/^[-*] /.test(line)) {
+          let items = [];
+          while (i < cleanLines.length && /^[-*] /.test(cleanLines[i])) {
+            items.push(cleanLines[i].replace(/^[-*] /, '').trim());
+            i++;
+          }
+          blocks.push({ type: 'bullets', items });
+          continue;
+        }
+
+        // 有序列表 1.
+        if (/^\d+\. /.test(line)) {
+          let items = [];
+          while (i < cleanLines.length && /^\d+\. /.test(cleanLines[i])) {
+            items.push(cleanLines[i].replace(/^\d+\. /, '').trim());
+            i++;
+          }
+          blocks.push({ type: 'numbered', items });
+          continue;
+        }
+
+        // 段落
+        if (line.trim()) {
+          let paraContent = [];
+          while (i < cleanLines.length && cleanLines[i].trim() && 
+                 !/^[#>```\-*]/.test(cleanLines[i]) && !/^\d+\. /.test(cleanLines[i])) {
+            paraContent.push(cleanLines[i].trim());
+            i++;
+          }
+          blocks.push({ type: 'paragraph', content: paraContent.join(' ') });
+          continue;
+        }
+
+        i++;
+      }
+
+      // 如果没有标题，取第一个段落作为标题
+      if (!blocks.find(b => b.type === 'title') && blocks.length > 0) {
+        const firstBlock = blocks[0];
+        if (firstBlock.type === 'paragraph') {
+          firstBlock.type = 'title';
+        }
+      }
+
+      return { blocks, images };
+    }
+
+    // ==================== 布局引擎 ====================
+    function generateLayouts(pageData, pageIndex) {
+      const config = DENSITY_CONFIG[state.density];
+      const titleAlign = state.titleAlign;
+
+      const layoutA = generateLayoutA(pageData, config, titleAlign, pageIndex);
+      const layoutB = generateLayoutB(pageData, config, titleAlign, pageIndex);
+      const layoutC = generateLayoutC(pageData, config, titleAlign, pageIndex);
+
+      // 评分并选择最佳方案
+      const scores = {
+        A: scoreLayout(layoutA, pageData),
+        B: scoreLayout(layoutB, pageData),
+        C: scoreLayout(layoutC, pageData),
+      };
+
+      let recommended = 'A';
+      if (pageData.images.length > 0) {
+        recommended = pageData.blocks.filter(b => b.type === 'bullets' || b.type === 'numbered').length > 2 ? 'C' : 'A';
+      } else if (getTotalTextLength(pageData) > 400) {
+        recommended = 'B';
+      } else if (getBulletCount(pageData) > 5) {
+        recommended = 'C';
+      }
+
+      return {
+        A: { ...layoutA, score: scores.A },
+        B: { ...layoutB, score: scores.B },
+        C: { ...layoutC, score: scores.C },
+        recommended,
+      };
+    }
+
+    function getTotalTextLength(pageData) {
+      return pageData.blocks.reduce((sum, b) => {
+        if (b.content) return sum + b.content.length;
+        if (b.items) return sum + b.items.join('').length;
+        return sum;
+      }, 0);
+    }
+
+    function getBulletCount(pageData) {
+      return pageData.blocks.filter(b => b.type === 'bullets' || b.type === 'numbered')
+        .reduce((sum, b) => sum + (b.items?.length || 0), 0);
+    }
+
+    // 方案A: 经典商务版式
+    function generateLayoutA(pageData, config, titleAlign, pageIndex) {
+      const elements = [];
+      const margin = config.margin;
+      let currentY = 24; // 顶部红线下方
+
+      // 顶部红线
+      elements.push({
+        type: 'line',
+        x: 0, y: 0,
+        w: SLIDE_WIDTH, h: 4,
+        style: { fill: HUAWEI_THEME.red }
+      });
+
+      // 标题
+      const titleBlock = pageData.blocks.find(b => b.type === 'title');
+      if (titleBlock) {
+        const titleFontSize = Math.min(config.titleSize, Math.max(28, 44 - Math.floor(titleBlock.content.length / 15) * 4));
+        elements.push({
+          type: 'title',
+          x: margin, y: currentY,
+          w: SLIDE_WIDTH - margin * 2, h: titleFontSize * 1.4,
+          content: titleBlock.content,
+          style: { 
+            fontSize: titleFontSize, 
+            align: titleAlign,
+            bold: true,
+            color: HUAWEI_THEME.gray900
+          }
+        });
+        currentY += titleFontSize * 1.4 + 16;
+      }
+
+      // 内容区域
+      const contentBlocks = pageData.blocks.filter(b => b.type !== 'title');
+      const hasImages = pageData.images.length > 0;
+      const contentWidth = hasImages ? (SLIDE_WIDTH - margin * 3) * 0.6 : SLIDE_WIDTH - margin * 2;
+      const contentX = margin;
+
+      // 判断是否需要分栏
+      const totalText = getTotalTextLength(pageData);
+      const useColumns = totalText > 300 && !hasImages;
+
+      if (useColumns) {
+        // 双栏布局
+        const colWidth = (contentWidth - 24) / 2;
+        let leftY = currentY;
+        let rightY = currentY;
+        let useLeft = true;
+
+        contentBlocks.forEach(block => {
+          const targetY = useLeft ? leftY : rightY;
+          const targetX = useLeft ? contentX : contentX + colWidth + 24;
+          const result = renderBlock(block, targetX, targetY, colWidth, config, elements);
+          
+          if (useLeft) {
+            leftY = result.nextY;
+          } else {
+            rightY = result.nextY;
+          }
+          useLeft = !useLeft;
+        });
+      } else {
+        // 单栏布局
+        contentBlocks.forEach(block => {
+          const result = renderBlock(block, contentX, currentY, contentWidth, config, elements);
+          currentY = result.nextY;
+        });
+      }
+
+      // 图片占位
+      if (hasImages) {
+        const imgX = SLIDE_WIDTH - margin - (SLIDE_WIDTH - margin * 3) * 0.35;
+        const imgY = titleBlock ? config.titleSize * 1.4 + 40 : 40;
+        const imgW = (SLIDE_WIDTH - margin * 3) * 0.35;
+        const imgH = SLIDE_HEIGHT - imgY - 60;
+
+        pageData.images.forEach((img, idx) => {
+          const perH = imgH / Math.min(pageData.images.length, 2);
+          elements.push({
+            type: 'imagePlaceholder',
+            x: imgX, y: imgY + idx * perH,
+            w: imgW, h: perH - 8,
+            content: img.alt || `图片 ${idx + 1}`,
+            style: {}
+          });
+        });
+      }
+
+      // 页码
+      elements.push({
+        type: 'pageNumber',
+        x: SLIDE_WIDTH - margin, y: SLIDE_HEIGHT - 28,
+        content: String(pageIndex + 1),
+        style: { fontSize: 12, color: HUAWEI_THEME.gray500, align: 'right' }
+      });
+
+      return { elements, scheme: 'A', name: '经典商务' };
+    }
+
+    // 方案B: 杂志式信息编排
+    function generateLayoutB(pageData, config, titleAlign, pageIndex) {
+      const elements = [];
+      const margin = config.margin;
+      let currentY = 20;
+
+      // 顶部红线（内容区宽度）
+      elements.push({
+        type: 'line',
+        x: margin, y: 0,
+        w: SLIDE_WIDTH - margin * 2, h: 3,
+        style: { fill: HUAWEI_THEME.red }
+      });
+
+      // 压缩标题区
+      const titleBlock = pageData.blocks.find(b => b.type === 'title');
+      if (titleBlock) {
+        const titleFontSize = Math.min(config.titleSize - 4, 32);
+        elements.push({
+          type: 'title',
+          x: margin, y: currentY,
+          w: SLIDE_WIDTH - margin * 2, h: titleFontSize * 1.2,
+          content: titleBlock.content,
+          style: { 
+            fontSize: titleFontSize, 
+            align: titleAlign,
+            bold: true,
+            color: HUAWEI_THEME.gray900
+          }
+        });
+        currentY += titleFontSize * 1.2 + 12;
+      }
+
+      // 卡片化分区
+      const contentBlocks = pageData.blocks.filter(b => b.type !== 'title');
+      const hasQuote = contentBlocks.some(b => b.type === 'quote');
+
+      contentBlocks.forEach(block => {
+        if (block.type === 'quote') {
+          // 强化引用块
+          elements.push({
+            type: 'quote',
+            x: margin, y: currentY,
+            w: SLIDE_WIDTH - margin * 2, h: 60,
+            content: block.content,
+            style: { 
+              fontSize: config.bodySize + 2, 
+              italic: true,
+              color: HUAWEI_THEME.gray700,
+              background: HUAWEI_THEME.gray100,
+              borderLeft: HUAWEI_THEME.red
+            }
+          });
+          currentY += 72;
+        } else if (block.type === 'code') {
+          elements.push({
+            type: 'code',
+            x: margin, y: currentY,
+            w: SLIDE_WIDTH - margin * 2, h: Math.min(block.content.split('\n').length * 18 + 24, 160),
+            content: block.content.split('\n').slice(0, 8).join('\n'),
+            style: { fontSize: 11, color: 'E0E0E0', background: HUAWEI_THEME.gray900 }
+          });
+          currentY += Math.min(block.content.split('\n').length * 18 + 32, 168);
+        } else {
+          const result = renderBlock(block, margin, currentY, SLIDE_WIDTH - margin * 2, config, elements);
+          currentY = result.nextY;
+        }
+      });
+
+      // 图片占位（底部横条）
+      if (pageData.images.length > 0) {
+        const imgH = 100;
+        const imgW = (SLIDE_WIDTH - margin * 2 - 16 * (pageData.images.length - 1)) / pageData.images.length;
+        pageData.images.slice(0, 3).forEach((img, idx) => {
+          elements.push({
+            type: 'imagePlaceholder',
+            x: margin + idx * (imgW + 16), y: SLIDE_HEIGHT - imgH - 40,
+            w: imgW, h: imgH,
+            content: img.alt || `图片 ${idx + 1}`,
+            style: {}
+          });
+        });
+      }
+
+      // 页码
+      elements.push({
+        type: 'pageNumber',
+        x: SLIDE_WIDTH - margin, y: SLIDE_HEIGHT - 28,
+        content: String(pageIndex + 1),
+        style: { fontSize: 12, color: HUAWEI_THEME.gray500, align: 'right' }
+      });
+
+      return { elements, scheme: 'B', name: '杂志编排' };
+    }
+
+    // 方案C: 卡片矩阵
+    function generateLayoutC(pageData, config, titleAlign, pageIndex) {
+      const elements = [];
+      const margin = config.margin;
+      let currentY = 20;
+
+      // 顶部红线
+      elements.push({
+        type: 'line',
+        x: 0, y: 0,
+        w: SLIDE_WIDTH, h: 4,
+        style: { fill: HUAWEI_THEME.red }
+      });
+
+      // 标题
+      const titleBlock = pageData.blocks.find(b => b.type === 'title');
+      if (titleBlock) {
+        elements.push({
+          type: 'title',
+          x: margin, y: currentY,
+          w: SLIDE_WIDTH - margin * 2, h: 36,
+          content: titleBlock.content,
+          style: { 
+            fontSize: 30, 
+            align: 'center',
+            bold: true,
+            color: HUAWEI_THEME.gray900
+          }
+        });
+        currentY += 52;
+      }
+
+      // 收集所有要点
+      const bullets = [];
+      const otherBlocks = [];
+
+      pageData.blocks.filter(b => b.type !== 'title').forEach(block => {
+        if (block.type === 'bullets' || block.type === 'numbered') {
+          block.items.forEach(item => bullets.push(item));
+        } else if (block.type === 'section') {
+          bullets.push({ isSection: true, content: block.content });
+        } else {
+          otherBlocks.push(block);
+        }
+      });
+
+      // 卡片矩阵布局
+      const cardCount = Math.min(bullets.length, 6);
+      const cols = cardCount <= 2 ? cardCount : (cardCount <= 4 ? 2 : 3);
+      const rows = Math.ceil(cardCount / cols);
+      const cardGap = 16;
+      const cardW = (SLIDE_WIDTH - margin * 2 - cardGap * (cols - 1)) / cols;
+      const availableHeight = SLIDE_HEIGHT - currentY - 30; // 底部留30px给页码
+      const cardH = Math.max((availableHeight - cardGap * (rows - 1)) / rows, 150); // 最小高度150px
+
+      // Debug logging
+      console.log(`[Layout C] Page ${pageIndex + 1}: currentY=${currentY}, availableHeight=${availableHeight}, cardH=${cardH}, cardW=${cardW}, rows=${rows}, cols=${cols}`);
+
+      bullets.slice(0, cardCount).forEach((item, idx) => {
+        const row = Math.floor(idx / cols);
+        const col = idx % cols;
+        const x = margin + col * (cardW + cardGap);
+        const y = currentY + row * (cardH + cardGap);
+
+        const isSection = typeof item === 'object' && item.isSection;
+        const content = isSection ? item.content : item;
+
+        // Debug: log card positions
+        if (idx === 0) {
+          console.log(`[Card ${idx + 1}] x=${x}, y=${y}, w=${cardW}, h=${cardH}`);
+        }
+
+        elements.push({
+          type: 'card',
+          x, y, w: cardW, h: cardH,
+          content: content,
+          cardIndex: idx + 1,
+          style: {
+            fontSize: config.bodySize,
+            titleColor: HUAWEI_THEME.red,
+            contentColor: HUAWEI_THEME.gray700
+          }
+        });
+      });
+
+      // 图片占位（右侧栏）
+      if (pageData.images.length > 0 && cardCount < 4) {
+        const imgW = cardW;
+        const imgH = cardH;
+        pageData.images.slice(0, 2).forEach((img, idx) => {
+          elements.push({
+            type: 'imagePlaceholder',
+            x: SLIDE_WIDTH - margin - imgW, 
+            y: currentY + idx * (imgH + cardGap),
+            w: imgW, h: imgH,
+            content: img.alt || `图片 ${idx + 1}`,
+            style: {}
+          });
+        });
+      }
+
+      // 页码
+      elements.push({
+        type: 'pageNumber',
+        x: SLIDE_WIDTH - margin, y: SLIDE_HEIGHT - 28,
+        content: String(pageIndex + 1),
+        style: { fontSize: 12, color: HUAWEI_THEME.gray500, align: 'right' }
+      });
+
+      return { elements, scheme: 'C', name: '卡片矩阵' };
+    }
+
+    function renderBlock(block, x, y, maxWidth, config, elements) {
+      const fontSize = config.bodySize;
+      const lineHeight = config.lineHeight;
+      let nextY = y;
+
+      switch (block.type) {
+        case 'section':
+          elements.push({
+            type: 'section',
+            x, y: nextY,
+            w: maxWidth, h: 24,
+            content: block.content,
+            style: { fontSize: fontSize + 4, bold: true, color: HUAWEI_THEME.gray800 }
+          });
+          nextY += 32;
+          break;
+
+        case 'paragraph':
+          const paraLines = Math.ceil(block.content.length / (maxWidth / (fontSize * 0.6)));
+          const paraH = paraLines * fontSize * lineHeight;
+          elements.push({
+            type: 'text',
+            x, y: nextY,
+            w: maxWidth, h: paraH,
+            content: block.content,
+            style: { fontSize, lineHeight, color: HUAWEI_THEME.gray700 }
+          });
+          nextY += paraH + 12;
+          break;
+
+        case 'bullets':
+        case 'numbered':
+          block.items.forEach((item, idx) => {
+            elements.push({
+              type: block.type === 'bullets' ? 'bullet' : 'numbered',
+              x, y: nextY,
+              w: maxWidth, h: fontSize * lineHeight,
+              content: item,
+              index: idx + 1,
+              style: { fontSize, lineHeight, color: HUAWEI_THEME.gray700 }
+            });
+            nextY += fontSize * lineHeight + 4;
+          });
+          nextY += 8;
+          break;
+
+        case 'quote':
+          elements.push({
+            type: 'quote',
+            x, y: nextY,
+            w: maxWidth, h: 56,
+            content: block.content,
+            style: { 
+              fontSize: fontSize + 1, 
+              italic: true, 
+              color: HUAWEI_THEME.gray700,
+              background: HUAWEI_THEME.gray100,
+              borderLeft: HUAWEI_THEME.red
+            }
+          });
+          nextY += 68;
+          break;
+
+        case 'code':
+          const codeLines = block.content.split('\n').slice(0, 6);
+          const codeH = codeLines.length * 16 + 24;
+          elements.push({
+            type: 'code',
+            x, y: nextY,
+            w: maxWidth, h: codeH,
+            content: codeLines.join('\n'),
+            style: { fontSize: 11, color: 'E0E0E0', background: HUAWEI_THEME.gray900 }
+          });
+          nextY += codeH + 12;
+          break;
+      }
+
+      return { nextY };
+    }
+
+    function scoreLayout(layout, pageData) {
+      let score = 100;
+      
+      // 检查溢出
+      const maxY = Math.max(...layout.elements.map(e => (e.y || 0) + (e.h || 0)));
+      if (maxY > SLIDE_HEIGHT - 20) score -= 30;
+
+      // 内容密度 (65%-82% 为佳)
+      const usedArea = layout.elements.reduce((sum, e) => sum + (e.w || 0) * (e.h || 0), 0);
+      const totalArea = SLIDE_WIDTH * SLIDE_HEIGHT;
+      const density = usedArea / totalArea;
+      if (density < 0.4) score -= 15;
+      if (density > 0.85) score -= 10;
+
+      // 字号评分
+      const textElements = layout.elements.filter(e => e.style?.fontSize);
+      const avgFontSize = textElements.reduce((sum, e) => sum + e.style.fontSize, 0) / (textElements.length || 1);
+      if (avgFontSize < 14) score -= 20;
+
+      return Math.max(0, Math.min(100, score));
+    }
+
+    // ==================== 渲染器 ====================
+    function renderSlideToHTML(layout, container) {
+      container.innerHTML = '';
+
+      layout.elements.forEach(el => {
+        const div = document.createElement('div');
+        
+        switch (el.type) {
+          case 'line':
+            div.className = 'slide-top-line';
+            div.style.cssText = `
+              left: ${el.x}px; top: ${el.y}px;
+              width: ${el.w}px; height: ${el.h}px;
+              background: #${el.style.fill};
+            `;
+            break;
+
+          case 'title':
+            div.className = 'slide-title';
+            div.style.cssText = `
+              left: ${el.x}px; top: ${el.y}px;
+              width: ${el.w}px;
+              font-size: ${el.style.fontSize}px;
+              text-align: ${el.style.align};
+              font-weight: ${el.style.bold ? '700' : '400'};
+              color: #${el.style.color};
+            `;
+            div.textContent = el.content;
+            break;
+
+          case 'section':
+            div.className = 'slide-section';
+            div.style.cssText = `
+              left: ${el.x}px; top: ${el.y}px;
+              width: ${el.w}px;
+              font-size: ${el.style.fontSize}px;
+              font-weight: ${el.style.bold ? '600' : '400'};
+              color: #${el.style.color};
+            `;
+            div.textContent = el.content;
+            break;
+
+          case 'text':
+            div.className = 'slide-text';
+            div.style.cssText = `
+              left: ${el.x}px; top: ${el.y}px;
+              width: ${el.w}px;
+              font-size: ${el.style.fontSize}px;
+              line-height: ${el.style.lineHeight};
+              color: #${el.style.color};
+            `;
+            div.textContent = el.content;
+            break;
+
+          case 'bullet':
+            div.className = 'slide-bullet';
+            div.style.cssText = `
+              left: ${el.x}px; top: ${el.y}px;
+              width: ${el.w}px;
+              font-size: ${el.style.fontSize}px;
+              line-height: ${el.style.lineHeight};
+              color: #${el.style.color};
+            `;
+            div.innerHTML = `<div class="slide-bullet-item">${el.content}</div>`;
+            break;
+
+          case 'numbered':
+            div.className = 'slide-bullet';
+            div.style.cssText = `
+              left: ${el.x}px; top: ${el.y}px;
+              width: ${el.w}px;
+              font-size: ${el.style.fontSize}px;
+              line-height: ${el.style.lineHeight};
+              color: #${el.style.color};
+            `;
+            div.innerHTML = `<div style="display:flex;gap:8px;"><span style="color:#C7000B;font-weight:600;">${el.index}.</span>${el.content}</div>`;
+            break;
+
+          case 'quote':
+            div.className = 'slide-quote';
+            div.style.cssText = `
+              left: ${el.x}px; top: ${el.y}px;
+              width: ${el.w}px; height: ${el.h}px;
+              font-size: ${el.style.fontSize}px;
+              font-style: ${el.style.italic ? 'italic' : 'normal'};
+              color: #${el.style.color};
+              background: #${el.style.background};
+              border-left-color: #${el.style.borderLeft};
+            `;
+            div.textContent = el.content;
+            break;
+
+          case 'code':
+            div.className = 'slide-code';
+            div.style.cssText = `
+              left: ${el.x}px; top: ${el.y}px;
+              width: ${el.w}px; height: ${el.h}px;
+              font-size: ${el.style.fontSize}px;
+              background: #${el.style.background};
+            `;
+            div.innerHTML = `<pre style="margin:0;white-space:pre-wrap;color:#${el.style.color}">${escapeHtml(el.content)}</pre>`;
+            break;
+
+          case 'imagePlaceholder':
+            div.className = 'slide-image-placeholder';
+            div.style.cssText = `
+              left: ${el.x}px; top: ${el.y}px;
+              width: ${el.w}px; height: ${el.h}px;
+            `;
+            div.innerHTML = `
+              <div class="placeholder-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                  <circle cx="8.5" cy="8.5" r="1.5"/>
+                  <polyline points="21 15 16 10 5 21"/>
+                </svg>
+              </div>
+              <span class="placeholder-text">${el.content}</span>
+            `;
+            break;
+
+          case 'card':
+            div.className = 'slide-card';
+            div.style.cssText = `
+              left: ${el.x}px; top: ${el.y}px;
+              width: ${el.w}px; height: ${el.h}px;
+            `;
+            div.innerHTML = `
+              <div class="slide-card-title">要点 ${el.cardIndex}</div>
+              <div class="slide-card-content">${el.content}</div>
+            `;
+            break;
+
+          case 'pageNumber':
+            div.className = 'slide-page-number';
+            div.style.cssText = `
+              right: 32px; bottom: 20px;
+              font-size: ${el.style.fontSize}px;
+              color: #${el.style.color};
+            `;
+            div.textContent = el.content;
+            break;
+        }
+
+        container.appendChild(div);
+      });
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    // ==================== PPTX 导出 ====================
+    function exportToPPTX() {
+      const pptx = new PptxGenJS();
+      pptx.layout = 'LAYOUT_WIDE';
+      pptx.author = 'MD2PPTX';
+      pptx.title = 'Markdown Presentation';
+
+      state.slides.forEach((slideData, idx) => {
+        const scheme = state.pageSchemes[idx] || slideData.layouts.recommended;
+        const layout = slideData.layouts[scheme];
+        const slide = pptx.addSlide();
+
+        layout.elements.forEach(el => {
+          const x = (el.x / SLIDE_WIDTH) * PPTX_WIDTH;
+          const y = (el.y / SLIDE_HEIGHT) * PPTX_HEIGHT;
+          const w = (el.w / SLIDE_WIDTH) * PPTX_WIDTH;
+          const h = (el.h / SLIDE_HEIGHT) * PPTX_HEIGHT;
+
+          switch (el.type) {
+            case 'line':
+              slide.addShape(pptx.ShapeType.rect, {
+                x, y, w, h,
+                fill: { color: el.style.fill },
+                line: { color: el.style.fill, width: 0 }
+              });
+              break;
+
+            case 'title':
+            case 'section':
+            case 'text':
+              slide.addText(el.content, {
+                x, y, w, h,
+                fontSize: el.style.fontSize * 0.75,
+                fontFace: 'Microsoft YaHei',
+                color: el.style.color,
+                bold: el.style.bold || false,
+                align: el.style.align || 'left',
+                valign: 'top'
+              });
+              break;
+
+            case 'bullet':
+            case 'numbered':
+              slide.addText([{
+                text: el.content,
+                options: {
+                  bullet: el.type === 'bullet' ? { type: 'bullet', color: HUAWEI_THEME.red } : { type: 'number' },
+                  color: el.style.color
+                }
+              }], {
+                x, y, w, h,
+                fontSize: el.style.fontSize * 0.75,
+                fontFace: 'Microsoft YaHei',
+                valign: 'top'
+              });
+              break;
+
+            case 'quote':
+              slide.addShape(pptx.ShapeType.rect, {
+                x, y, w, h,
+                fill: { color: el.style.background },
+                line: { color: el.style.background, width: 0 }
+              });
+              slide.addShape(pptx.ShapeType.rect, {
+                x, y, w: 0.05, h,
+                fill: { color: el.style.borderLeft },
+                line: { color: el.style.borderLeft, width: 0 }
+              });
+              slide.addText(el.content, {
+                x: x + 0.15, y, w: w - 0.2, h,
+                fontSize: el.style.fontSize * 0.75,
+                fontFace: 'Microsoft YaHei',
+                color: el.style.color,
+                italic: el.style.italic,
+                valign: 'middle'
+              });
+              break;
+
+            case 'code':
+              slide.addShape(pptx.ShapeType.rect, {
+                x, y, w, h,
+                fill: { color: el.style.background },
+                line: { color: el.style.background, width: 0 }
+              });
+              slide.addText(el.content, {
+                x: x + 0.1, y: y + 0.1, w: w - 0.2, h: h - 0.2,
+                fontSize: 9,
+                fontFace: 'Consolas',
+                color: el.style.color,
+                valign: 'top'
+              });
+              break;
+
+            case 'imagePlaceholder':
+              slide.addShape(pptx.ShapeType.rect, {
+                x, y, w, h,
+                fill: { color: HUAWEI_THEME.gray100 },
+                line: { color: HUAWEI_THEME.gray300, width: 1, dashType: 'dash' }
+              });
+              slide.addText(el.content, {
+                x, y: y + h/2 - 0.2, w, h: 0.4,
+                fontSize: 10,
+                fontFace: 'Microsoft YaHei',
+                color: HUAWEI_THEME.gray500,
+                align: 'center',
+                valign: 'middle'
+              });
+              break;
+
+            case 'card':
+              // 卡片背景和边框
+              slide.addShape(pptx.ShapeType.rect, {
+                x, y, w, h,
+                fill: { color: 'FFFFFF' },
+                line: { color: HUAWEI_THEME.gray300, width: 1 },
+                shadow: { type: 'outer', blur: 3, offset: 1, angle: 90, color: '000000', opacity: 0.1 }
+              });
+
+              // 红色顶部标记条（60px = 0.625英寸在10英寸宽度下）
+              const redBarWidth = (60 / SLIDE_WIDTH) * PPTX_WIDTH;
+              const redBarHeight = (4 / SLIDE_HEIGHT) * PPTX_HEIGHT;
+              slide.addShape(pptx.ShapeType.rect, {
+                x: x, y: y, w: redBarWidth, h: redBarHeight,
+                fill: { color: HUAWEI_THEME.red },
+                line: { width: 0 }
+              });
+
+              // 计算内边距（20px转英寸）
+              const paddingX = (20 / SLIDE_WIDTH) * PPTX_WIDTH;
+              const paddingTop = (16 / SLIDE_HEIGHT) * PPTX_HEIGHT;
+              const titleHeight = (30 / SLIDE_HEIGHT) * PPTX_HEIGHT; // 标题区域高度
+
+              // 卡片标题
+              slide.addText(`要点 ${el.cardIndex}`, {
+                x: x + paddingX,
+                y: y + paddingTop,
+                w: w - paddingX * 2,
+                h: titleHeight,
+                fontSize: 11,
+                fontFace: 'Microsoft YaHei',
+                color: HUAWEI_THEME.red,
+                bold: true,
+                valign: 'top'
+              });
+
+              // 卡片内容
+              const contentPaddingTop = (8 / SLIDE_HEIGHT) * PPTX_HEIGHT;
+              const bottomPadding = (16 / SLIDE_HEIGHT) * PPTX_HEIGHT;
+              slide.addText(el.content, {
+                x: x + paddingX,
+                y: y + paddingTop + titleHeight + contentPaddingTop,
+                w: w - paddingX * 2,
+                h: h - paddingTop - titleHeight - contentPaddingTop - bottomPadding,
+                fontSize: el.style.fontSize * 0.65,
+                fontFace: 'Microsoft YaHei',
+                color: el.style.contentColor,
+                valign: 'top'
+              });
+              break;
+
+            case 'pageNumber':
+              slide.addText(el.content, {
+                x: PPTX_WIDTH - 0.6, y: PPTX_HEIGHT - 0.4, w: 0.5, h: 0.3,
+                fontSize: 10,
+                fontFace: 'Microsoft YaHei',
+                color: el.style.color,
+                align: 'right'
+              });
+              break;
+          }
+        });
+      });
+
+      pptx.writeFile({ fileName: 'presentation.pptx' });
+      showToast('PPTX 导出成功！');
+    }
+
+    // ==================== UI 更新 ====================
+    function updateUI() {
+      const markdown = dom.editor.value;
+      const pages = parseMarkdown(markdown);
+      
+      state.slides = pages.map((pageData, idx) => ({
+        data: pageData,
+        layouts: generateLayouts(pageData, idx)
+      }));
+
+      dom.pageCount.textContent = `${state.slides.length} 页`;
+      
+      updateThumbnails();
+      updatePreview();
+      updateSchemeList();
+      updateNavigation();
+    }
+
+    function updatePreview() {
+      if (state.slides.length === 0) {
+        dom.slideCanvas.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#ADB5BD;">输入 Markdown 开始</div>';
+        return;
+      }
+
+      const slideData = state.slides[state.currentPage];
+      const scheme = state.pageSchemes[state.currentPage] || slideData.layouts.recommended;
+      const layout = slideData.layouts[scheme];
+      
+      renderSlideToHTML(layout, dom.slideCanvas);
+    }
+
+    function updateSchemeList() {
+      if (state.slides.length === 0) {
+        dom.schemeList.innerHTML = '<div style="padding:20px;text-align:center;color:#ADB5BD;font-size:13px;">暂无页面</div>';
+        return;
+      }
+
+      const slideData = state.slides[state.currentPage];
+      const currentScheme = state.pageSchemes[state.currentPage] || slideData.layouts.recommended;
+
+      dom.schemeList.innerHTML = ['A', 'B', 'C'].map(s => {
+        const layout = slideData.layouts[s];
+        const isActive = s === currentScheme;
+        const isRecommended = s === slideData.layouts.recommended;
+
+        return `
+          <div class="scheme-item ${isActive ? 'active' : ''}" data-scheme="${s}">
+            <div class="scheme-preview">
+              <div class="mini-slide" id="mini-${s}"></div>
+            </div>
+            <div class="scheme-meta">
+              <span class="scheme-name">
+                方案 ${s}
+                ${isRecommended ? '<span class="scheme-badge">推荐</span>' : ''}
+              </span>
+              <span class="scheme-score">${layout.score}分</span>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      // 渲染缩略图
+      ['A', 'B', 'C'].forEach(s => {
+        const miniSlide = document.getElementById(`mini-${s}`);
+        if (miniSlide) {
+          renderSlideToHTML(slideData.layouts[s], miniSlide);
+        }
+      });
+
+      // 绑定点击事件
+      dom.schemeList.querySelectorAll('.scheme-item').forEach(item => {
+        item.addEventListener('click', () => {
+          const scheme = item.dataset.scheme;
+          state.pageSchemes[state.currentPage] = scheme;
+          updatePreview();
+          updateSchemeList();
+        });
+      });
+    }
+
+    function updateThumbnails() {
+      dom.thumbnails.innerHTML = state.slides.map((_, idx) => `
+        <div class="thumbnail-item ${idx === state.currentPage ? 'active' : ''}" data-page="${idx}">
+          <span class="thumbnail-number">${idx + 1}</span>
+        </div>
+      `).join('');
+
+      dom.thumbnails.querySelectorAll('.thumbnail-item').forEach(item => {
+        item.addEventListener('click', () => {
+          state.currentPage = parseInt(item.dataset.page);
+          updatePreview();
+          updateSchemeList();
+          updateThumbnails();
+          updateNavigation();
+        });
+      });
+    }
+
+    function updateNavigation() {
+      dom.pageInfo.textContent = state.slides.length > 0 
+        ? `${state.currentPage + 1} / ${state.slides.length}` 
+        : '0 / 0';
+      
+      dom.prevBtn.disabled = state.currentPage <= 0;
+      dom.nextBtn.disabled = state.currentPage >= state.slides.length - 1;
+    }
+
+    function setZoom(zoom) {
+      if (zoom === 'fit') {
+        const container = dom.slideContainer.parentElement;
+        const maxW = container.clientWidth - 48;
+        const maxH = container.clientHeight - 48;
+        zoom = Math.min(maxW / SLIDE_WIDTH, maxH / SLIDE_HEIGHT);
+      }
+      state.zoom = zoom;
+      dom.slideContainer.style.transform = `scale(${zoom})`;
+      
+      document.querySelectorAll('.zoom-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.zoom == zoom || (btn.dataset.zoom === 'fit' && zoom !== 1 && zoom !== 0.75 && zoom !== 0.5));
+      });
+    }
+
+    function showToast(msg) {
+      dom.toast.textContent = msg;
+      dom.toast.classList.add('show');
+      setTimeout(() => dom.toast.classList.remove('show'), 2500);
+    }
+
+    // ==================== 事件绑定 ====================
+    dom.editor.addEventListener('input', debounce(updateUI, 300));
+
+    dom.prevBtn.addEventListener('click', () => {
+      if (state.currentPage > 0) {
+        state.currentPage--;
+        updatePreview();
+        updateSchemeList();
+        updateThumbnails();
+        updateNavigation();
+      }
+    });
+
+    dom.nextBtn.addEventListener('click', () => {
+      if (state.currentPage < state.slides.length - 1) {
+        state.currentPage++;
+        updatePreview();
+        updateSchemeList();
+        updateThumbnails();
+        updateNavigation();
+      }
+    });
+
+    document.querySelectorAll('.zoom-btn').forEach(btn => {
+      btn.addEventListener('click', () => setZoom(btn.dataset.zoom === 'fit' ? 'fit' : parseFloat(btn.dataset.zoom)));
+    });
+
+    dom.densitySelect.addEventListener('change', (e) => {
+      state.density = e.target.value;
+      updateUI();
+    });
+
+    dom.preferenceSelect.addEventListener('change', (e) => {
+      state.preference = e.target.value;
+      updateUI();
+    });
+
+    dom.titleAlignSelect.addEventListener('change', (e) => {
+      state.titleAlign = e.target.value;
+      updateUI();
+    });
+
+    dom.exportBtn.addEventListener('click', exportToPPTX);
+
+    dom.applyAllBtn.addEventListener('click', () => {
+      const currentScheme = state.pageSchemes[state.currentPage] || state.slides[state.currentPage]?.layouts.recommended || 'A';
+      state.slides.forEach((_, idx) => {
+        state.pageSchemes[idx] = currentScheme;
+      });
+      showToast(`已将方案 ${currentScheme} 应用到所有页面`);
+      updateSchemeList();
+    });
+
+    function debounce(fn, delay) {
+      let timer;
+      return function(...args) {
+        clearTimeout(timer);
+        timer = setTimeout(() => fn.apply(this, args), delay);
+      };
+    }
+
+    // ==================== 初始化 ====================
+    function init() {
+      // 示例内容
+      dom.editor.value = `# 数字化转型战略规划
+助力企业实现智能化升级
+
+---
+
+# 项目背景与目标
+
+## 行业挑战
+- 市场竞争加剧，传统模式面临冲击
+- 客户需求多元化，响应速度要求提升
+- 数据孤岛问题严重，决策效率低下
+
+## 项目目标
+1. 构建统一数据平台
+2. 实现业务流程自动化
+3. 提升客户体验满意度
+
+---
+
+# 解决方案架构
+
+![系统架构图](architecture.png)
+
+## 核心模块
+- **数据中台**：统一数据采集、治理、分析
+- **业务中台**：可复用业务能力组件化
+- **技术中台**：DevOps、微服务、容器化
+
+> 采用云原生架构，支撑业务快速迭代
+
+---
+
+# 实施路线图
+
+## 第一阶段（Q1-Q2）
+- 基础设施云化改造
+- 核心系统接口开发
+- 数据治理体系建立
+
+## 第二阶段（Q3-Q4）
+- 业务流程重构优化
+- 智能分析平台上线
+- 全渠道整合完成
+
+---
+
+# 预期收益
+
+- 运营效率提升 **40%**
+- 客户满意度提高 **25%**
+- IT 成本降低 **30%**
+- 新业务上线周期缩短 **50%**
+
+> 数字化转型不是选择题，而是必答题
+
+---
+
+# 谢谢
+期待与您的合作`;
+
+      updateUI();
+      setZoom(1);
+    }
+
+    init();
+  </script>
+</body>
+</html>

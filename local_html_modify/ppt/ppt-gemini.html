@@ -1,0 +1,1291 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Huawei Style Smart PPTX Generator Pro</title>
+    <!-- 核心依赖 -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/gitbrent/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
+    <!-- 图标库 -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+
+    <style>
+        /* --- 全局样式变量与重置 --- */
+        :root {
+            --primary-color: #C8102E;
+            /* 华为红标准色 */
+            --bg-canvas: #eef2f5;
+            --bg-panel: #ffffff;
+            --text-main: #333333;
+            --border-color: #e0e0e0;
+            --sidebar-width: 350px;
+            --options-width: 280px;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: "Segoe UI", "Microsoft YaHei", sans-serif;
+            background: var(--bg-canvas);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* --- 顶部导航 --- */
+        header {
+            height: 60px;
+            background: #fff;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 24px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            z-index: 10;
+        }
+
+        .logo-area {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-weight: 700;
+            font-size: 18px;
+            color: #000;
+        }
+
+        .logo-icon {
+            color: var(--primary-color);
+            font-size: 24px;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 12px;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border-radius: 4px;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #a60d26;
+            box-shadow: 0 4px 12px rgba(200, 16, 46, 0.3);
+        }
+
+        .btn-ghost {
+            background: transparent;
+            color: #666;
+            border: 1px solid #ddd;
+        }
+
+        .btn-ghost:hover {
+            background: #f5f5f5;
+        }
+
+        /* --- 主工作区 --- */
+        .workspace {
+            display: flex;
+            flex: 1;
+            height: calc(100vh - 60px);
+        }
+
+        /* 1. 编辑器 (Markdown) */
+        .editor-panel {
+            width: var(--sidebar-width);
+            background: #1e1e1e;
+            color: #ccc;
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid #333;
+        }
+
+        .panel-title {
+            padding: 12px 16px;
+            background: #252526;
+            font-size: 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #888;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        textarea.md-input {
+            flex: 1;
+            background: #1e1e1e;
+            color: #d4d4d4;
+            border: none;
+            padding: 20px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            resize: none;
+            outline: none;
+        }
+
+        /* 滚动条美化 */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #444;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        /* 预览区域滚动条特殊样式 */
+        .preview-stage::-webkit-scrollbar {
+            width: 10px;
+        }
+
+        .preview-stage::-webkit-scrollbar-thumb {
+            background: rgba(200, 16, 46, 0.3);
+            border-radius: 5px;
+        }
+
+        .preview-stage::-webkit-scrollbar-thumb:hover {
+            background: rgba(200, 16, 46, 0.5);
+        }
+
+        .preview-stage::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.05);
+        }
+
+        /* 2. 预览舞台 (Canvas) */
+        .preview-stage {
+            flex: 1;
+            background: var(--bg-canvas);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding: 40px 0;
+        }
+
+        .slides-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 30px;
+            width: 100%;
+        }
+
+        .canvas-wrapper {
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.15);
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            cursor: pointer;
+            border: 3px solid transparent;
+            position: relative;
+        }
+
+        .canvas-wrapper:hover {
+            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.25);
+            transform: scale(1.02);
+        }
+
+        .canvas-wrapper.selected {
+            border-color: var(--primary-color);
+            box-shadow: 0 25px 60px rgba(200, 16, 46, 0.3);
+        }
+
+        .canvas-wrapper.selected::after {
+            content: '已选中';
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: var(--primary-color);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+            pointer-events: none;
+        }
+
+        /* --- 幻灯片渲染层 (HTML与PPTX逻辑的映射) --- */
+        .slide-render {
+            width: 960px;
+            height: 540px;
+            background: white;
+            position: relative;
+            overflow: hidden;
+            /* 禁止用户选择，模拟PPT视图 */
+            user-select: none;
+        }
+
+        /* 页面序号标签 */
+        .slide-number-badge {
+            position: absolute;
+            top: -15px;
+            left: -15px;
+            background: var(--primary-color);
+            color: white;
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 14px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+            z-index: 5;
+        }
+
+        /* 元素定位基类 */
+        .slide-element {
+            position: absolute;
+            transition: all 0.3s;
+        }
+
+        /* 文本框样式 */
+        .slide-text {
+            word-wrap: break-word;
+            color: var(--text-main);
+        }
+
+        .slide-text h1 {
+            margin: 0 0 0.5em 0;
+            line-height: 1.2;
+            letter-spacing: -0.5px;
+        }
+
+        .slide-text p,
+        .slide-text li {
+            margin: 0 0 0.6em 0;
+            line-height: 1.6;
+            color: #555;
+        }
+
+        .slide-text ul,
+        .slide-text ol {
+            padding-left: 1.2em;
+            margin: 0;
+        }
+
+        .slide-text li::marker {
+            color: var(--primary-color);
+        }
+
+        /* 引用块样式 */
+        .quote-box {
+            border-left: 4px solid var(--primary-color);
+            padding: 12px 20px;
+            background: #f8f9fa;
+            color: #444;
+            font-style: italic;
+            border-radius: 0 4px 4px 0;
+        }
+
+        /* 表格样式 (关键新增) */
+        .slide-table-wrapper {
+            overflow: hidden;
+            border-radius: 6px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .slide-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: inherit;
+            border: none;
+        }
+
+        .slide-table th {
+            background: var(--primary-color);
+            color: white;
+            padding: 10px 16px;
+            text-align: left;
+            font-weight: 600;
+            border: none;
+        }
+
+        .slide-table td {
+            padding: 10px 16px;
+            border-bottom: 1px solid #eee;
+            color: #444;
+        }
+
+        .slide-table tr:nth-child(even) {
+            background: #fcfcfc;
+        }
+
+        .slide-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        /* 占位图样式 */
+        .slide-placeholder {
+            background: #f1f5f9;
+            border: 2px dashed #cbd5e1;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #64748b;
+            font-size: 14px;
+            text-align: center;
+            padding: 20px;
+            transition: all 0.3s;
+        }
+
+        .slide-placeholder:hover {
+            border-color: var(--primary-color);
+            background: #fff5f5;
+        }
+
+        /* 装饰性元素 */
+        .theme-decor {
+            position: absolute;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* 卡片样式 (Grid Layout) */
+        .grid-card {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            overflow: hidden;
+            border: 1px solid #eee;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .grid-card-header {
+            height: 6px;
+            background: var(--primary-color);
+        }
+
+        .grid-card-body {
+            padding: 16px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+
+        /* 3. 右侧选项栏 */
+        .options-panel {
+            width: var(--options-width);
+            background: #fff;
+            border-left: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+
+        .layout-card {
+            margin: 16px;
+            border: 2px solid transparent;
+            border-radius: 8px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+        }
+
+        .layout-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .layout-card.active {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(200, 16, 46, 0.1);
+        }
+
+        .layout-thumb {
+            height: 100px;
+            background: #f0f0f0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .layout-info {
+            padding: 10px;
+            background: #fafafa;
+        }
+
+        .layout-name {
+            font-weight: 600;
+            font-size: 13px;
+            color: #333;
+            margin-bottom: 4px;
+        }
+
+        .layout-desc {
+            font-size: 11px;
+            color: #888;
+        }
+
+        .badge {
+            position: absolute;
+            top: 6px;
+            right: 6px;
+            background: var(--primary-color);
+            color: white;
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+
+        /* 底部控制条 */
+        .zoom-ctrl {
+            position: fixed;
+            bottom: 20px;
+            right: 320px;
+            background: rgba(0, 0, 0, 0.6);
+            color: white;
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            display: flex;
+            gap: 12px;
+            backdrop-filter: blur(4px);
+            z-index: 100;
+        }
+
+        .zoom-ctrl i {
+            cursor: pointer;
+        }
+
+        .zoom-ctrl i:hover {
+            color: #fff;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="app">
+        <!-- 1. Header -->
+        <header>
+            <div class="logo-area">
+                <i class="fas fa-shapes logo-icon"></i>
+                <span>Huawei SmartSlide Pro</span>
+            </div>
+            <div class="header-actions">
+                <div style="font-size: 13px; color: #666; margin-right: 10px;">
+                    当前页: <b>{{ currentPageIndex + 1 }}</b> / {{ slides.length }}
+                </div>
+                <button class="btn btn-ghost" @click="resetContent">
+                    <i class="fas fa-rotate-left"></i> 重置
+                </button>
+                <button class="btn btn-primary" @click="exportPPTX">
+                    <i class="fas fa-file-powerpoint"></i> 导出 PPTX
+                </button>
+            </div>
+        </header>
+
+        <div class="workspace">
+            <!-- 2. Markdown Editor -->
+            <div class="editor-panel">
+                <div class="panel-title">
+                    <span>Markdown Input</span>
+                    <i class="fab fa-markdown"></i>
+                </div>
+                <textarea class="md-input" v-model="markdownInput" @input="handleInput"
+                    placeholder="在此输入 Markdown... 使用 '---' 分页"></textarea>
+            </div>
+
+            <!-- 3. Preview Stage -->
+            <div class="preview-stage" @wheel.ctrl.prevent="handleWheel">
+                <div class="slides-container" :style="{ transform: `scale(${previewScale})` }">
+
+                    <!-- 遍历所有幻灯片 -->
+                    <div v-for="(slide, slideIdx) in slides" :key="slideIdx" class="canvas-wrapper"
+                        :class="{ selected: currentPageIndex === slideIdx }" @click="selectSlide(slideIdx)">
+
+                        <!-- 页面序号徽章 -->
+                        <div class="slide-number-badge">{{ slideIdx + 1 }}</div>
+
+                        <!-- 核心渲染组件：这里即是"所见"，也是导出逻辑的直接映射 -->
+                        <div class="slide-render">
+
+                            <!-- 背景装饰 (SVG) -->
+                            <div class="theme-decor" style="top:0; left:0; width:100%; height:100%"
+                                v-html="themeConfig.decorSvg[getSlideResult(slide).master || 'normal']">
+                            </div>
+
+                            <!-- 动态元素渲染 -->
+                            <div v-for="(el, idx) in getSlideResult(slide).elements" :key="idx"
+                                :class="['slide-element', getElementClass(el.type)]" :style="getElementStyle(el)">
+
+                                <!-- 文本类型 -->
+                                <div v-if="el.type === 'text'" v-html="el.html"></div>
+
+                                <!-- 表格类型 (新增) -->
+                                <div v-else-if="el.type === 'table'" class="slide-table-wrapper">
+                                    <table class="slide-table">
+                                        <thead>
+                                            <tr>
+                                                <th v-for="h in el.data.header">{{ h }}</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr v-for="row in el.data.rows">
+                                                <td v-for="cell in row">{{ cell }}</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                <!-- 占位图类型 -->
+                                <div v-else-if="el.type === 'placeholder'" class="slide-placeholder">
+                                    <i class="fas fa-image fa-2x" style="margin-bottom:8px; opacity:0.5"></i>
+                                    <div>{{ el.alt }}</div>
+                                </div>
+
+                                <!-- 形状类型 -->
+                                <div v-else-if="el.type === 'shape'"
+                                    :style="{width: '100%', height:'100%', background: el.fill}"></div>
+                            </div>
+
+                            <!-- 页码 -->
+                            <div style="position:absolute; bottom:15px; right:20px; color:#999; font-size:12px;">
+                                {{ slideIdx + 1 }}
+                            </div>
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <div class="zoom-ctrl">
+                    <i class="fas fa-minus" @click="previewScale -= 0.1"></i>
+                    <span>{{ Math.round(previewScale * 100) }}%</span>
+                    <i class="fas fa-plus" @click="previewScale += 0.1"></i>
+                </div>
+            </div>
+
+            <!-- 4. Layout Options -->
+            <div class="options-panel">
+                <div class="panel-title">智能排版方案</div>
+                <div v-for="(layout, key) in currentLayouts" :key="key" class="layout-card"
+                    :class="{ active: currentSlide?.selectedLayout === key }" @click="selectLayout(key)">
+
+                    <!-- 迷你缩略图 (用CSS缩放模拟) -->
+                    <div class="layout-thumb">
+                        <div
+                            style="transform: scale(0.2); transform-origin: top left; width: 960px; height: 540px; background: white; padding:20px;">
+                            <!-- 简单示意红线 -->
+                            <div style="height:10px; background:#C8102E; width:100%; margin-bottom:20px"></div>
+                            <!-- 简单示意内容块 -->
+                            <div v-for="el in layout.elements"
+                                :style="{position:'absolute', left:el.x+'px', top:el.y+'px', width:el.w+'px', height: (el.h||20)+'px', background:'#ddd', opacity:0.5}">
+                            </div>
+                        </div>
+                        <span v-if="layout.isRecommended" class="badge">推荐</span>
+                    </div>
+
+                    <div class="layout-info">
+                        <div class="layout-name">方案 {{ key }}</div>
+                        <div class="layout-desc">{{ layout.desc }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp, ref, computed, onMounted, watch } = Vue;
+
+        /* -----------------------------------------------------------
+           1. 配置中心 (THEME_CONFIG)
+           提供 JSON 接口方便用户或开发者修改风格
+        ----------------------------------------------------------- */
+        const THEME_CONFIG = {
+            colors: {
+                primary: '#C8102E', // 华为红
+                text: '#333333',
+                secondaryText: '#666666',
+                accentBg: '#f9f9f9'
+            },
+            canvas: { w: 960, h: 540 },
+            margins: { top: 70, bottom: 40, left: 50, right: 50 },
+            // SVG 装饰：顶部红线装饰
+            // SVG 装饰：支持多种母版风格
+            decorSvg: {
+                normal: `
+                    <svg width="100%" height="100%" viewBox="0 0 960 540" preserveAspectRatio="none">
+                        <!-- 顶部装饰 -->
+                        <rect x="0" y="0" width="960" height="6" fill="#C8102E" />
+                        <!-- 底部 Logo 占位 -->
+                        <rect x="900" y="500" width="40" height="20" rx="2" fill="#ddd" opacity="0.5" />
+                        <text x="920" y="514" font-size="10" fill="#999" text-anchor="middle" font-family="Arial">LOGO</text>
+                    </svg>
+                `,
+                cover: `
+                    <svg width="100%" height="100%" viewBox="0 0 960 540" preserveAspectRatio="none">
+                        <!-- 左侧红色色块 -->
+                        <path d="M0 0 H380 L320 540 H0 V0 Z" fill="#C8102E" />
+                        <!-- 装饰线条 -->
+                        <path d="M380 0 L400 0 L340 540 L320 540 Z" fill="#C8102E" opacity="0.1" />
+                    </svg>
+                `
+            }
+        };
+
+        /* -----------------------------------------------------------
+           2. 排版引擎 (Layout Engine)
+           核心逻辑：将解析后的 Block 转换为具备绝对坐标的 Element
+        ----------------------------------------------------------- */
+        class LayoutEngine {
+            constructor() {
+                this.C = THEME_CONFIG.canvas;
+                this.M = THEME_CONFIG.margins;
+            }
+
+            // 主入口：生成 3 套布局
+            generateLayouts(slideData) {
+                // 分析内容特征
+                const stats = this.analyzeContent(slideData);
+
+                const layouts = {};
+
+                // 检测是否为封面页（只有标题和副标题，没有或很少内容块）
+                const isCoverPage = slideData.subtitle && slideData.blocks.length === 0;
+
+                if (isCoverPage) {
+                    // 封面页使用特殊布局
+                    layouts['A'] = this.layoutCover(slideData);
+                    layouts['A'].isRecommended = true;
+                } else {
+                    layouts['A'] = this.layoutStandard(slideData, stats); // 经典
+                    layouts['B'] = this.layoutSplit(slideData, stats);    // 左右分栏 (Smart Split)
+                    layouts['C'] = this.layoutGrid(slideData, stats);     // 智能网格
+
+                    // 智能推荐逻辑
+                    let best = 'A';
+                    if (stats.hasTable) best = 'A';
+                    else if (stats.hasImage && stats.charCount > 50) best = 'B'; // 图文混排推荐分栏
+                    else if (stats.listItems >= 4 || stats.imgCount >= 2) best = 'C'; // 多项列表/多图推荐网格
+                    else if (stats.charCount > 500) best = 'A'; // 长文推荐标准
+
+                    layouts[best].isRecommended = true;
+                }
+
+
+                return { layouts, best: 'A' };
+            }
+
+            // --- 封面布局 (Modern Cover) ---
+            layoutCover(data) {
+                const elements = [];
+                // 封面背景由 Master Slide 处理，这里只放文字
+                // 文字颜色需要根据背景色调整 (左侧红色区域放标题，右侧白色区域放副标题? 
+                // 不，新设计是左红右白。标题在左侧(白字)，副标题在右侧(黑字)?)
+
+                // 调整：标题在左侧红色区域，白色文字
+                elements.push({
+                    type: 'text',
+                    html: `<h1 style="font-size:56px; color:#fff; margin:0; line-height:1.1; font-weight:800">${data.title}</h1>`,
+                    text: data.title,
+                    x: 40, y: 180, w: 300, h: 200,
+                    fontSize: 56, bold: true, color: 'FFFFFF', align: 'left'
+                });
+
+                // 副标题在右侧白色区域，灰色文字
+                if (data.subtitle) {
+                    elements.push({
+                        type: 'text',
+                        html: `<div style="font-size:24px; color:#666; margin:0; border-left:4px solid #C8102E; padding-left:20px">${data.subtitle}</div>`,
+                        text: data.subtitle,
+                        x: 420, y: 200, w: 480, h: 100,
+                        fontSize: 24, color: '666666', align: 'left'
+                    });
+                }
+
+                // 装饰性年份/日期
+                elements.push({
+                    type: 'text',
+                    html: `<div style="font-size:14px; color:rgba(255,255,255,0.6); font-family:Arial">2025 REPORT</div>`,
+                    text: "2025 REPORT",
+                    x: 40, y: 500, w: 200, h: 20,
+                    fontSize: 12, color: 'FFCCCC'
+                });
+
+                return { elements, desc: '现代分割封面', master: 'cover' };
+            }
+
+            analyzeContent(data) {
+                let charCount = 0;
+                let listItems = 0;
+                let hasTable = false;
+                let hasImage = false;
+                let imgCount = 0;
+
+                data.blocks.forEach(b => {
+                    if (b.type === 'text') charCount += b.content.length;
+                    if (b.type === 'list') listItems += b.items.length;
+                    if (b.type === 'table') hasTable = true;
+                    if (b.type === 'image') { hasImage = true; imgCount++; }
+                });
+
+                return { charCount, listItems, hasTable, hasImage, imgCount };
+            }
+        };
+            }
+
+        // --- 方案 A: 经典商务 (自动分栏/适应表格) ---
+        layoutStandard(data, stats) {
+            const elements = [];
+            let currY = this.M.top;
+            const contentW = this.C.w - this.M.left - this.M.right;
+
+            // 1. 标题
+            elements.push(this.createTitle(data.title, this.M.left, 40, contentW));
+            currY += 50;
+
+            // 2. 正文流
+            const blocks = data.blocks;
+            const fontSize = stats.charCount > 400 ? 14 : 18; // 字号自适应
+
+            // 如果只有表格，居中显示
+            if (blocks.length === 1 && blocks[0].type === 'table') {
+                elements.push({
+                    type: 'table', data: blocks[0].data,
+                    x: this.M.left, y: currY + 20, w: contentW, h: 300
+                });
+                return { elements, desc: '表格/标准布局', master: 'normal' };
+            }
+
+            // 双栏检测
+            const useTwoCol = stats.charCount > 350 && !stats.hasTable;
+            let leftColY = currY, rightColY = currY;
+            const colW = useTwoCol ? (contentW - 40) / 2 : contentW;
+
+            blocks.forEach((b, i) => {
+                // 简单的两栏分配逻辑
+                const isRight = useTwoCol && i >= blocks.length / 2;
+                const x = isRight ? (this.M.left + colW + 40) : this.M.left;
+                let y = isRight ? rightColY : leftColY;
+
+                const h = this.estimateBlockHeight(b, colW, fontSize);
+
+                // 构建 Element
+                const el = this.blockToElement(b, x, y, colW, h, fontSize);
+                elements.push(el);
+
+                // 更新 Y
+                if (isRight) rightColY += h + 20;
+                else leftColY += h + 20;
+            });
+
+            return { elements, desc: useTwoCol ? '双栏密集型' : '标准通栏', master: 'normal' };
+        }
+
+        // --- 方案 B: 智能分栏 (Smart Split) ---
+        layoutSplit(data, stats) {
+            const elements = [];
+            elements.push(this.createTitle(data.title, this.M.left, 40, this.C.w - 100));
+
+            // 左文右图 (或左图右文)
+            const leftW = (this.C.w - this.M.left - this.M.right - 40) * 0.5;
+            const rightX = this.M.left + leftW + 40;
+
+            let currLeftY = 100;
+            let currRightY = 100;
+
+            data.blocks.forEach(b => {
+                if (b.type === 'image') {
+                    // 图片放右边
+                    elements.push(this.blockToElement(b, rightX, currRightY, leftW, 350, 14));
+                    currRightY += 370;
+                } else {
+                    // 文字放左边
+                    const h = this.estimateBlockHeight(b, leftW, 16);
+                    elements.push(this.blockToElement(b, this.M.left, currLeftY, leftW, 16)); // Pass fontSize, not h
+                    currLeftY += h + 20;
+                }
+            });
+
+            return { elements, desc: '图文分栏布局', master: 'normal' };
+        }
+
+        // --- 方案 C: 智能网格 (Adaptive Grid) ---
+        layoutGrid(data, stats) {
+            const elements = [];
+            elements.push(this.createTitle(data.title, this.M.left, 40, this.C.w - 100));
+
+            // 收集所有可网格化的项
+            let items = [];
+            data.blocks.forEach(b => {
+                if (b.type === 'list') {
+                    b.items.forEach(item => items.push({ type: 'text', content: item }));
+                } else if (b.type === 'image') {
+                    items.push({ type: 'img', ...b });
+                } else {
+                    items.push({ type: 'text', content: b.content || '...' });
+                }
+            });
+
+            // 智能计算行列
+            const count = items.length;
+            let cols = 3;
+            if (count === 1) cols = 1;
+            else if (count === 2 || count === 4) cols = 2;
+
+            // 限制最大数量
+            const displayItems = items.slice(0, 6);
+
+            const startY = 110;
+            const gap = 20;
+            const totalW = this.C.w - this.M.left - this.M.right;
+            const cardW = (totalW - (cols - 1) * gap) / cols;
+            const cardH = count <= 3 ? 200 : 150;
+
+            displayItems.forEach((item, i) => {
+                const row = Math.floor(i / cols);
+                const col = i % cols;
+                const x = this.M.left + col * (cardW + gap);
+                const y = startY + row * (cardH + gap);
+
+                // 卡片背景 (带阴影和圆角)
+                elements.push({ type: 'shape', fill: '#ffffff', x, y, w: cardW, h: cardH, border: '#e0e0e0' });
+                // 顶部装饰条
+                elements.push({ type: 'shape', fill: THEME_CONFIG.colors.primary, x: x, y: y, w: cardW, h: 4 });
+
+                // 内容
+                if (item.type === 'img') {
+                    elements.push({ type: 'placeholder', alt: item.alt, x: x + 15, y: y + 20, w: cardW - 30, h: cardH - 35 });
+                } else {
+                    elements.push({
+                        type: 'text', html: `<div style="font-size:16px; color:#333; font-weight:500">${item.content}</div>`,
+                        text: item.content,
+                        x: x + 20, y: y + 25, w: cardW - 40, h: cardH - 50, fontSize: 16, align: 'left', valign: 'top'
+                    });
+                }
+            });
+
+            return { elements, desc: `智能网格 (${cols}列)`, master: 'normal' };
+        }        }
+
+
+        // --- 辅助方法 ---
+        createTitle(text, x, y, w) {
+            return {
+                type: 'text',
+                html: `<h1 style="font-size:32px; color:#000; margin:0">${text}</h1>`,
+                text: text, x, y, w, h: 50, fontSize: 32, bold: true
+            };
+        }
+
+        blockToElement(b, x, y, w, h, fontSize) {
+            if (b.type === 'image') {
+                return { type: 'placeholder', alt: b.alt, x, y, w, h: 200 };
+            }
+            if (b.type === 'table') {
+                return { type: 'table', data: b.data, x, y, w, h: h || 200 };
+            }
+
+            let htmlContent = b.content || '';
+            let textContent = b.content || '';
+
+            if (b.type === 'list') {
+                // 处理列表，支持Markdown格式（粗体、斜体等）
+                htmlContent = '<ul style="margin:0; padding-left:1.5em; line-height:1.6">' +
+                    b.items.map(i => {
+                        // 简单处理Markdown粗体 **text**
+                        let processedItem = i.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+                        return `<li style="margin-bottom:0.4em">${processedItem}</li>`;
+                    }).join('') + '</ul>';
+                textContent = b.items.join('\n'); // 用于PPT导出
+            } else if (b.type === 'quote') {
+                htmlContent = `<div class="quote-box">${b.content}</div>`;
+            } else {
+                // 普通文本也处理Markdown粗体
+                htmlContent = htmlContent.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+            }
+
+            return {
+                type: 'text',
+                html: `<div style="font-size:${fontSize}px; line-height:1.5">${htmlContent}</div>`,
+                text: textContent,
+                rawBlock: b, // 保留原始引用
+                x, y, w, h, fontSize
+            };
+        }
+
+        estimateBlockHeight(b, w, fontSize) {
+            if (b.type === 'image') return 220;
+            if (b.type === 'table') return (b.data.rows.length + 1) * 35 + 20; // 粗略估算
+
+            const charsPerLine = w / (fontSize * 0.55); // 更准确的字符宽度估算
+            let lines = 0;
+
+            if (b.type === 'list') {
+                // 列表项高度计算：每项基础高度 + 换行高度
+                b.items.forEach(i => {
+                    const itemLines = Math.max(1, Math.ceil(i.length / charsPerLine));
+                    lines += itemLines;
+                });
+                // 列表有额外间距
+                return Math.max(lines * (fontSize * 1.6) + b.items.length * 4, 50);
+            } else if (b.type === 'quote') {
+                lines = Math.ceil((b.content || '').length / charsPerLine);
+                return Math.max(lines * (fontSize * 1.6) + 20, 60); // 引用框有padding
+            } else {
+                lines = Math.ceil((b.content || '').length / charsPerLine);
+                return Math.max(lines * (fontSize * 1.5), 40);
+            }
+        }
+        }
+
+        /* -----------------------------------------------------------
+           3. Vue Application
+        ----------------------------------------------------------- */
+        const DEFAULT_MD = `# 2025 季度汇报
+核心业务数据分析
+
+---
+## 市场增长趋势
+> 过去三个季度，企业级市场保持了 **25%** 的高速增长。
+
+* AI 算力需求激增，带动基础设施建设。
+* SaaS 订阅收入占比提升至 40%。
+* 客户满意度评分 (NPS) 达到历史新高。
+
+![增长曲线](Placeholder)
+
+---
+## 核心数据对比 (自动渲染表格)
+
+| 部门 | Q1 营收 (M) | Q2 营收 (M) | 增长率 |
+| :--- | :--- | :--- | :--- |
+| 云服务 | 120 | 145 | +21% |
+| 终端设备 | 300 | 310 | +3.3% |
+| 智能汽车 | 50 | 90 | +80% |
+
+此表格将自动解析并适配 PPT 样式。
+
+---
+## 战略举措 - 矩阵排版
+* **研发投入**: 持续加大基础科学研究。
+* **生态建设**: 赋能开发者，共建开放生态。
+* **全球化**: 本地化运营，服务全球客户。
+* **人才梯队**: 启动天才少年计划 3.0。
+* **合规经营**: 严格遵守各地法律法规。
+* **绿色低碳**: 践行碳中和承诺。
+`;
+
+        createApp({
+            setup() {
+                const markdownInput = ref(DEFAULT_MD);
+                const slides = ref([]);
+                const currentPageIndex = ref(0);
+                const previewScale = ref(0.8);
+                const engine = new LayoutEngine();
+                const slideStates = ref({}); // 存储每页的用户选择
+
+                // 解析 Markdown
+                const processMarkdown = () => {
+                    const rawSlides = markdownInput.value.split(/^---$/m);
+
+                    slides.value = rawSlides.map((raw, idx) => {
+                        const tokens = marked.lexer(raw);
+                        const slideData = { title: '未命名幻灯片', subtitle: '', blocks: [] };
+                        let foundTitle = false;
+
+                        tokens.forEach(t => {
+                            if (t.type === 'heading' && t.depth <= 2 && !foundTitle) {
+                                slideData.title = t.text;
+                                foundTitle = true;
+                            } else if (t.type === 'paragraph') {
+                                const img = t.text.match(/!\[(.*?)\]\((.*?)\)/);
+                                if (img) {
+                                    slideData.blocks.push({ type: 'image', alt: img[1] });
+                                } else if (t.text.trim()) {
+                                    // 如果刚找到标题，且还没有内容块，将第一段作为副标题
+                                    if (foundTitle && slideData.blocks.length === 0 && !slideData.subtitle) {
+                                        slideData.subtitle = t.text.trim();
+                                    } else {
+                                        slideData.blocks.push({ type: 'text', content: t.text });
+                                    }
+                                }
+                            } else if (t.type === 'list') {
+                                slideData.blocks.push({ type: 'list', items: t.items.map(i => i.text) });
+                            } else if (t.type === 'blockquote') {
+                                slideData.blocks.push({ type: 'quote', content: t.text });
+                            } else if (t.type === 'table') {
+                                // Table 处理
+                                slideData.blocks.push({
+                                    type: 'table',
+                                    data: {
+                                        header: t.header.map(h => h.text),
+                                        rows: t.rows.map(row => row.map(cell => cell.text))
+                                    }
+                                });
+                            }
+                        });
+
+                        // 生成布局
+                        const { layouts, best } = engine.generateLayouts(slideData);
+
+                        // 保持用户选择
+                        const savedState = slideStates.value[idx];
+                        const selectedLayout = savedState ? savedState.selectedLayout : best;
+
+                        // 更新状态
+                        slideStates.value[idx] = { selectedLayout };
+
+                        return { data: slideData, layouts, selectedLayout };
+                    });
+
+                    // 修正页码
+                    if (currentPageIndex.value >= slides.value.length) currentPageIndex.value = slides.value.length - 1;
+                };
+
+                // 防抖监听
+                let timer;
+                const handleInput = () => {
+                    clearTimeout(timer);
+                    timer = setTimeout(processMarkdown, 500);
+                };
+
+                // 计算当前页结果
+                const currentSlide = computed(() => slides.value[currentPageIndex.value]);
+                const currentLayouts = computed(() => currentSlide.value?.layouts || {});
+                const currentSlideResult = computed(() => {
+                    if (!currentSlide.value) return null;
+                    return currentSlide.value.layouts[currentSlide.value.selectedLayout];
+                });
+
+                // 获取指定幻灯片的渲染结果
+                const getSlideResult = (slide) => {
+                    if (!slide) return { elements: [] };
+                    return slide.layouts[slide.selectedLayout];
+                };
+
+                // 选择幻灯片
+                const selectSlide = (index) => {
+                    currentPageIndex.value = index;
+                    // 不需要滚动，因为用户已经通过点击选择了页面
+                };
+
+                const selectLayout = (key) => {
+                    if (currentSlide.value) {
+                        currentSlide.value.selectedLayout = key;
+                        slideStates.value[currentPageIndex.value].selectedLayout = key;
+                    }
+                };
+
+                // 样式转换 helper
+                const getElementClass = (type) => (type === 'text' ? 'slide-text' : '');
+                const getElementStyle = (el) => {
+                    const s = { left: el.x + 'px', top: el.y + 'px', width: el.w + 'px' };
+                    if (el.h) s.height = el.h + 'px';
+                    if (el.fontSize) s.fontSize = el.fontSize + 'px';
+                    if (el.color) s.color = el.color;
+                    return s;
+                };
+
+                const resetContent = () => {
+                    if (confirm('确定恢复默认内容吗？')) {
+                        markdownInput.value = DEFAULT_MD;
+                        processMarkdown();
+                    }
+                };
+
+                // 鼠标滚轮缩放
+                const handleWheel = (e) => {
+                    if (e.ctrlKey) {
+                        const delta = e.deltaY > 0 ? -0.1 : 0.1;
+                        previewScale.value = Math.min(Math.max(0.3, previewScale.value + delta), 2.0);
+                    }
+                };
+
+                // --- 导出逻辑 (PptxGenJS + Master Slides) ---
+                const exportPPTX = () => {
+                    const pptx = new PptxGenJS();
+                    pptx.layout = 'LAYOUT_16x9';
+
+                    // 1. 定义母版 (Master Slides)
+                    // MASTER_NORMAL: 顶部细红条，底部Logo
+                    pptx.defineSlideMaster({
+                        title: 'MASTER_NORMAL',
+                        background: { color: 'FFFFFF' },
+                        objects: [
+                            { rect: { x: 0, y: 0, w: 10, h: 0.06, fill: { color: 'C8102E' } } }, // 顶部红条
+                            { rect: { x: 9.4, y: 5.2, w: 0.4, h: 0.2, fill: { color: 'EEEEEE' } } }, // Logo 占位
+                            { text: { text: "LOGO", options: { x: 9.4, y: 5.2, w: 0.4, h: 0.2, align: 'center', fontSize: 8, color: '999999' } } }
+                        ],
+                        slideNumber: { x: 0.3, y: 5.3, color: '999999', fontSize: 10 }
+                    });
+
+                    // MASTER_COVER: 现代分割封面 (左红右白)
+                    pptx.defineSlideMaster({
+                        title: 'MASTER_COVER',
+                        background: { color: 'FFFFFF' },
+                        objects: [
+                            // 左侧红色色块 (梯形效果用 Shape 模拟，这里简化为矩形+三角形或直接矩形)
+                            // PptxGenJS 不支持复杂 Path，用矩形代替
+                            { rect: { x: 0, y: 0, w: 4, h: 5.625, fill: { color: 'C8102E' } } },
+                            // 装饰性线条
+                            { rect: { x: 4, y: 0, w: 0.1, h: 5.625, fill: { color: 'C8102E', transparency: 90 } } }
+                        ]
+                    });
+                });
+
+        slides.value.forEach(slide => {
+            const layout = slide.layouts[slide.selectedLayout];
+
+            // 使用布局引擎返回的 master 属性
+            const masterMap = { 'cover': 'MASTER_COVER', 'normal': 'MASTER_NORMAL' };
+            const masterName = masterMap[layout.master] || 'MASTER_NORMAL';
+
+            const pptSlide = pptx.addSlide({ masterName });
+
+            // 2. 遍历元素
+            layout.elements.forEach(el => {
+                // px to inch conversion (960px = 10 inches)
+                const factor = 10 / 960;
+                const props = {
+                    x: el.x * factor,
+                    y: el.y * factor,
+                    w: el.w * factor,
+                    h: el.h ? el.h * factor : null,
+                    color: el.color ? el.color.replace('#', '') : '333333',
+                    fontSize: (el.fontSize || 14) * 0.75 // pt approx
+                };
+
+                if (el.type === 'text') {
+                    // 处理引用块 (Quote)
+                    if (el.rawBlock && el.rawBlock.type === 'quote') {
+                        // 添加左侧红线
+                        pptSlide.addShape(pptx.ShapeType.rect, {
+                            x: props.x, y: props.y, w: 0.05, h: props.h || 1,
+                            fill: { color: 'C8102E' }
+                        });
+                        // 调整文本位置
+                        props.x += 0.2;
+                        props.w -= 0.2;
+                        // 灰色背景
+                        pptSlide.addShape(pptx.ShapeType.rect, {
+                            x: props.x - 0.1, y: props.y, w: props.w + 0.1, h: props.h || 1,
+                            fill: { color: 'F9F9F9' }
+                        });
+                    }
+
+                    // 处理列表
+                    if (el.rawBlock && el.rawBlock.type === 'list') {
+                        el.rawBlock.items.forEach((item, idx) => {
+                            // 解析 Markdown 格式（粗体 **text**）
+                            const textParts = [];
+                            let lastIndex = 0;
+                            const boldRegex = /\*\*(.*?)\*\*/g;
+                            let match;
+
+                            while ((match = boldRegex.exec(item)) !== null) {
+                                if (match.index > lastIndex) {
+                                    textParts.push({ text: item.substring(lastIndex, match.index), options: {} });
+                                }
+                                textParts.push({ text: match[1], options: { bold: true } });
+                                lastIndex = boldRegex.lastIndex;
+                            }
+                            if (lastIndex < item.length) {
+                                textParts.push({ text: item.substring(lastIndex), options: {} });
+                            }
+
+                            if (textParts.length === 0) {
+                                pptSlide.addText(item, {
+                                    ...props, y: props.y + (idx * 0.4), h: 0.4,
+                                    bullet: true, valign: 'top'
+                                });
+                            } else {
+                                pptSlide.addText(textParts, {
+                                    ...props, y: props.y + (idx * 0.4), h: 0.4,
+                                    bullet: true, valign: 'top'
+                                });
+                            }
+                        });
+                    } else {
+                        const textProps = { ...props, valign: 'top' };
+                        if (el.align) textProps.align = el.align;
+                        if (el.bold) textProps.bold = true;
+                        pptSlide.addText(el.text, textProps);
+                    }
+                }
+                else if (el.type === 'table') {
+                    const rows = [el.data.header, ...el.data.rows];
+                    const colCount = el.data.header.length;
+
+                    pptSlide.addTable(rows, {
+                        x: props.x,
+                        y: props.y,
+                        w: props.w,
+                        border: { pt: 1, color: 'DDDDDD' },
+                        fill: { color: 'FFFFFF' },
+                        color: '333333',
+                        fontSize: 11,
+                        fontFace: 'Arial',
+                        valign: 'middle',
+                        rowH: [0.45, ...el.data.rows.map(() => 0.4)],
+                        colW: Array(colCount).fill(props.w / colCount),
+                        autoPage: false,
+                        rowOpts: [
+                            { fill: { color: 'C8102E' }, color: 'FFFFFF', bold: true, fontSize: 11 }
+                        ]
+                    });
+                }
+                else if (el.type === 'placeholder') {
+                    pptSlide.addText(`[图: ${el.alt}]`, { ...props, fill: { color: 'F4F6F8' }, align: 'center' });
+                }
+                else if (el.type === 'shape') {
+                    pptSlide.addShape(pptx.ShapeType.rect, { ...props, fill: { color: el.fill ? el.fill.replace('#', '') : 'FFFFFF' } });
+                }
+            });
+        });
+
+        pptx.writeFile({ fileName: `Huawei-SmartSlide-Master-${new Date().toISOString().slice(0, 10)}.pptx` });
+                };
+
+        onMounted(() => {
+            processMarkdown();
+        });
+
+        return {
+            markdownInput, slides, currentPageIndex, previewScale,
+            currentSlideResult, currentLayouts, currentSlide, themeConfig: THEME_CONFIG,
+            handleInput, selectLayout, selectSlide, getSlideResult, getElementClass, getElementStyle, exportPPTX, resetContent, handleWheel
+        };
+            }
+        }).mount('#app');
+    </script>
+
+</body>
+
+</html>

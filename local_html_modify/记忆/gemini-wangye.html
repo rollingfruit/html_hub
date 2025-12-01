@@ -1,0 +1,1973 @@
+<!DOCTYPE html>
+<html lang="zh">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>记忆宫殿 - SRS智能复习系统</title>
+    <style>
+        :root {
+            --accent: #3b82f6;
+            --text: #1e293b;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+        }
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: #000;
+            touch-action: none;
+        }
+
+        /* HUD 层 */
+        #hud {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            user-select: none;
+            z-index: 10;
+        }
+
+        /* 今日进度条 */
+        #progress-bar {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-size: 14px;
+            backdrop-filter: blur(10px);
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .progress-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .progress-num {
+            font-weight: bold;
+            color: var(--warning);
+        }
+
+        /* 准心 */
+        #crosshair {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 6px;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            border: 2px solid rgba(0, 0, 0, 0.5);
+            transition: all 0.2s;
+        }
+
+        /* 顶部提示条 */
+        #holding-bar {
+            position: absolute;
+            top: 15%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 255, 255, 0.95);
+            color: #000;
+            padding: 15px 30px;
+            border-radius: 30px;
+            display: none;
+            text-align: center;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+            border: 2px solid var(--accent);
+        }
+
+        #holding-word {
+            font-size: 24px;
+            font-weight: bold;
+            display: block;
+        }
+
+        #holding-hint {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        /* 底部操作栏 */
+        #action-bar {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 15px;
+            pointer-events: auto;
+            flex-wrap: wrap;
+            justify-content: center;
+            max-width: 90%;
+        }
+
+        .action-btn {
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 12px 24px;
+            border-radius: 30px;
+            font-weight: 500;
+            cursor: pointer;
+            backdrop-filter: blur(10px);
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+        }
+
+        .action-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .action-btn.primary {
+            background: var(--accent);
+            border-color: var(--accent);
+        }
+
+        .action-btn.success {
+            background: var(--success);
+            border-color: var(--success);
+        }
+
+        .action-btn.warning {
+            background: var(--warning);
+            border-color: var(--warning);
+        }
+
+        /* 通用弹窗样式 */
+        .modal {
+            display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 25px;
+            border-radius: 16px;
+            width: 400px;
+            max-width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+            pointer-events: auto;
+            z-index: 100;
+        }
+
+        .modal h3 {
+            margin: 0 0 15px 0;
+            color: var(--text);
+        }
+
+        textarea {
+            width: 100%;
+            height: 150px;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            box-sizing: border-box;
+            font-family: monospace;
+            font-size: 12px;
+            resize: vertical;
+        }
+
+        input[type="text"],
+        input[type="file"] {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            box-sizing: border-box;
+        }
+
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+        }
+
+        /* 详情卡片弹窗 - SRS样式 */
+        #detail-card {
+            text-align: center;
+            width: 380px;
+            border: 4px solid #333;
+        }
+
+        #detail-word {
+            font-size: 42px;
+            font-weight: 800;
+            margin: 0;
+            color: #000;
+        }
+
+        #detail-mean {
+            font-size: 20px;
+            color: #555;
+            margin: 15px 0;
+            line-height: 1.6;
+        }
+
+        #detail-stats {
+            font-size: 12px;
+            color: #999;
+            margin-bottom: 15px;
+        }
+
+        .review-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+        .review-btn {
+            flex: 1;
+            padding: 15px 10px;
+            border-radius: 10px;
+            cursor: pointer;
+            border: none;
+            color: white;
+            font-weight: bold;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        .review-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .review-btn.again {
+            background: var(--danger);
+        }
+
+        .review-btn.hard {
+            background: var(--warning);
+        }
+
+        .review-btn.easy {
+            background: var(--success);
+        }
+
+        /* 状态提示 */
+        #toast {
+            position: absolute;
+            top: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.85);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 14px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+            max-width: 80%;
+            text-align: center;
+        }
+
+        /* 启动/帮助遮罩 */
+        #overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            flex-direction: column;
+            z-index: 200;
+            backdrop-filter: blur(5px);
+        }
+
+        .key-badge {
+            background: #444;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+
+        /* 移动端虚拟摇杆 */
+        #mobile-controls {
+            display: none;
+            position: absolute;
+            bottom: 100px;
+            left: 20px;
+            width: 120px;
+            height: 120px;
+            pointer-events: auto;
+        }
+
+        #joystick-base {
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            position: relative;
+        }
+
+        #joystick-stick {
+            width: 50px;
+            height: 50px;
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 50%;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            transition: all 0.1s;
+        }
+
+        @media (max-width: 768px) {
+            #mobile-controls {
+                display: block;
+            }
+
+            #action-bar {
+                bottom: 10px;
+            }
+
+            .action-btn {
+                padding: 8px 16px;
+                font-size: 12px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="canvas-container"></div>
+
+    <!-- 界面 HUD -->
+    <div id="hud">
+        <!-- 今日进度 -->
+        <div id="progress-bar">
+            <div class="progress-item">
+                📚 待学习: <span class="progress-num" id="new-count">0</span>
+            </div>
+            <div class="progress-item">
+                🔄 待复习: <span class="progress-num" id="review-count">0</span>
+            </div>
+            <div class="progress-item">
+                ✅ 已完成: <span class="progress-num" id="done-count">0</span>
+            </div>
+        </div>
+
+        <div id="crosshair"></div>
+        <div id="toast"></div>
+
+        <!-- 手持卡片提示 -->
+        <div id="holding-bar">
+            <span id="holding-word">WORD</span>
+            <div id="holding-hint">正在寻找位置... (点击绿色光圈放置)</div>
+        </div>
+
+        <div id="action-bar">
+            <button class="action-btn" onclick="openImportModal()">📥 导入</button>
+            <button class="action-btn" onclick="openInputModal()">➕ 添加</button>
+            <button class="action-btn warning" onclick="autoNavigateToNextReview()">🎯 自动复习</button>
+            <button class="action-btn" onclick="openDataModal()">💾 备份</button>
+            <button class="action-btn primary" onclick="startApp()">🎮 开始</button>
+        </div>
+    </div>
+
+    <!-- 移动端虚拟摇杆 -->
+    <div id="mobile-controls">
+        <div id="joystick-base">
+            <div id="joystick-stick"></div>
+        </div>
+    </div>
+
+    <!-- 导入弹窗 -->
+    <div id="import-modal" class="modal">
+        <h3>📥 批量导入</h3>
+        <p style="font-size:12px; color:#666; margin-bottom:5px;">
+            每行一个词,格式: <code>单词 [tab/逗号] 释义</code>
+        </p>
+        <textarea id="import-text" placeholder="Apple 苹果&#10;Banana 香蕉&#10;Serendipity 意外发现"></textarea>
+        <div class="modal-footer">
+            <button class="action-btn" style="background:#64748b; padding:8px 16px;"
+                onclick="closeAllModals()">取消</button>
+            <button class="action-btn primary" style="padding:8px 16px;" onclick="processImport()">确认导入</button>
+        </div>
+    </div>
+
+    <!-- 单个添加弹窗 -->
+    <div id="input-modal" class="modal" style="width: 300px;">
+        <h3>📝 添加新卡片</h3>
+        <input type="text" id="inp-word" placeholder="单词">
+        <input type="text" id="inp-mean" placeholder="释义">
+        <div class="modal-footer">
+            <button class="action-btn" style="background:#64748b; padding:8px 16px;"
+                onclick="closeAllModals()">取消</button>
+            <button class="action-btn primary" style="padding:8px 16px;" onclick="confirmSingleInput()">添加</button>
+        </div>
+    </div>
+
+    <!-- 数据管理弹窗 -->
+    <div id="data-modal" class="modal">
+        <h3>💾 数据管理</h3>
+        <div style="margin-bottom: 15px;">
+            <button class="action-btn success" style="width: 100%; justify-content: center; margin-bottom: 10px;"
+                onclick="exportData()">⬇️ 导出备份 (JSON)</button>
+            <button class="action-btn primary" style="width: 100%; justify-content: center; margin-bottom: 10px;"
+                onclick="document.getElementById('import-file').click()">⬆️ 导入备份</button>
+            <input type="file" id="import-file" accept=".json" style="display:none;" onchange="importData(event)">
+            <button class="action-btn" style="width: 100%; justify-content: center; background: var(--danger);"
+                onclick="confirmResetData()">🗑️ 清空所有数据</button>
+        </div>
+        <div style="font-size: 12px; color: #666; margin-top: 10px;">
+            <strong>当前数据:</strong><br>
+            总卡片数: <span id="total-cards">0</span><br>
+            已放置: <span id="placed-cards">0</span>
+        </div>
+        <div class="modal-footer">
+            <button class="action-btn" style="padding:8px 16px;" onclick="closeAllModals()">关闭</button>
+        </div>
+    </div>
+
+    <!-- Tooltip -->
+    <div id="tooltip"
+        style="position: absolute; top: 50%; left: 55%; transform: translateY(-50%); background: rgba(0,0,0,0.8); color: white; padding: 10px 15px; border-radius: 8px; pointer-events: none; opacity: 0; transition: opacity 0.3s; max-width: 200px; backdrop-filter: blur(5px); border: 1px solid rgba(255,255,255,0.1); z-index: 1000;">
+    </div>
+
+    <!-- 详情/复习卡片 - Dashboard -->
+    <div id="detail-card" class="modal"
+        style="width: 800px; max-width: 90vw; background: #0f172a; color: white; border: 1px solid #334155; padding: 30px;">
+        <div style="display: flex; gap: 30px; flex-wrap: wrap;">
+            <!-- Left: Word & Audio -->
+            <div
+                style="flex: 1; min-width: 200px; text-align: center; border-right: 1px solid #334155; padding-right: 20px;">
+                <h1 id="detail-word"
+                    style="font-size: 56px; margin: 0; font-family: 'Times New Roman', serif; color: white;">Word</h1>
+                <div id="detail-phonetic"
+                    style="color: #94a3b8; font-size: 24px; margin-bottom: 20px; font-family: sans-serif;">/wɜːd/</div>
+                <button class="action-btn primary"
+                    style="width: 100%; padding: 12px; font-size: 16px; justify-content: center;"
+                    onclick="playCurrentAudio()">
+                    🔊 播放发音
+                </button>
+            </div>
+
+            <!-- Middle: Meanings -->
+            <div style="flex: 2; min-width: 300px;">
+                <div id="detail-meanings" style="max-height: 300px; overflow-y: auto; padding-right: 10px;">
+                    <!-- Dynamic Content -->
+                </div>
+                <div id="detail-example"
+                    style="margin-top: 20px; padding: 15px; background: #1e293b; border-radius: 8px; font-style: italic; color: #cbd5e1; border-left: 4px solid #3b82f6;">
+                    "Example sentence..."
+                </div>
+            </div>
+
+            <!-- Right: Stats & Actions -->
+            <div
+                style="flex: 1; min-width: 150px; border-left: 1px solid #334155; padding-left: 20px; display: flex; flex-direction: column;">
+                <div style="margin-bottom: 20px;">
+                    <div style="font-size: 12px; color: #94a3b8; margin-bottom: 5px;">当前阶段</div>
+                    <div id="card-stage" style="font-size: 24px; font-weight: bold; color: #fbbf24;">Level 0</div>
+
+                    <div style="font-size: 12px; color: #94a3b8; margin-top: 15px; margin-bottom: 5px;">下次复习</div>
+                    <div id="card-next" style="font-size: 18px;">现在</div>
+                </div>
+
+                <div class="review-buttons" style="flex-direction: column; gap: 10px; margin-top: auto;">
+                    <button class="review-btn again" style="width: 100%;" onclick="reviewCard('again')">
+                        忘记 <span style="font-size:11px; opacity:0.7;">1m</span>
+                    </button>
+                    <button class="review-btn hard" style="width: 100%;" onclick="reviewCard('hard')">
+                        模糊 <span id="hard-interval" style="font-size:11px; opacity:0.7;">10m</span>
+                    </button>
+                    <button class="review-btn easy" style="width: 100%;" onclick="reviewCard('easy')">
+                        记得 <span id="easy-interval" style="font-size:11px; opacity:0.7;">1d</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div style="margin-top: 20px; text-align: right; border-top: 1px solid #334155; padding-top: 15px;">
+            <button class="action-btn"
+                style="padding:6px 16px; background:#ef4444; border-color:#ef4444; font-size:12px;"
+                onclick="deleteCurrentCard()">🗑️ 删除此卡</button>
+            <button class="action-btn" style="padding:6px 16px; background:#94a3b8; font-size:12px;"
+                onclick="closeAllModals()">关闭</button>
+        </div>
+    </div>
+
+    <!-- 启动页 -->
+    <div id="overlay" onclick="startApp()">
+        <h1 style="font-size: 36px; margin-bottom: 20px;">🧠 记忆宫殿 · SRS智能复习</h1>
+        <div style="text-align: left; line-height: 2; color: #ccc; max-width: 600px; padding: 0 20px;">
+            <strong style="color: #fbbf24;">核心功能:</strong><br>
+            ✅ 间隔重复算法 (SuperMemo-2) - 科学复习<br>
+            ✅ 自动导航到待复习卡片 - 无需手动寻找<br>
+            ✅ 数据导入导出 - 永不丢失进度<br>
+            ✅ 移动端/桌面端全适配<br>
+            <br>
+            <strong style="color: #10b981;">使用说明:</strong><br>
+            1. 点击 <span class="key-badge">导入</span> 批量导入单词<br>
+            2. 点击 <span class="key-badge">自动复习</span> 跳转到待学卡片<br>
+            3. 拿起卡片,在房间中找绿色光圈放置<br>
+            4. 看着卡片按 <span class="key-badge">E</span> 或点击复习<br>
+            5. 根据记忆情况选择 忘记/模糊/记得
+        </div>
+        <div
+            style="margin-top: 40px; padding: 12px 30px; border: 2px solid white; border-radius: 30px; cursor: pointer; font-weight: bold;">
+            点击任意处开始
+        </div>
+    </div>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js';
+
+        // =========================
+        // 全局状态与配置
+        // =========================
+        const SRS_CONFIG = {
+            INTERVALS_MINUTES: {
+                again: 1,
+                hard: 10,
+                easy_new: 1440,      // 1天
+                easy_learning: 4320, // 3天
+                multiplier: 2.5      // 每次正确后间隔倍增
+            }
+        };
+
+        const state = {
+            mode: 'ROAM', // ROAM | HOLDING | AUTO_NAVIGATE
+            pendingQueue: [], // 待学习 [{id, text, meaning, nextReview, interval, stage}]
+            placedWords: [],  // 已放置 [{..., locusId, mesh}]
+            loci: [],         // 所有锚点
+
+            // 统计
+            todayReviewedCount: 0,
+
+            // 运行时
+            holdingWord: null,
+            hoveredObj: null,
+            hoveredLocus: null,
+            currentDetailData: null,
+
+            // 自动导航
+            autoNavTarget: null,
+            autoNavStartPos: null,
+            autoNavStartTime: 0,
+
+            // 移动端
+            isMobile: /Android|iPhone|iPad/i.test(navigator.userAgent),
+            joystickActive: false,
+            joystickDir: { x: 0, y: 0 }
+        };
+
+        // Three.js 核心对象
+        let scene, camera, renderer, controls;
+        let raycaster, mouse;
+        let inboxMesh = null;
+        let inboxLabel = null;
+        const cardGeometry = new THREE.PlaneGeometry(0.3, 0.15);
+        const ghostMaterial = new THREE.MeshBasicMaterial({
+            color: 0x22c55e,
+            opacity: 0.5,
+            transparent: true,
+            side: THREE.DoubleSide
+        });
+
+        // 移动控制
+        let moveF = false, moveB = false, moveL = false, moveR = false;
+        let prevTime = performance.now();
+        const velocity = new THREE.Vector3();
+        const direction = new THREE.Vector3();
+
+        // =========================
+        // 初始化
+        // =========================
+        // =========================
+        // 初始化
+        // =========================
+        // init(); // Moved to bottom
+        // animate(); // Moved to bottom
+
+        function init() {
+            // 场景
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0xf1f5f9);
+            scene.fog = new THREE.Fog(0xf1f5f9, 0, 20);
+
+            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 100);
+            camera.position.set(0, 1.6, 3);
+
+            // 灯光
+            const hemi = new THREE.HemisphereLight(0xffffff, 0xffffff, 0.7);
+            scene.add(hemi);
+            const dir = new THREE.DirectionalLight(0xfff7ed, 0.8);
+            dir.position.set(5, 8, 5);
+            dir.castShadow = true;
+            scene.add(dir);
+
+            // 渲染器
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true;
+            document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+            // 控制器
+            controls = new PointerLockControls(camera, document.body);
+            controls.addEventListener('unlock', () => {
+                if (state.mode !== 'AUTO_NAVIGATE') {
+                    document.getElementById('action-bar').style.display = 'flex';
+                }
+            });
+            controls.addEventListener('lock', () => {
+                document.getElementById('action-bar').style.display = 'none';
+                closeAllModals();
+            });
+
+            // 事件
+            document.addEventListener('keydown', onKeyDown);
+            document.addEventListener('keyup', onKeyUp);
+            document.addEventListener('mousedown', onMouseDown);
+            window.addEventListener('resize', onResize);
+
+            // 移动端摇杆
+            if (state.isMobile) {
+                initMobileControls();
+            }
+
+            raycaster = new THREE.Raycaster();
+            mouse = new THREE.Vector2(0, 0);
+
+            // 构建房间
+            buildRoom();
+
+            // 加载数据
+            loadData();
+            updateInboxVisuals();
+            updateProgressBar();
+        }
+
+        // =========================
+        // 场景构建 - 支持扩展
+        // =========================
+        function buildRoom() {
+            const matFloor = new THREE.MeshStandardMaterial({ color: 0x94a3b8, roughness: 0.5 });
+            const matWall = new THREE.MeshStandardMaterial({ color: 0xffffff });
+            const matWood = new THREE.MeshStandardMaterial({ color: 0xd4a373 });
+            const matTable = new THREE.MeshStandardMaterial({ color: 0xe2e8f0 });
+
+            // 地板
+            const floor = new THREE.Mesh(new THREE.PlaneGeometry(12, 12), matFloor);
+            floor.rotation.x = -Math.PI / 2;
+            floor.receiveShadow = true;
+            scene.add(floor);
+
+            // 墙
+            const wallN = new THREE.Mesh(new THREE.BoxGeometry(12, 4, 0.5), matWall);
+            wallN.position.set(0, 2, -6);
+            scene.add(wallN);
+            const wallS = new THREE.Mesh(new THREE.BoxGeometry(12, 4, 0.5), matWall);
+            wallS.position.set(0, 2, 6);
+            scene.add(wallS);
+            const wallW = new THREE.Mesh(new THREE.BoxGeometry(0.5, 4, 12), matWall);
+            wallW.position.set(-6, 2, 0);
+            scene.add(wallW);
+            const wallE = new THREE.Mesh(new THREE.BoxGeometry(0.5, 4, 12), matWall);
+            wallE.position.set(6, 2, 0);
+            scene.add(wallE);
+
+            // 茶几 (Inbox)
+            const table = new THREE.Mesh(new THREE.BoxGeometry(2, 0.5, 1.2), matTable);
+            table.position.set(0, 0.25, 0);
+            table.castShadow = true;
+            scene.add(table);
+            createInboxStack(0, 0.51, 0);
+
+            // 家具与锚点 - 初始15个
+            createProp(-3, 0.4, -5, 2.5, 0.8, 0.8, matWood);
+            addLocus(-3.5, 0.81, -5, -Math.PI / 2, 0, 0);
+            addLocus(-2.5, 0.81, -5, -Math.PI / 2, 0, 0);
+
+            createProp(-3, 1.5, -5.2, 2, 1.2, 0.1, new THREE.MeshStandardMaterial({ color: 0x111 }));
+            addLocus(-3, 1.5, -5.14, 0, 0, 0);
+
+            createProp(3, 1.2, -5, 1.2, 2.4, 1.2, new THREE.MeshStandardMaterial({ color: 0xffffff, metalness: 0.3 }));
+            addLocus(3, 1.8, -4.39, 0, 0, 0);
+            addLocus(3, 1.2, -4.39, 0, 0, 0);
+            addLocus(2.39, 1.5, -5, 0, -Math.PI / 2, 0);
+
+            addLocus(0, 2, 5.7, 0, Math.PI, 0);
+            addLocus(-2, 2, 5.7, 0, Math.PI, 0);
+            addLocus(2, 2, 5.7, 0, Math.PI, 0);
+
+            createProp(-5.5, 1.5, 0, 1, 3, 2, matWood);
+            addLocus(-4.99, 2.0, 0, 0, Math.PI / 2, 0);
+            addLocus(-4.99, 1.2, 0.5, 0, Math.PI / 2, 0);
+
+            // 墙面额外锚点 - 扩展容量
+            addLocus(-5.7, 1.5, -3, 0, -Math.PI / 2, 0);
+            addLocus(-5.7, 2.5, -3, 0, -Math.PI / 2, 0);
+            addLocus(-5.7, 1.5, 3, 0, -Math.PI / 2, 0);
+            addLocus(-5.7, 2.5, 3, 0, -Math.PI / 2, 0);
+
+            addLocus(5.7, 1.5, -3, 0, Math.PI / 2, 0);
+            addLocus(5.7, 2.5, -3, 0, Math.PI / 2, 0);
+            addLocus(5.7, 1.5, 3, 0, Math.PI / 2, 0);
+            addLocus(5.7, 2.5, 3, 0, Math.PI / 2, 0);
+
+            // =========================
+            // 新增家居 - 设计感升级
+            // =========================
+
+            // 1. 现代简约沙发 (Sofa) - 位于南侧，面向中心
+            const matSofaFabric = new THREE.MeshStandardMaterial({ color: 0x475569, roughness: 0.9 });
+
+            // 沙发底座
+            const sofaBase = new THREE.Mesh(new THREE.BoxGeometry(3.2, 0.4, 1.0), matSofaFabric);
+            sofaBase.position.set(0, 0.2, 3.5);
+            sofaBase.castShadow = true;
+            sofaBase.receiveShadow = true;
+            scene.add(sofaBase);
+
+            // 沙发靠背
+            const sofaBack = new THREE.Mesh(new THREE.BoxGeometry(3.2, 0.5, 0.2), matSofaFabric);
+            sofaBack.position.set(0, 0.65, 3.9);
+            sofaBack.castShadow = true;
+            scene.add(sofaBack);
+
+            // 沙发扶手 (左/右)
+            const sofaArmL = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.6, 1.0), matSofaFabric);
+            sofaArmL.position.set(-1.45, 0.3, 3.5);
+            scene.add(sofaArmL);
+            const sofaArmR = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.6, 1.0), matSofaFabric);
+            sofaArmR.position.set(1.45, 0.3, 3.5);
+            scene.add(sofaArmR);
+
+            // 锚点: 沙发靠背和坐垫
+            addLocus(-0.8, 0.7, 3.8, -0.2, 0, 0); // 靠背左
+            addLocus(0.8, 0.7, 3.8, -0.2, 0, 0);  // 靠背右
+            addLocus(-0.8, 0.41, 3.2, -Math.PI / 2, 0, 0); // 坐垫左
+            addLocus(0.8, 0.41, 3.2, -Math.PI / 2, 0, 0);  // 坐垫右
+
+            // 2. 艺术画廊墙 (Gallery Wall) - 东墙
+            const matFrame = new THREE.MeshStandardMaterial({ color: 0x1e293b });
+            const matArt1 = new THREE.MeshStandardMaterial({ color: 0xfca5a5 }); // Pinkish
+            const matArt2 = new THREE.MeshStandardMaterial({ color: 0x93c5fd }); // Blueish
+            const matArt3 = new THREE.MeshStandardMaterial({ color: 0xfde047 }); // Yellowish
+
+            function createPainting(x, y, z, w, h, mat) {
+                const frame = new THREE.Mesh(new THREE.BoxGeometry(0.1, h, w), matFrame);
+                frame.position.set(x, y, z);
+                scene.add(frame);
+                const canvas = new THREE.Mesh(new THREE.PlaneGeometry(w - 0.1, h - 0.1), mat);
+                canvas.position.set(x - 0.06, y, z);
+                canvas.rotation.y = -Math.PI / 2;
+                scene.add(canvas);
+                // 锚点
+                addLocus(x - 0.1, y, z, 0, Math.PI / 2, 0);
+            }
+
+            createPainting(5.95, 2.5, -1.5, 1.2, 1.5, matArt1);
+            createPainting(5.95, 2.5, 0.5, 1.2, 1.0, matArt2);
+            createPainting(5.95, 1.2, 0.5, 1.2, 1.0, matArt3);
+
+            // 3. 绿植角落 (Plant Corner) - 西南角
+            const matPot = new THREE.MeshStandardMaterial({ color: 0xd97706 });
+            const matLeaf = new THREE.MeshStandardMaterial({ color: 0x15803d });
+
+            const pot = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.3, 0.6, 16), matPot);
+            pot.position.set(-5, 0.3, 5);
+            pot.castShadow = true;
+            scene.add(pot);
+
+            const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 1.5, 8), new THREE.MeshStandardMaterial({ color: 0x4b3621 }));
+            trunk.position.set(-5, 1.0, 5);
+            scene.add(trunk);
+
+            // 树叶 (简化为几个球体)
+            const leaf1 = new THREE.Mesh(new THREE.SphereGeometry(0.5, 8, 8), matLeaf);
+            leaf1.position.set(-5, 1.8, 5);
+            scene.add(leaf1);
+            const leaf2 = new THREE.Mesh(new THREE.SphereGeometry(0.4, 8, 8), matLeaf);
+            leaf2.position.set(-4.6, 1.5, 5);
+            scene.add(leaf2);
+
+            // 锚点: 树叶上
+            addLocus(-5, 1.8, 4.4, 0, 0, 0);
+            addLocus(-4.5, 1.5, 4.8, 0, -Math.PI / 4, 0);
+
+            // 4. 用餐区 (Dining Area) - 东南角
+            const matDiningTable = new THREE.MeshStandardMaterial({ color: 0xf1f5f9, metalness: 0.1 });
+            const diningTableTop = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.2, 0.1, 32), matDiningTable);
+            diningTableTop.position.set(3.5, 0.8, 3.5);
+            diningTableTop.receiveShadow = true;
+            scene.add(diningTableTop);
+
+            const diningLeg = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.4, 0.8, 16), new THREE.MeshStandardMaterial({ color: 0x334155 }));
+            diningLeg.position.set(3.5, 0.4, 3.5);
+            scene.add(diningLeg);
+
+            // 椅子
+            function createChair(x, z, rot) {
+                const chairMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8 });
+                const seat = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.1, 0.5), chairMat);
+                seat.position.set(x, 0.45, z);
+                seat.rotation.y = rot;
+                scene.add(seat);
+
+                const back = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 0.05), chairMat);
+                back.position.set(0, 0.25, -0.22);
+                seat.add(back); // Attach back to seat for easier rotation
+
+                const leg = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.45, 0.05), chairMat);
+                leg.position.set(0, -0.225, 0);
+                seat.add(leg);
+
+                // 锚点
+                addLocus(x, 0.8, z, 0, rot + Math.PI, 0); // 椅子背后的锚点
+            }
+
+            createChair(3.5, 2.2, 0); // North side
+            createChair(3.5, 4.8, Math.PI); // South side
+            createChair(5.2, 3.5, -Math.PI / 2); // West side
+
+            // 餐桌上的锚点
+            addLocus(3.5, 0.9, 3.5, -Math.PI / 2, 0, 0);
+
+            // 5. 地毯 (Rug) - 中心区域
+            const matRug = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, roughness: 1.0 });
+            const rug = new THREE.Mesh(new THREE.PlaneGeometry(5, 7), matRug);
+            rug.rotation.x = -Math.PI / 2;
+            rug.position.set(0, 0.01, 1); // 稍微抬高一点点防止z-fighting
+            rug.receiveShadow = true;
+            scene.add(rug);
+
+            // 6. 落地灯 (Floor Lamp) - 沙发旁
+            const lampPole = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 2.5, 8), new THREE.MeshStandardMaterial({ color: 0x000000 }));
+            lampPole.position.set(-2.5, 1.25, 3.5);
+            scene.add(lampPole);
+
+            const lampShade = new THREE.Mesh(new THREE.ConeGeometry(0.4, 0.5, 32, 1, true), new THREE.MeshStandardMaterial({ color: 0xfff7ed, emissive: 0xffedd5, emissiveIntensity: 0.5, side: THREE.DoubleSide }));
+            lampShade.position.set(-2.5, 2.3, 3.5);
+            scene.add(lampShade);
+
+            // 灯光
+            const pointLight = new THREE.PointLight(0xffaa00, 0.5, 5);
+            pointLight.position.set(-2.5, 2.2, 3.5);
+            scene.add(pointLight);
+
+            // 锚点
+            addLocus(-2.5, 2.3, 3.5, 0, 0, 0);
+
+            // 可继续扩展: 动态生成更多房间/墙面
+        }
+
+        function createProp(x, y, z, w, h, d, mat) {
+            const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+            mesh.position.set(x, y, z);
+            mesh.castShadow = true;
+            mesh.receiveShadow = true;
+            scene.add(mesh);
+            return mesh;
+        }
+
+        function addLocus(x, y, z, rx, ry, rz) {
+            state.loci.push({
+                id: `loc_${state.loci.length}`,
+                pos: new THREE.Vector3(x, y, z),
+                rot: new THREE.Euler(rx, ry, rz),
+                occupied: false,
+                ghost: null
+            });
+        }
+
+        function createInboxStack(x, y, z) {
+            const geo = new THREE.BoxGeometry(0.32, 0.05, 0.17);
+            const mat = new THREE.MeshStandardMaterial({ color: 0xffffff });
+            inboxMesh = new THREE.Mesh(geo, mat);
+            inboxMesh.position.set(x, y, z);
+            inboxMesh.visible = false;
+            inboxMesh.name = "INBOX_STACK";
+            scene.add(inboxMesh);
+
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = 256;
+            canvas.height = 128;
+            const tex = new THREE.CanvasTexture(canvas);
+            const spriteMat = new THREE.SpriteMaterial({ map: tex });
+            inboxLabel = new THREE.Sprite(spriteMat);
+            inboxLabel.position.set(x, y + 0.3, z);
+            inboxLabel.scale.set(0.8, 0.4, 1);
+            inboxLabel.visible = false;
+            scene.add(inboxLabel);
+        }
+
+        function updateInboxVisuals() {
+            const count = state.pendingQueue.length;
+
+            if (count > 0) {
+                inboxMesh.visible = true;
+                inboxLabel.visible = true;
+
+                const tex = inboxLabel.material.map;
+                const ctx = tex.image.getContext('2d');
+                ctx.clearRect(0, 0, 256, 128);
+
+                ctx.fillStyle = "rgba(0,0,0,0.7)";
+                ctx.beginPath();
+                ctx.roundRect(28, 14, 200, 100, 20);
+                ctx.fill();
+
+                ctx.fillStyle = "white";
+                ctx.font = "bold 36px Arial";
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                ctx.fillText(`待学习: ${count}`, 128, 50);
+
+                ctx.font = "20px Arial";
+                ctx.fillStyle = "#fbbf24";
+                const nextWord = state.pendingQueue[0].text;
+                ctx.fillText(nextWord.length > 10 ? nextWord.slice(0, 9) + "..." : nextWord, 128, 90);
+
+                tex.needsUpdate = true;
+
+                inboxMesh.scale.y = Math.min(count, 10);
+                inboxMesh.position.y = 0.51 + (inboxMesh.geometry.parameters.height * inboxMesh.scale.y / 2);
+
+            } else {
+                inboxMesh.visible = false;
+                inboxLabel.visible = false;
+            }
+        }
+
+        // =========================
+        // SRS 算法核心
+        // =========================
+        function calculateNextReview(currentStage, response) {
+            let intervalMinutes = 0;
+            let newStage = currentStage;
+
+            if (response === 'again') {
+                intervalMinutes = SRS_CONFIG.INTERVALS_MINUTES.again;
+                newStage = Math.max(0, currentStage - 1);
+            } else if (response === 'hard') {
+                intervalMinutes = SRS_CONFIG.INTERVALS_MINUTES.hard;
+                newStage = currentStage;
+            } else if (response === 'easy') {
+                if (currentStage === 0) {
+                    intervalMinutes = SRS_CONFIG.INTERVALS_MINUTES.easy_new;
+                    newStage = 1;
+                } else if (currentStage === 1) {
+                    intervalMinutes = SRS_CONFIG.INTERVALS_MINUTES.easy_learning;
+                    newStage = 2;
+                } else {
+                    // 已学会的卡片,每次间隔倍增
+                    const lastInterval = SRS_CONFIG.INTERVALS_MINUTES.easy_learning;
+                    intervalMinutes = lastInterval * Math.pow(SRS_CONFIG.INTERVALS_MINUTES.multiplier, currentStage - 1);
+                    newStage = Math.min(currentStage + 1, 10); // 最高10级
+                }
+            }
+
+            const nextReview = Date.now() + (intervalMinutes * 60 * 1000);
+            return { nextReview, newStage, intervalMinutes };
+        }
+
+        function formatInterval(minutes) {
+            if (minutes < 60) return `${Math.round(minutes)}分钟`;
+            if (minutes < 1440) return `${Math.round(minutes / 60)}小时`;
+            return `${Math.round(minutes / 1440)}天`;
+        }
+
+        function isCardDue(card) {
+            return Date.now() >= card.nextReview;
+        }
+
+        function getCardStyle(card) {
+            if (!isCardDue(card)) {
+                return { color: 0xffffff, emissive: 0x000000, emissiveIntensity: 0 };
+            }
+            // 需要复习 - 红色发光
+            return { color: 0xff6b6b, emissive: 0xff0000, emissiveIntensity: 0.3 };
+        }
+
+        // =========================
+        // 核心循环
+        // =========================
+        function animate() {
+            requestAnimationFrame(animate);
+            const delta = (performance.now() - prevTime) / 1000;
+            prevTime = performance.now();
+
+            // 自动导航模式
+            if (state.mode === 'AUTO_NAVIGATE' && state.autoNavTarget) {
+                updateAutoNavigation(delta);
+            } else if (controls.isLocked) {
+                // 手动移动
+                velocity.x -= velocity.x * 10.0 * delta;
+                velocity.z -= velocity.z * 10.0 * delta;
+
+                if (state.isMobile && state.joystickActive) {
+                    direction.z = -state.joystickDir.y;
+                    direction.x = state.joystickDir.x;
+                } else {
+                    direction.z = Number(moveF) - Number(moveB);
+                    direction.x = Number(moveR) - Number(moveL);
+                }
+                direction.normalize();
+
+                if (direction.z !== 0) velocity.z -= direction.z * 40.0 * delta;
+                if (direction.x !== 0) velocity.x -= direction.x * 40.0 * delta;
+
+                controls.moveRight(-velocity.x * delta);
+                controls.moveForward(-velocity.z * delta);
+
+                // 射线检测
+                updateRaycaster();
+            }
+
+            // 更新卡片视觉状态 (复习提醒)
+            updateCardVisuals();
+
+            renderer.render(scene, camera);
+        }
+
+        function updateCardVisuals() {
+            state.placedWords.forEach(card => {
+                if (!card.mesh) return;
+                const style = getCardStyle(card);
+
+                // 更新材质
+                if (card.mesh.material.emissive) {
+                    card.mesh.material.emissive.setHex(style.emissive);
+                    card.mesh.material.emissiveIntensity = style.emissiveIntensity;
+                }
+            });
+        }
+
+        function updateRaycaster() {
+            raycaster.setFromCamera(mouse, camera);
+            const crosshair = document.getElementById('crosshair');
+
+            // 拿着卡片 -> 找空位
+            if (state.mode === 'HOLDING') {
+                let nearest = null;
+                let minDist = 4;
+
+                state.loci.forEach(l => {
+                    if (l.occupied) return;
+                    const dist = l.pos.distanceTo(camera.position);
+                    const dirToObj = l.pos.clone().sub(camera.position).normalize();
+                    const camDir = new THREE.Vector3();
+                    camera.getWorldDirection(camDir);
+
+                    if (dist < minDist && camDir.angleTo(dirToObj) < 0.5) {
+                        minDist = dist;
+                        nearest = l;
+                    }
+                });
+
+                state.loci.forEach(l => {
+                    if (l.ghost && !l.occupied) {
+                        if (l === nearest) {
+                            l.ghost.visible = true;
+                            l.ghost.scale.set(1.2, 1.2, 1.2);
+                            l.ghost.material.opacity = 0.8;
+                        } else {
+                            l.ghost.visible = true;
+                            l.ghost.scale.set(1, 1, 1);
+                            l.ghost.material.opacity = 0.2;
+                        }
+                    }
+                });
+
+                state.hoveredLocus = nearest;
+                return;
+            }
+
+            // 漫游模式 -> 检测 Inbox 或 Cards
+            state.hoveredLocus = null;
+
+            if (inboxMesh && inboxMesh.visible) {
+                const intersectInbox = raycaster.intersectObject(inboxMesh);
+                if (intersectInbox.length > 0 && intersectInbox[0].distance < 3) {
+                    crosshair.style.transform = "translate(-50%, -50%) scale(1.5)";
+                    crosshair.style.borderColor = "#fbbf24";
+                    state.hoveredObj = "INBOX";
+                    showToast("左键拿起卡片");
+                    return;
+                }
+            }
+
+            const meshes = state.placedWords.map(w => w.mesh).filter(m => m);
+            const intersects = raycaster.intersectObjects(meshes);
+
+            if (intersects.length > 0 && intersects[0].distance < 3) {
+                const obj = intersects[0].object;
+
+                // Hover Logic
+                if (state.hoveredObj !== obj) {
+                    state.hoveredObj = obj;
+                    state.hoverStartTime = Date.now();
+                    state.hasTriggeredHover = false;
+                } else {
+                    // Hovering same object
+                    if (!state.hasTriggeredHover && Date.now() - state.hoverStartTime > 500) {
+                        // Trigger Hover Effect (Audio + Tooltip)
+                        triggerHoverEffect(obj.userData);
+                        state.hasTriggeredHover = true;
+                    }
+                }
+
+                crosshair.style.transform = "translate(-50%, -50%) scale(1.5)";
+                crosshair.style.borderColor = "#3b82f6";
+
+                const card = obj.userData;
+                if (isCardDue(card)) {
+                    showToast("按 E 复习 (该复习了!)");
+                } else {
+                    showToast("按 E 查看");
+                }
+                return;
+            }
+
+            // Reset Hover
+            if (state.hoveredObj && typeof state.hoveredObj === 'object') {
+                hideTooltip();
+            }
+            state.hoveredObj = null;
+            state.hoverStartTime = 0;
+            state.hasTriggeredHover = false;
+
+            crosshair.style.transform = "translate(-50%, -50%) scale(1)";
+            crosshair.style.borderColor = "rgba(0,0,0,0.5)";
+            showToast("");
+        }
+
+        function triggerHoverEffect(wordData) {
+            // 1. Audio
+            const rich = wordData.richData;
+            if (rich && rich.audio) {
+                playAudio(rich.audio);
+            }
+
+            // 2. Tooltip
+            showTooltip(wordData);
+        }
+
+        let currentAudio = null;
+        function playAudio(url) {
+            if (currentAudio) {
+                currentAudio.pause();
+                currentAudio = null;
+            }
+            const audio = new Audio(url);
+            audio.volume = 0.5;
+            audio.play().catch(e => console.log("Audio play failed (interaction needed)", e));
+            currentAudio = audio;
+        }
+
+        function showTooltip(wordData) {
+            const tooltip = document.getElementById('tooltip');
+            if (!tooltip) return; // Need to add tooltip element to HTML
+
+            const mean = wordData.meaning || "暂无释义";
+            tooltip.innerHTML = `<strong>${wordData.text}</strong><br><span style="font-size:12px; color:#ccc">${mean}</span>`;
+            tooltip.style.opacity = 1;
+        }
+
+        function hideTooltip() {
+            const tooltip = document.getElementById('tooltip');
+            if (tooltip) tooltip.style.opacity = 0;
+        }
+
+        // =========================
+        // 自动导航
+        // =========================
+        window.autoNavigateToNextReview = function () {
+            // 找到下一个需要复习或新学习的卡片
+            let target = null;
+
+            // 优先找待复习
+            for (let card of state.placedWords) {
+                if (isCardDue(card)) {
+                    target = card;
+                    break;
+                }
+            }
+
+            // 没有待复习,找待学习
+            if (!target && state.pendingQueue.length > 0) {
+                // 导航到茶几
+                target = { pos: new THREE.Vector3(0, 1.6, 2.5), isInbox: true };
+            }
+
+            if (!target) {
+                showToast("🎉 太棒了!今天没有需要复习的卡片了!");
+                return;
+            }
+
+            // 开始自动导航
+            state.mode = 'AUTO_NAVIGATE';
+            state.autoNavTarget = target;
+            state.autoNavStartPos = camera.position.clone();
+            state.autoNavStartTime = Date.now();
+
+            if (!controls.isLocked) {
+                controls.lock();
+            }
+
+            showToast("🎯 正在飞向目标卡片...");
+        };
+
+        function updateAutoNavigation(delta) {
+            const duration = 1500; // 1.5秒飞行时间
+            const elapsed = Date.now() - state.autoNavStartTime;
+            const progress = Math.min(elapsed / duration, 1);
+
+            // 缓动函数
+            const easeProgress = 1 - Math.pow(1 - progress, 3);
+
+            const targetPos = state.autoNavTarget.isInbox
+                ? state.autoNavTarget.pos
+                : state.autoNavTarget.mesh.position.clone().add(new THREE.Vector3(0, 0, 1.5));
+
+            camera.position.lerpVectors(state.autoNavStartPos, targetPos, easeProgress);
+
+            // 看向目标
+            const lookTarget = state.autoNavTarget.isInbox
+                ? new THREE.Vector3(0, 1, 0)
+                : state.autoNavTarget.mesh.position;
+            camera.lookAt(lookTarget);
+
+            if (progress >= 1) {
+                // 导航完成
+                state.mode = 'ROAM';
+                state.autoNavTarget = null;
+                showToast("✅ 已到达!可以操作了");
+
+                // 如果是卡片,自动打开详情
+                if (!state.autoNavTarget?.isInbox) {
+                    setTimeout(() => {
+                        const card = state.placedWords.find(c => c.mesh === state.hoveredObj);
+                        if (card) openDetail(card);
+                    }, 300);
+                }
+            }
+        }
+
+        // =========================
+        // 交互事件
+        // =========================
+        function onMouseDown(e) {
+            if (!controls.isLocked || state.mode === 'AUTO_NAVIGATE') return;
+
+            if (state.mode === 'ROAM' && state.hoveredObj === "INBOX") {
+                pickUpNextCard();
+                return;
+            }
+
+            if (state.mode === 'HOLDING' && state.hoveredLocus) {
+                placeCard(state.hoveredLocus);
+                return;
+            }
+
+            if (state.mode === 'ROAM' && state.hoveredObj && typeof state.hoveredObj === 'object') {
+                openDetail(state.hoveredObj.userData);
+            }
+        }
+
+        function onKeyDown(e) {
+            if (e.code === 'KeyE') {
+                if (state.mode === 'ROAM' && state.hoveredObj && typeof state.hoveredObj === 'object') {
+                    openDetail(state.hoveredObj.userData);
+                }
+            }
+            switch (e.code) {
+                case 'KeyW': moveF = true; break;
+                case 'KeyS': moveB = true; break;
+                case 'KeyA': moveL = true; break;
+                case 'KeyD': moveR = true; break;
+            }
+        }
+
+        function onKeyUp(e) {
+            switch (e.code) {
+                case 'KeyW': moveF = false; break;
+                case 'KeyS': moveB = false; break;
+                case 'KeyA': moveL = false; break;
+                case 'KeyD': moveR = false; break;
+            }
+        }
+
+        // =========================
+        // 核心逻辑
+        // =========================
+        function pickUpNextCard() {
+            if (state.pendingQueue.length === 0) return;
+
+            const word = state.pendingQueue.shift();
+            state.holdingWord = word;
+            state.mode = 'HOLDING';
+
+            updateInboxVisuals();
+            document.getElementById('holding-bar').style.display = 'block';
+            document.getElementById('holding-word').innerText = word.text;
+
+            state.loci.forEach(l => {
+                if (!l.occupied) {
+                    if (!l.ghost) {
+                        const g = new THREE.Mesh(cardGeometry, ghostMaterial);
+                        g.position.copy(l.pos);
+                        g.rotation.copy(l.rot);
+                        scene.add(g);
+                        l.ghost = g;
+                    }
+                    l.ghost.visible = true;
+                }
+            });
+
+            showToast("找到绿色光圈并点击放置");
+        }
+
+        function placeCard(locus) {
+            const word = state.holdingWord;
+
+            // 创建卡片 Mesh
+            const tex = generateWordTexture(word);
+            const mat = new THREE.MeshStandardMaterial({
+                map: tex,
+                emissive: 0x000000,
+                emissiveIntensity: 0,
+                roughness: 0.4,
+                metalness: 0.1
+            });
+            const mesh = new THREE.Mesh(cardGeometry, mat);
+            mesh.position.copy(locus.pos);
+            mesh.rotation.copy(locus.rot);
+            mesh.translateZ(0.01);
+
+            mesh.userData = { ...word, locusId: locus.id };
+            scene.add(mesh);
+
+            state.placedWords.push({ ...word, locusId: locus.id, mesh: mesh });
+            locus.occupied = true;
+
+            state.mode = 'ROAM';
+            state.holdingWord = null;
+            document.getElementById('holding-bar').style.display = 'none';
+
+            state.loci.forEach(l => { if (l.ghost) l.ghost.visible = false; });
+
+            saveData();
+            updateProgressBar();
+            showToast("✅ 放置成功!");
+        }
+
+        // =========================
+        // 渲染层 - 动态纹理生成
+        // =========================
+        function generateWordTexture(wordData) {
+            const canvas = document.createElement('canvas');
+            canvas.width = 512;
+            canvas.height = 256;
+            const ctx = canvas.getContext('2d');
+
+            const rich = wordData.richData || {};
+            const color = rich.color || '#94a3b8'; // Default Gray
+            const pos = rich.meanings?.[0]?.partOfSpeech || "";
+            const phonetic = rich.phonetic || "";
+
+            // 1. Background
+            ctx.fillStyle = '#f8fafc'; // Slate-50 (Off-white)
+            ctx.fillRect(0, 0, 512, 256);
+
+            // 2. Accent Border (Bottom)
+            ctx.fillStyle = color;
+            ctx.fillRect(0, 240, 512, 16);
+
+            // 3. Typography
+            // Word
+            ctx.fillStyle = '#1e293b'; // Slate-800
+            ctx.font = 'bold 70px "Times New Roman", serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(wordData.text, 256, 100);
+
+            // Phonetic
+            if (phonetic) {
+                ctx.font = '28px Arial, sans-serif';
+                ctx.fillStyle = '#64748b'; // Slate-500
+                ctx.fillText(phonetic, 256, 155);
+            }
+
+            // Part of Speech Tag
+            if (pos) {
+                ctx.font = 'italic bold 24px "Times New Roman", serif';
+                ctx.fillStyle = color;
+                ctx.fillText(pos, 256, 195);
+            }
+
+            // Border
+            ctx.lineWidth = 4;
+            ctx.strokeStyle = '#e2e8f0';
+            ctx.strokeRect(0, 0, 512, 256);
+
+            const tex = new THREE.CanvasTexture(canvas);
+            tex.colorSpace = THREE.SRGBColorSpace;
+            return tex;
+        }
+
+        // =========================
+        // 数据层 - Dictionary API
+        // =========================
+        async function fetchWordData(word) {
+            try {
+                // 简单缓存检查
+                const cacheKey = `dict_cache_${word.toLowerCase()}`;
+                const cached = localStorage.getItem(cacheKey);
+                if (cached) return JSON.parse(cached);
+
+                const res = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${word}`);
+                if (!res.ok) throw new Error('Word not found');
+                const data = await res.json();
+
+                const processed = processWordData(data[0]);
+                localStorage.setItem(cacheKey, JSON.stringify(processed));
+                return processed;
+            } catch (e) {
+                console.warn(`Failed to fetch data for ${word}`, e);
+                // Fallback data
+                return {
+                    word: word,
+                    phonetic: '/.../',
+                    audio: null,
+                    meanings: [{ partOfSpeech: 'unknown', def: '暂无释义', example: '' }],
+                    color: '#94a3b8' // Gray
+                };
+            }
+        }
+
+        function processWordData(entry) {
+            // 1. Phonetic & Audio
+            let phonetic = entry.phonetic || (entry.phonetics.find(p => p.text)?.text) || "";
+            let audio = entry.phonetics.find(p => p.audio && p.audio.length > 0)?.audio || null;
+
+            // 2. Meanings (Top 2 distinct parts of speech)
+            const meanings = [];
+            const seenPoS = new Set();
+
+            for (const m of entry.meanings) {
+                if (seenPoS.has(m.partOfSpeech)) continue;
+                if (meanings.length >= 2) break;
+
+                const def = m.definitions[0];
+                meanings.push({
+                    partOfSpeech: m.partOfSpeech, // noun, verb, adjective...
+                    def: def.definition,
+                    example: def.example || ""
+                });
+                seenPoS.add(m.partOfSpeech);
+            }
+
+            // 3. Color Tagging
+            const primaryPoS = meanings[0]?.partOfSpeech || 'unknown';
+            let color = '#94a3b8'; // Default Gray
+            if (primaryPoS === 'noun') color = '#3b82f6'; // Blue
+            else if (primaryPoS === 'verb') color = '#ef4444'; // Red
+            else if (primaryPoS === 'adjective') color = '#eab308'; // Yellow
+            else if (primaryPoS === 'adverb') color = '#a855f7'; // Purple
+
+            return {
+                word: entry.word,
+                phonetic,
+                audio,
+                meanings,
+                color
+            };
+        }
+
+        // =========================
+        // UI 功能
+        // =========================
+        window.openImportModal = function () {
+            document.exitPointerLock();
+            document.getElementById('import-modal').style.display = 'block';
+        };
+
+        window.processImport = async function () {
+            const raw = document.getElementById('import-text').value;
+            if (!raw.trim()) return;
+
+            const lines = raw.split('\n');
+            let count = 0;
+
+            showToast("⏳ 正在获取单词数据...");
+
+            // 并行处理所有单词
+            const promises = lines.map(async (line) => {
+                if (!line.trim()) return null;
+                const parts = line.split(/[\t,，]/);
+                const text = parts[0].trim();
+                // 如果用户提供了释义，优先使用用户的，否则用API的
+                const userMeaning = parts[1] ? parts[1].trim() : "";
+
+                if (text) {
+                    const richData = await fetchWordData(text);
+                    return {
+                        id: Date.now() + Math.random(),
+                        text: richData.word, // Use corrected casing from API
+                        meaning: userMeaning || richData.meanings[0]?.def || "暂无释义",
+                        richData: richData,
+                        nextReview: Date.now(),
+                        interval: 0,
+                        stage: 0
+                    };
+                }
+                return null;
+            });
+
+            const results = await Promise.all(promises);
+
+            results.forEach(item => {
+                if (item) {
+                    state.pendingQueue.push(item);
+                    count++;
+                }
+            });
+
+            closeAllModals();
+            updateInboxVisuals();
+            updateProgressBar();
+            saveData();
+
+            showToast(`✅ 成功导入 ${count} 个单词!`);
+            setTimeout(() => startApp(), 1000);
+        };
+
+        window.openInputModal = function () {
+            document.exitPointerLock();
+            document.getElementById('input-modal').style.display = 'block';
+            document.getElementById('inp-word').focus();
+        };
+
+        window.confirmSingleInput = async function () {
+            const w = document.getElementById('inp-word').value.trim();
+            const m = document.getElementById('inp-mean').value.trim();
+
+            if (w) {
+                showToast("⏳ 正在获取数据...");
+                const richData = await fetchWordData(w);
+
+                state.pendingQueue.push({
+                    id: Date.now(),
+                    text: richData.word,
+                    meaning: m || richData.meanings[0]?.def || "暂无释义",
+                    richData: richData,
+                    nextReview: Date.now(),
+                    interval: 0,
+                    stage: 0
+                });
+                updateInboxVisuals();
+                updateProgressBar();
+                saveData();
+            }
+            closeAllModals();
+            startApp();
+        };
+
+        window.openDetail = function (data) {
+            document.exitPointerLock();
+            state.currentDetailData = data;
+            const rich = data.richData || {};
+
+            document.getElementById('detail-card').style.display = 'block';
+
+            // 1. Word & Phonetic
+            document.getElementById('detail-word').innerText = data.text;
+            document.getElementById('detail-phonetic').innerText = rich.phonetic || "/.../";
+
+            // 2. Meanings
+            const meaningsContainer = document.getElementById('detail-meanings');
+            meaningsContainer.innerHTML = '';
+
+            // Add User Meaning first (if exists and different from API)
+            if (data.meaning && data.meaning !== "暂无释义") {
+                const div = document.createElement('div');
+                div.style.marginBottom = '15px';
+                div.innerHTML = `<span style="color: #fbbf24; font-weight: bold;">[User]</span> <span style="color: #e2e8f0;">${data.meaning}</span>`;
+                meaningsContainer.appendChild(div);
+            }
+
+            if (rich.meanings && rich.meanings.length > 0) {
+                rich.meanings.forEach(m => {
+                    const div = document.createElement('div');
+                    div.style.marginBottom = '15px';
+                    div.innerHTML = `
+                        <span style="color: ${rich.color || '#94a3b8'}; font-weight: bold; font-style: italic; margin-right: 10px;">${m.partOfSpeech}</span>
+                        <span style="color: #e2e8f0;">${m.def}</span>
+                    `;
+                    meaningsContainer.appendChild(div);
+                });
+            } else if (!data.meaning) {
+                meaningsContainer.innerHTML = '<div style="color: #64748b;">暂无详细释义</div>';
+            }
+
+            // 3. Example
+            const example = rich.meanings?.[0]?.example || "No example sentence available.";
+            // Highlight word in example
+            const regex = new RegExp(`\\b${data.text}\\b`, 'gi');
+            const highlighted = example.replace(regex, match => `<span style="color: #fbbf24; font-weight: bold;">${match}</span>`);
+            document.getElementById('detail-example').innerHTML = `"${highlighted}"`;
+
+            // 4. SRS Stats
+            const stageNames = ['新卡片', '学习中', '已学会', '熟练', '精通'];
+            document.getElementById('card-stage').innerText = stageNames[Math.min(data.stage, 4)] || `Level ${data.stage}`;
+
+            const nextDate = new Date(data.nextReview);
+            const now = new Date();
+            if (nextDate <= now) {
+                document.getElementById('card-next').innerText = '现在';
+                document.getElementById('card-next').style.color = '#ef4444';
+            } else {
+                const diff = (nextDate - now) / 1000 / 60;
+                document.getElementById('card-next').innerText = formatInterval(diff);
+                document.getElementById('card-next').style.color = '#fff';
+            }
+
+            // Intervals
+            const hardCalc = calculateNextReview(data.stage, 'hard');
+            const easyCalc = calculateNextReview(data.stage, 'easy');
+            document.getElementById('hard-interval').innerText = formatInterval(hardCalc.intervalMinutes);
+            document.getElementById('easy-interval').innerText = formatInterval(easyCalc.intervalMinutes);
+        };
+
+        window.reviewCard = function (response) {
+            if (!state.currentDetailData) return;
+            const data = state.currentDetailData;
+
+            // 计算新的复习时间
+            const result = calculateNextReview(data.stage, response);
+
+            // 更新数据
+            const idx = state.placedWords.findIndex(w => w.id === data.id);
+            if (idx > -1) {
+                state.placedWords[idx].nextReview = result.nextReview;
+                state.placedWords[idx].interval = result.intervalMinutes;
+                state.placedWords[idx].stage = result.newStage;
+                state.placedWords[idx].mesh.userData = state.placedWords[idx];
+            }
+
+            state.todayReviewedCount++;
+            saveData();
+            updateProgressBar();
+
+            closeAllModals();
+            showToast(`下次复习: ${formatInterval(result.intervalMinutes)}`);
+
+            // 自动跳转到下一张
+            setTimeout(() => autoNavigateToNextReview(), 800);
+        };
+
+        window.deleteCurrentCard = function () {
+            if (!confirm('确定要删除这张卡片吗?')) return;
+            if (!state.currentDetailData) return;
+            const data = state.currentDetailData;
+
+            const idx = state.placedWords.findIndex(w => w.id === data.id);
+            if (idx > -1) {
+                scene.remove(state.placedWords[idx].mesh);
+                state.placedWords.splice(idx, 1);
+            }
+
+            const loc = state.loci.find(l => l.id === data.locusId);
+            if (loc) loc.occupied = false;
+
+            saveData();
+            updateProgressBar();
+            closeAllModals();
+            startApp();
+        };
+
+        window.playCurrentAudio = function () {
+            const data = state.currentDetailData;
+            if (data && data.richData && data.richData.audio) {
+                playAudio(data.richData.audio);
+            } else {
+                // Fallback to TTS
+                const u = new SpeechSynthesisUtterance(data.text);
+                u.lang = 'en-US';
+                speechSynthesis.speak(u);
+            }
+        };
+
+        window.openDataModal = function () {
+            document.exitPointerLock();
+            document.getElementById('total-cards').innerText = state.pendingQueue.length + state.placedWords.length;
+            document.getElementById('placed-cards').innerText = state.placedWords.length;
+            document.getElementById('data-modal').style.display = 'block';
+        };
+
+        window.exportData = function () {
+            const data = {
+                version: 2,
+                exportDate: new Date().toISOString(),
+                pending: state.pendingQueue,
+                placed: state.placedWords.map(w => ({
+                    id: w.id,
+                    text: w.text,
+                    meaning: w.meaning,
+                    locusId: w.locusId,
+                    nextReview: w.nextReview,
+                    interval: w.interval,
+                    stage: w.stage
+                })),
+                stats: {
+                    todayReviewed: state.todayReviewedCount
+                }
+            };
+
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `memory-palace-backup-${Date.now()}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+
+            showToast('✅ 备份已下载!');
+        };
+
+        window.importData = function (event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                try {
+                    const data = JSON.parse(e.target.result);
+
+                    // 清空当前数据
+                    state.placedWords.forEach(w => scene.remove(w.mesh));
+                    state.placedWords = [];
+                    state.pendingQueue = [];
+                    state.loci.forEach(l => l.occupied = false);
+
+                    // 导入数据
+                    state.pendingQueue = data.pending || [];
+
+                    if (data.placed) {
+                        data.placed.forEach(p => {
+                            const loc = state.loci.find(l => l.id === p.locusId);
+                            if (loc) {
+                                state.holdingWord = p;
+                                placeCard(loc);
+                            }
+                        });
+                    }
+
+                    saveData();
+                    updateInboxVisuals();
+                    updateProgressBar();
+                    showToast('✅ 数据导入成功!');
+                    closeAllModals();
+                } catch (err) {
+                    alert('导入失败: 文件格式错误');
+                }
+            };
+            reader.readAsText(file);
+        };
+
+        window.confirmResetData = function () {
+            if (!confirm('确定要清空所有数据吗?此操作不可恢复!')) return;
+
+            state.placedWords.forEach(w => scene.remove(w.mesh));
+            state.placedWords = [];
+            state.pendingQueue = [];
+            state.loci.forEach(l => l.occupied = false);
+            state.todayReviewedCount = 0;
+
+            localStorage.removeItem('mp_srs_v2');
+            updateInboxVisuals();
+            updateProgressBar();
+            closeAllModals();
+            showToast('✅ 所有数据已清空');
+        };
+
+        window.closeAllModals = function () {
+            document.querySelectorAll('.modal').forEach(el => el.style.display = 'none');
+        };
+
+        window.startApp = function () {
+            document.getElementById('overlay').style.display = 'none';
+            if (!state.isMobile) {
+                controls.lock();
+            } else {
+                // 移动端不使用 PointerLock
+                document.getElementById('action-bar').style.display = 'none';
+            }
+        };
+
+        function updateProgressBar() {
+            const newCount = state.pendingQueue.length;
+            const reviewCount = state.placedWords.filter(c => isCardDue(c)).length;
+            const doneCount = state.todayReviewedCount;
+
+            document.getElementById('new-count').innerText = newCount;
+            document.getElementById('review-count').innerText = reviewCount;
+            document.getElementById('done-count').innerText = doneCount;
+        }
+
+        // =========================
+        // 数据持久化
+        // =========================
+        function saveData() {
+            const saveObj = {
+                version: 2,
+                pending: state.pendingQueue,
+                placed: state.placedWords.map(w => ({
+                    id: w.id,
+                    text: w.text,
+                    meaning: w.meaning,
+                    locusId: w.locusId,
+                    nextReview: w.nextReview,
+                    interval: w.interval,
+                    stage: w.stage
+                })),
+                todayReviewed: state.todayReviewedCount
+            };
+            localStorage.setItem('mp_srs_v2', JSON.stringify(saveObj));
+        }
+
+        function loadData() {
+            const str = localStorage.getItem('mp_srs_v2');
+            if (str) {
+                const data = JSON.parse(str);
+                state.pendingQueue = data.pending || [];
+                state.todayReviewedCount = data.todayReviewed || 0;
+
+                if (data.placed) {
+                    data.placed.forEach(p => {
+                        const loc = state.loci.find(l => l.id === p.locusId);
+                        if (loc) {
+                            state.holdingWord = p;
+                            placeCard(loc);
+                        }
+                    });
+                }
+            }
+        }
+
+        function onResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        // =========================
+        // 移动端控制
+        // =========================
+        function initMobileControls() {
+            const base = document.getElementById('joystick-base');
+            const stick = document.getElementById('joystick-stick');
+
+            base.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                state.joystickActive = true;
+            });
+
+            base.addEventListener('touchmove', (e) => {
+                e.preventDefault();
+                if (!state.joystickActive) return;
+
+                const touch = e.touches[0];
+                const rect = base.getBoundingClientRect();
+                const centerX = rect.left + rect.width / 2;
+                const centerY = rect.top + rect.height / 2;
+
+                let dx = touch.clientX - centerX;
+                let dy = touch.clientY - centerY;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                const maxDistance = 35;
+
+                if (distance > maxDistance) {
+                    dx = (dx / distance) * maxDistance;
+                    dy = (dy / distance) * maxDistance;
+                }
+
+                stick.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+
+                state.joystickDir.x = dx / maxDistance;
+                state.joystickDir.y = dy / maxDistance;
+            });
+
+            base.addEventListener('touchend', () => {
+                state.joystickActive = false;
+                stick.style.transform = 'translate(-50%, -50%)';
+                state.joystickDir.x = 0;
+                state.joystickDir.y = 0;
+            });
+        }
+
+        // Toast 提示
+        let toastTimeout = null;
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            if (!msg) {
+                toast.style.opacity = '0';
+                if (toastTimeout) clearTimeout(toastTimeout);
+                return;
+            }
+            toast.innerText = msg;
+            toast.style.opacity = '1';
+
+            if (toastTimeout) clearTimeout(toastTimeout);
+            toastTimeout = setTimeout(() => {
+                toast.style.opacity = '0';
+            }, 3000);
+        }
+
+        // 启动应用
+        init();
+        animate();
+
+    </script>
+</body>
+
+</html>
