@@ -419,10 +419,7 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
   try {
     const exists = await fileExists(absolutePath);
     if (exists && !isAdminRequest) {
-      const approvedRequest = await validateAccessToken(relativePath, token, REQUEST_TYPE.MODIFY);
-      if (!approvedRequest) {
-        return res.status(403).json({ message: '文件已存在，请先申请修改权限' });
-      }
+      return res.status(403).json({ message: '文件已存在，请先申请修改权限' });
     }
 
     await ensureDir(absoluteDir);
@@ -440,11 +437,11 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
         path: relativePath,
         owner: isAdminRequest
           ? {
-              connect: { id: adminUser.sub },
-            }
+            connect: { id: adminUser.sub },
+          }
           : {
-              connect: { username: 'guest_uploader' },
-            },
+            connect: { username: 'guest_uploader' },
+          },
       },
       include: { owner: true },
     });
@@ -492,10 +489,7 @@ app.put('/api/files', async (req, res) => {
   }
 
   if (!isAdminRequest) {
-    const approvedRequest = await validateAccessToken(oldRelativePath, token, REQUEST_TYPE.MODIFY);
-    if (!approvedRequest) {
-      return res.status(403).json({ message: '请先申请修改权限' });
-    }
+    return res.status(403).json({ message: '权限不足，仅管理员可操作' });
   }
 
   try {
@@ -536,10 +530,7 @@ app.delete('/api/files', async (req, res) => {
     return res.status(404).json({ message: '文件不存在' });
   }
   if (!isAdminRequest) {
-    const approvedRequest = await validateAccessToken(relativePath, token, REQUEST_TYPE.DELETE);
-    if (!approvedRequest) {
-      return res.status(403).json({ message: '请先申请删除权限' });
-    }
+    return res.status(403).json({ message: '权限不足，仅管理员可操作' });
   }
   await fsp.rm(absolutePath, { force: true });
   await prisma.project.delete({ where: { path: relativePath } }).catch(() => null);
@@ -547,7 +538,7 @@ app.delete('/api/files', async (req, res) => {
 });
 
 app.post('/api/request-permission', async (req, res) => {
-  const { path: targetPath, type, name, email, reason = '', clientSecret } = req.body;
+  const { path: targetPath, type, name, email, reason = '' } = req.body;
   const normalizedType = typeof type === 'string' ? type.toUpperCase() : type;
   if (!targetPath || !normalizedType || !Object.values(REQUEST_TYPE).includes(normalizedType)) {
     return res.status(400).json({ message: '参数错误' });
@@ -556,14 +547,10 @@ app.post('/api/request-permission', async (req, res) => {
   if (!relativePath) {
     return res.status(400).json({ message: '路径格式不正确' });
   }
-  if (!clientSecret || typeof clientSecret !== 'string') {
-    return res.status(400).json({ message: '缺少客户端密钥' });
-  }
   const trimmedReason = typeof reason === 'string' ? reason.trim() : '';
   if (!trimmedReason) {
     return res.status(400).json({ message: '请填写申请理由' });
   }
-  const clientSecretHash = await bcrypt.hash(clientSecret, 10);
   const request = await prisma.fileRequest.create({
     data: {
       projectPath: relativePath,
@@ -571,55 +558,13 @@ app.post('/api/request-permission', async (req, res) => {
       requesterName: name,
       requesterEmail: email,
       reason: trimmedReason,
-      clientSecretHash,
+      pendingContent: normalizedType === REQUEST_TYPE.MODIFY ? req.body.content : undefined,
     },
   });
   res.json({ requestId: request.id });
 });
 
-app.post('/api/claim-token', async (req, res) => {
-  const { requestId } = req.body;
-  const clientSecretHeader = req.get('x-client-secret');
-  const clientSecretBody = typeof req.body?.clientSecret === 'string' ? req.body.clientSecret : '';
-  const clientSecretRaw = typeof clientSecretHeader === 'string' && clientSecretHeader.trim()
-    ? clientSecretHeader
-    : clientSecretBody;
-  const clientSecret = typeof clientSecretRaw === 'string' ? clientSecretRaw.trim() : '';
-  const numericId = Number(requestId);
-  if (Number.isNaN(numericId)) {
-    return res.status(400).json({ message: '请求 ID 无效' });
-  }
-  if (!clientSecret) {
-    return res.status(400).json({ message: '缺少客户端密钥' });
-  }
-  const request = await prisma.fileRequest.findUnique({ where: { id: numericId } });
-  if (!request) {
-    return res.status(404).json({ message: '请求不存在' });
-  }
-  if (!request.clientSecretHash) {
-    return res.status(400).json({ message: '请求缺少密钥信息，请重新申请' });
-  }
-  const match = await bcrypt.compare(clientSecret, request.clientSecretHash);
-  const baseResponse = {
-    status: request.status,
-    expiresAt: request.expiresAt ? request.expiresAt.toISOString() : null,
-  };
-  if (!match) {
-    return res.json(baseResponse);
-  }
-  if (
-    request.status === REQUEST_STATUS.APPROVED &&
-    request.accessToken &&
-    request.expiresAt &&
-    request.expiresAt > new Date()
-  ) {
-    return res.json({
-      ...baseResponse,
-      accessToken: request.accessToken,
-    });
-  }
-  return res.json(baseResponse);
-});
+
 
 app.post('/api/auth/login', async (req, res) => {
   const { username, password } = req.body;
@@ -666,13 +611,30 @@ app.post('/api/admin/approve', authenticateAdmin, async (req, res) => {
     });
     return res.json({ message: '已拒绝', request: updated });
   }
-  const token = uuidv4();
-  const expiresAt = new Date(Date.now() + TOKEN_EXPIRATION_MINUTES * 60 * 1000);
-  const updated = await prisma.fileRequest.update({
-    where: { id: numericId },
-    data: { status: REQUEST_STATUS.APPROVED, accessToken: token, expiresAt },
-  });
-  res.json({ message: '已批准', token, expiresAt, request: updated });
+  const absolutePath = path.join(UPLOAD_DIR, request.projectPath);
+
+  try {
+    if (request.requestType === REQUEST_TYPE.DELETE) {
+      if (await fileExists(absolutePath)) {
+        await fsp.rm(absolutePath, { force: true, recursive: true });
+      }
+      await prisma.project.delete({ where: { path: request.projectPath } }).catch(() => null);
+    } else if (request.requestType === REQUEST_TYPE.MODIFY) {
+      if (request.pendingContent) {
+        await ensureDir(path.dirname(absolutePath));
+        await fsp.writeFile(absolutePath, request.pendingContent, 'utf-8');
+      }
+    }
+
+    const updated = await prisma.fileRequest.update({
+      where: { id: numericId },
+      data: { status: REQUEST_STATUS.APPROVED },
+    });
+    res.json({ message: '已批准', request: updated });
+  } catch (error) {
+    console.error('Approval execution failed:', error);
+    res.status(500).json({ message: '操作执行失败', detail: error.message });
+  }
 });
 
 // 全局错误处理，确保上传异常返回友好信息

@@ -37,14 +37,11 @@ const ContextMenu = ({ x, y, node, onSelect, onClose }: Props) => {
   return (
     <div className="context-menu" style={{ top: y, left: x }}>
       <p className="context-title">{node.path}</p>
-      <button type="button" onClick={() => handleSelect('request')}>
-        申请修改 / 删除权限
+      <button type="button" onClick={() => handleSelect('edit')}>
+        修改文件
       </button>
       <button type="button" onClick={() => handleSelect('delete')}>
-        使用 Token 删除文件
-      </button>
-      <button type="button" onClick={() => handleSelect('edit')}>
-        使用 Token 编辑文件
+        删除文件
       </button>
     </div>
   );

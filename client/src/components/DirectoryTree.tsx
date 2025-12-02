@@ -44,7 +44,7 @@ const DirectoryTree: FC<Props> = ({ nodes, activePath, onSelectPath }) => {
   }
 
   return (
-    <ul className="tree">
+    <ul className="tree" id="sidebar-directory-tree">
       {nodes.map((node) => (
         <TreeBranch
           key={node.path}

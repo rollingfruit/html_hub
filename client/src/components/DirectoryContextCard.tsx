@@ -59,14 +59,14 @@ const DirectoryContextCard = ({ path, meta, onEdit }: Props) => {
           </div>
         )}
       </div>
-      <div className="prompt-panel">
+      <div className="prompt-panel" id="prompt-panel-card">
         <div className="prompt-header">
           <div className="prompt-header-left">
             <span>System Prompt</span>
             {hasPrompt && <span className="prompt-badge">创作母题</span>}
           </div>
           <div className="prompt-actions">
-            <button type="button" className="ghost-compact" onClick={handleCopy} disabled={!hasPrompt}>
+            <button type="button" className="ghost-compact" onClick={handleCopy} disabled={!hasPrompt} id="btn-copy-prompt">
               <Copy size={14} />
               {copied ? '已复制' : '复制'}
             </button>

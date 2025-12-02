@@ -37,18 +37,18 @@ export const fetchProjects = async (): Promise<ProjectResponse> => {
 
 type UploadPayload =
   | {
-      file: File;
-      path?: string;
-      token?: string;
-      adminToken?: string;
-    }
+    file: File;
+    path?: string;
+    token?: string;
+    adminToken?: string;
+  }
   | {
-      content: string;
-      filename: string;
-      path?: string;
-      token?: string;
-      adminToken?: string;
-    };
+    content: string;
+    filename: string;
+    path?: string;
+    token?: string;
+    adminToken?: string;
+  };
 
 export const uploadHtml = async (payload: UploadPayload) => {
   const formData = new FormData();
@@ -112,7 +112,7 @@ interface PermissionPayload {
   name?: string;
   email?: string;
   reason: string;
-  clientSecret: string;
+  content?: string;
 }
 
 export const requestPermission = async (payload: PermissionPayload) => {
@@ -124,33 +124,15 @@ export const requestPermission = async (payload: PermissionPayload) => {
   return handleResponse(resp);
 };
 
-export const claimAccessToken = async ({
-  requestId,
-  clientSecret,
-}: {
-  requestId: number;
-  clientSecret: string;
-}): Promise<{ status: RequestStatus; accessToken?: string; expiresAt?: string | null }> => {
-  const resp = await fetch(`${API_BASE}/claim-token`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-client-secret': clientSecret,
-    },
-    body: JSON.stringify({ requestId }),
-  });
-  return handleResponse(resp);
-};
+
 
 export const renameFile = async ({
   oldPath,
   newPath,
-  token,
   adminToken,
 }: {
   oldPath: string;
   newPath: string;
-  token?: string;
   adminToken?: string;
 }) => {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
@@ -163,7 +145,6 @@ export const renameFile = async ({
     body: JSON.stringify({
       oldPath,
       newPath,
-      token: token || undefined,
     }),
   });
   return handleResponse(resp);
@@ -171,11 +152,9 @@ export const renameFile = async ({
 
 export const deleteFile = async ({
   path,
-  token,
   adminToken,
 }: {
   path: string;
-  token?: string;
   adminToken?: string;
 }) => {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
@@ -187,7 +166,6 @@ export const deleteFile = async ({
     headers,
     body: JSON.stringify({
       path,
-      token: token || undefined,
     }),
   });
   return handleResponse(resp);
@@ -223,5 +201,5 @@ export const approveRequest = async (
     },
     body: JSON.stringify(payload),
   });
-  return handleResponse(resp);
+  return handleResponse(resp) as Promise<{ message: string; request: FileRequest }>;
 };

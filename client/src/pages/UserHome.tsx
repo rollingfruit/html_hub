@@ -1,17 +1,18 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import { Lightbulb, ArrowRight } from 'lucide-react';
 import UploadForm from '../components/UploadForm';
-import PermissionRequestForm from '../components/PermissionRequestForm';
 import DeleteForm from '../components/DeleteForm';
 import FileExplorer from '../components/FileExplorer';
 import DirectoryTree from '../components/DirectoryTree';
 import ContextMenu, { ContextAction } from '../components/ContextMenu';
 import DirectoryContextCard from '../components/DirectoryContextCard';
 import AIDock from '../components/AIDock';
+import UserGuide from '../components/UserGuide';
+
 import { createDirectory, fetchDirectoryMeta, fetchProjects, saveDirectoryMeta } from '../api';
 import { DirectoryMeta, Project, TreeNode } from '../types';
 
-type ModalType = 'UPLOAD' | 'REQUEST' | 'DELETE' | 'PROMPT' | 'FOLDER' | null;
+type ModalType = 'UPLOAD' | 'DELETE' | 'PROMPT' | 'FOLDER' | null;
 
 type ContextMenuState = {
   x: number;
@@ -42,10 +43,8 @@ const UserHome = () => {
   const [prefill, setPrefill] = useState({
     uploadPath: '',
     uploadFilename: '',
-    requestPath: '',
     deletePath: '',
   });
-  const [focusToken, setFocusToken] = useState(false);
   const [sidebarWidth, setSidebarWidth] = useState(260);
   const [cachedSidebarWidth, setCachedSidebarWidth] = useState(260);
   const [isSidebarOpen, setSidebarOpen] = useState(true);
@@ -63,7 +62,7 @@ const UserHome = () => {
       const data = await fetchProjects();
       setProjects(data.projects);
       setTree(data.tree);
-       setDirectories(data.directories || []);
+      setDirectories(data.directories || []);
       const metas = data.directoryMeta || [];
       const metaMap = metas.reduce<Record<string, DirectoryMeta>>((acc, meta) => {
         acc[meta.path || ''] = meta;
@@ -112,18 +111,11 @@ const UserHome = () => {
 
   const closeModal = () => {
     setModalType(null);
-    setFocusToken(false);
   };
 
   const handlePrimaryAction = () => {
     setPrefill((prev) => ({ ...prev, uploadPath: currentPath, uploadFilename: '' }));
-    setFocusToken(false);
     openModal('UPLOAD');
-  };
-
-  const handleRequestAction = () => {
-    setPrefill((prev) => ({ ...prev, requestPath: currentPath }));
-    openModal('REQUEST');
   };
 
   const handlePromptAction = () => {
@@ -144,15 +136,11 @@ const UserHome = () => {
     const filePath = node.path;
     const { directory, fileName } = splitPath(filePath);
     setContextMenu(null);
-    if (action === 'request') {
-      setPrefill((prev) => ({ ...prev, requestPath: filePath }));
-      openModal('REQUEST');
-    } else if (action === 'delete') {
+    if (action === 'delete') {
       setPrefill((prev) => ({ ...prev, deletePath: filePath }));
       openModal('DELETE');
     } else if (action === 'edit') {
       setPrefill((prev) => ({ ...prev, uploadPath: directory, uploadFilename: fileName }));
-      setFocusToken(true);
       openModal('UPLOAD');
     }
   };
@@ -266,12 +254,8 @@ const UserHome = () => {
         onUploaded={handleUploadSuccess}
         defaultPath={prefill.uploadPath || currentPath}
         defaultFilename={prefill.uploadFilename}
-        autoFocusToken={focusToken}
       />
     );
-  } else if (modalType === 'REQUEST') {
-    modalTitle = '申请权限';
-    modalContent = <PermissionRequestForm defaultPath={prefill.requestPath || currentPath} />;
   } else if (modalType === 'DELETE') {
     modalTitle = '删除文件';
     modalContent = <DeleteForm defaultPath={prefill.deletePath} onDeleted={handleDeleteSuccess} />;
@@ -409,7 +393,7 @@ const UserHome = () => {
             <button type="button" className="secondary" onClick={handleCreateFolderAction}>
               新建文件夹
             </button>
-            <button type="button" className="primary" onClick={handlePrimaryAction}>
+            <button type="button" className="primary" onClick={handlePrimaryAction} id="btn-create-page">
               + 新建页面
             </button>
           </div>
@@ -459,6 +443,7 @@ const UserHome = () => {
           </div>
         </div>
       )}
+      <UserGuide />
     </div>
   );
 };

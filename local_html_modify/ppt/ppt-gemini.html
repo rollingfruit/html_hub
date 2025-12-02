@@ -9,6 +9,7 @@
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/gitbrent/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <!-- 图标库 -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
 
@@ -504,6 +505,10 @@
                 <button class="btn btn-ghost" @click="resetContent">
                     <i class="fas fa-rotate-left"></i> 重置
                 </button>
+                <button class="btn btn-ghost" @click="triggerImport">
+                    <i class="fas fa-file-import"></i> 导入模板
+                </button>
+                <input type="file" ref="fileInput" accept=".pptx" style="display: none" @change="handleFileImport">
                 <button class="btn btn-primary" @click="exportPPTX">
                     <i class="fas fa-file-powerpoint"></i> 导出 PPTX
                 </button>
@@ -535,9 +540,9 @@
                         <!-- 核心渲染组件：这里即是"所见"，也是导出逻辑的直接映射 -->
                         <div class="slide-render">
 
-                            <!-- 背景装饰 (SVG) -->
+                            <!-- 背景装饰 (SVG 或 图片) -->
                             <div class="theme-decor" style="top:0; left:0; width:100%; height:100%"
-                                v-html="themeConfig.decorSvg[getSlideResult(slide).master || 'normal']">
+                                v-html="getSlideBackground(getSlideResult(slide).master)">
                             </div>
 
                             <!-- 动态元素渲染 -->
@@ -621,121 +626,108 @@
     </div>
 
     <script>
-        const { createApp, ref, computed, onMounted, watch } = Vue;
+        const { createApp, ref, computed, onMounted } = Vue;
 
-        /* -----------------------------------------------------------
-           1. 配置中心 (THEME_CONFIG)
-           提供 JSON 接口方便用户或开发者修改风格
-        ----------------------------------------------------------- */
         const THEME_CONFIG = {
             colors: {
-                primary: '#C8102E', // 华为红
+                primary: '#C8102E',
                 text: '#333333',
                 secondaryText: '#666666',
                 accentBg: '#f9f9f9'
             },
             canvas: { w: 960, h: 540 },
             margins: { top: 70, bottom: 40, left: 50, right: 50 },
-            // SVG 装饰：顶部红线装饰
-            // SVG 装饰：支持多种母版风格
             decorSvg: {
                 normal: `
                     <svg width="100%" height="100%" viewBox="0 0 960 540" preserveAspectRatio="none">
-                        <!-- 顶部装饰 -->
                         <rect x="0" y="0" width="960" height="6" fill="#C8102E" />
-                        <!-- 底部 Logo 占位 -->
                         <rect x="900" y="500" width="40" height="20" rx="2" fill="#ddd" opacity="0.5" />
                         <text x="920" y="514" font-size="10" fill="#999" text-anchor="middle" font-family="Arial">LOGO</text>
                     </svg>
                 `,
                 cover: `
                     <svg width="100%" height="100%" viewBox="0 0 960 540" preserveAspectRatio="none">
-                        <!-- 左侧红色色块 -->
                         <path d="M0 0 H380 L320 540 H0 V0 Z" fill="#C8102E" />
-                        <!-- 装饰线条 -->
                         <path d="M380 0 L400 0 L340 540 L320 540 Z" fill="#C8102E" opacity="0.1" />
                     </svg>
                 `
             }
         };
 
-        /* -----------------------------------------------------------
-           2. 排版引擎 (Layout Engine)
-           核心逻辑：将解析后的 Block 转换为具备绝对坐标的 Element
-        ----------------------------------------------------------- */
         class LayoutEngine {
             constructor() {
                 this.C = THEME_CONFIG.canvas;
                 this.M = THEME_CONFIG.margins;
             }
 
-            // 主入口：生成 3 套布局
             generateLayouts(slideData) {
-                // 分析内容特征
                 const stats = this.analyzeContent(slideData);
-
                 const layouts = {};
-
-                // 检测是否为封面页（只有标题和副标题，没有或很少内容块）
                 const isCoverPage = slideData.subtitle && slideData.blocks.length === 0;
 
                 if (isCoverPage) {
-                    // 封面页使用特殊布局
                     layouts['A'] = this.layoutCover(slideData);
                     layouts['A'].isRecommended = true;
-                } else {
-                    layouts['A'] = this.layoutStandard(slideData, stats); // 经典
-                    layouts['B'] = this.layoutSplit(slideData, stats);    // 左右分栏 (Smart Split)
-                    layouts['C'] = this.layoutGrid(slideData, stats);     // 智能网格
-
-                    // 智能推荐逻辑
-                    let best = 'A';
-                    if (stats.hasTable) best = 'A';
-                    else if (stats.hasImage && stats.charCount > 50) best = 'B'; // 图文混排推荐分栏
-                    else if (stats.listItems >= 4 || stats.imgCount >= 2) best = 'C'; // 多项列表/多图推荐网格
-                    else if (stats.charCount > 500) best = 'A'; // 长文推荐标准
-
-                    layouts[best].isRecommended = true;
+                    return { layouts, best: 'A' };
                 }
 
+                layouts['A'] = this.layoutStandard(slideData, stats);
+                layouts['B'] = this.layoutSplit(slideData, stats);
+                layouts['C'] = this.layoutGrid(slideData, stats);
 
-                return { layouts, best: 'A' };
+                let best = 'A';
+                if (stats.hasTable) best = 'A';
+                else if (stats.hasImage && stats.charCount > 50) best = 'B';
+                else if (stats.listItems >= 4 || stats.imgCount >= 2) best = 'C';
+                else if (stats.charCount > 500) best = 'A';
+
+                layouts[best].isRecommended = true;
+
+                return { layouts, best };
             }
 
-            // --- 封面布局 (Modern Cover) ---
             layoutCover(data) {
                 const elements = [];
-                // 封面背景由 Master Slide 处理，这里只放文字
-                // 文字颜色需要根据背景色调整 (左侧红色区域放标题，右侧白色区域放副标题? 
-                // 不，新设计是左红右白。标题在左侧(白字)，副标题在右侧(黑字)?)
 
-                // 调整：标题在左侧红色区域，白色文字
                 elements.push({
                     type: 'text',
                     html: `<h1 style="font-size:56px; color:#fff; margin:0; line-height:1.1; font-weight:800">${data.title}</h1>`,
                     text: data.title,
-                    x: 40, y: 180, w: 300, h: 200,
-                    fontSize: 56, bold: true, color: 'FFFFFF', align: 'left'
+                    x: 40,
+                    y: 180,
+                    w: 300,
+                    h: 200,
+                    fontSize: 56,
+                    bold: true,
+                    color: 'FFFFFF',
+                    align: 'left'
                 });
 
-                // 副标题在右侧白色区域，灰色文字
                 if (data.subtitle) {
                     elements.push({
                         type: 'text',
                         html: `<div style="font-size:24px; color:#666; margin:0; border-left:4px solid #C8102E; padding-left:20px">${data.subtitle}</div>`,
                         text: data.subtitle,
-                        x: 420, y: 200, w: 480, h: 100,
-                        fontSize: 24, color: '666666', align: 'left'
+                        x: 420,
+                        y: 200,
+                        w: 480,
+                        h: 100,
+                        fontSize: 24,
+                        color: '666666',
+                        align: 'left'
                     });
                 }
 
-                // 装饰性年份/日期
                 elements.push({
                     type: 'text',
                     html: `<div style="font-size:14px; color:rgba(255,255,255,0.6); font-family:Arial">2025 REPORT</div>`,
-                    text: "2025 REPORT",
-                    x: 40, y: 500, w: 200, h: 20,
-                    fontSize: 12, color: 'FFCCCC'
+                    text: '2025 REPORT',
+                    x: 40,
+                    y: 500,
+                    w: 200,
+                    h: 20,
+                    fontSize: 12,
+                    color: 'FFCCCC'
                 });
 
                 return { elements, desc: '现代分割封面', master: 'cover' };
@@ -752,222 +744,215 @@
                     if (b.type === 'text') charCount += b.content.length;
                     if (b.type === 'list') listItems += b.items.length;
                     if (b.type === 'table') hasTable = true;
-                    if (b.type === 'image') { hasImage = true; imgCount++; }
+                    if (b.type === 'image') {
+                        hasImage = true;
+                        imgCount += 1;
+                    }
                 });
 
                 return { charCount, listItems, hasTable, hasImage, imgCount };
             }
-        };
-            }
 
-        // --- 方案 A: 经典商务 (自动分栏/适应表格) ---
-        layoutStandard(data, stats) {
-            const elements = [];
-            let currY = this.M.top;
-            const contentW = this.C.w - this.M.left - this.M.right;
+            layoutStandard(data, stats) {
+                const elements = [];
+                let currY = this.M.top;
+                const contentW = this.C.w - this.M.left - this.M.right;
 
-            // 1. 标题
-            elements.push(this.createTitle(data.title, this.M.left, 40, contentW));
-            currY += 50;
+                elements.push(this.createTitle(data.title, this.M.left, 40, contentW));
+                currY += 50;
 
-            // 2. 正文流
-            const blocks = data.blocks;
-            const fontSize = stats.charCount > 400 ? 14 : 18; // 字号自适应
+                const blocks = data.blocks;
+                const fontSize = stats.charCount > 400 ? 14 : 18;
 
-            // 如果只有表格，居中显示
-            if (blocks.length === 1 && blocks[0].type === 'table') {
-                elements.push({
-                    type: 'table', data: blocks[0].data,
-                    x: this.M.left, y: currY + 20, w: contentW, h: 300
-                });
-                return { elements, desc: '表格/标准布局', master: 'normal' };
-            }
-
-            // 双栏检测
-            const useTwoCol = stats.charCount > 350 && !stats.hasTable;
-            let leftColY = currY, rightColY = currY;
-            const colW = useTwoCol ? (contentW - 40) / 2 : contentW;
-
-            blocks.forEach((b, i) => {
-                // 简单的两栏分配逻辑
-                const isRight = useTwoCol && i >= blocks.length / 2;
-                const x = isRight ? (this.M.left + colW + 40) : this.M.left;
-                let y = isRight ? rightColY : leftColY;
-
-                const h = this.estimateBlockHeight(b, colW, fontSize);
-
-                // 构建 Element
-                const el = this.blockToElement(b, x, y, colW, h, fontSize);
-                elements.push(el);
-
-                // 更新 Y
-                if (isRight) rightColY += h + 20;
-                else leftColY += h + 20;
-            });
-
-            return { elements, desc: useTwoCol ? '双栏密集型' : '标准通栏', master: 'normal' };
-        }
-
-        // --- 方案 B: 智能分栏 (Smart Split) ---
-        layoutSplit(data, stats) {
-            const elements = [];
-            elements.push(this.createTitle(data.title, this.M.left, 40, this.C.w - 100));
-
-            // 左文右图 (或左图右文)
-            const leftW = (this.C.w - this.M.left - this.M.right - 40) * 0.5;
-            const rightX = this.M.left + leftW + 40;
-
-            let currLeftY = 100;
-            let currRightY = 100;
-
-            data.blocks.forEach(b => {
-                if (b.type === 'image') {
-                    // 图片放右边
-                    elements.push(this.blockToElement(b, rightX, currRightY, leftW, 350, 14));
-                    currRightY += 370;
-                } else {
-                    // 文字放左边
-                    const h = this.estimateBlockHeight(b, leftW, 16);
-                    elements.push(this.blockToElement(b, this.M.left, currLeftY, leftW, 16)); // Pass fontSize, not h
-                    currLeftY += h + 20;
-                }
-            });
-
-            return { elements, desc: '图文分栏布局', master: 'normal' };
-        }
-
-        // --- 方案 C: 智能网格 (Adaptive Grid) ---
-        layoutGrid(data, stats) {
-            const elements = [];
-            elements.push(this.createTitle(data.title, this.M.left, 40, this.C.w - 100));
-
-            // 收集所有可网格化的项
-            let items = [];
-            data.blocks.forEach(b => {
-                if (b.type === 'list') {
-                    b.items.forEach(item => items.push({ type: 'text', content: item }));
-                } else if (b.type === 'image') {
-                    items.push({ type: 'img', ...b });
-                } else {
-                    items.push({ type: 'text', content: b.content || '...' });
-                }
-            });
-
-            // 智能计算行列
-            const count = items.length;
-            let cols = 3;
-            if (count === 1) cols = 1;
-            else if (count === 2 || count === 4) cols = 2;
-
-            // 限制最大数量
-            const displayItems = items.slice(0, 6);
-
-            const startY = 110;
-            const gap = 20;
-            const totalW = this.C.w - this.M.left - this.M.right;
-            const cardW = (totalW - (cols - 1) * gap) / cols;
-            const cardH = count <= 3 ? 200 : 150;
-
-            displayItems.forEach((item, i) => {
-                const row = Math.floor(i / cols);
-                const col = i % cols;
-                const x = this.M.left + col * (cardW + gap);
-                const y = startY + row * (cardH + gap);
-
-                // 卡片背景 (带阴影和圆角)
-                elements.push({ type: 'shape', fill: '#ffffff', x, y, w: cardW, h: cardH, border: '#e0e0e0' });
-                // 顶部装饰条
-                elements.push({ type: 'shape', fill: THEME_CONFIG.colors.primary, x: x, y: y, w: cardW, h: 4 });
-
-                // 内容
-                if (item.type === 'img') {
-                    elements.push({ type: 'placeholder', alt: item.alt, x: x + 15, y: y + 20, w: cardW - 30, h: cardH - 35 });
-                } else {
+                if (blocks.length === 1 && blocks[0].type === 'table') {
                     elements.push({
-                        type: 'text', html: `<div style="font-size:16px; color:#333; font-weight:500">${item.content}</div>`,
-                        text: item.content,
-                        x: x + 20, y: y + 25, w: cardW - 40, h: cardH - 50, fontSize: 16, align: 'left', valign: 'top'
+                        type: 'table',
+                        data: blocks[0].data,
+                        x: this.M.left,
+                        y: currY + 20,
+                        w: contentW,
+                        h: 300
                     });
+                    return { elements, desc: '表格/标准布局', master: 'normal' };
                 }
-            });
 
-            return { elements, desc: `智能网格 (${cols}列)`, master: 'normal' };
-        }        }
+                const useTwoCol = stats.charCount > 350 && !stats.hasTable;
+                let leftColY = currY;
+                let rightColY = currY;
+                const colW = useTwoCol ? (contentW - 40) / 2 : contentW;
 
+                blocks.forEach((b, i) => {
+                    const isRight = useTwoCol && i >= blocks.length / 2;
+                    const x = isRight ? (this.M.left + colW + 40) : this.M.left;
+                    let y = isRight ? rightColY : leftColY;
 
-        // --- 辅助方法 ---
-        createTitle(text, x, y, w) {
-            return {
-                type: 'text',
-                html: `<h1 style="font-size:32px; color:#000; margin:0">${text}</h1>`,
-                text: text, x, y, w, h: 50, fontSize: 32, bold: true
-            };
-        }
+                    const h = this.estimateBlockHeight(b, colW, fontSize);
+                    const el = this.blockToElement(b, x, y, colW, h, fontSize);
+                    elements.push(el);
 
-        blockToElement(b, x, y, w, h, fontSize) {
-            if (b.type === 'image') {
-                return { type: 'placeholder', alt: b.alt, x, y, w, h: 200 };
-            }
-            if (b.type === 'table') {
-                return { type: 'table', data: b.data, x, y, w, h: h || 200 };
-            }
-
-            let htmlContent = b.content || '';
-            let textContent = b.content || '';
-
-            if (b.type === 'list') {
-                // 处理列表，支持Markdown格式（粗体、斜体等）
-                htmlContent = '<ul style="margin:0; padding-left:1.5em; line-height:1.6">' +
-                    b.items.map(i => {
-                        // 简单处理Markdown粗体 **text**
-                        let processedItem = i.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-                        return `<li style="margin-bottom:0.4em">${processedItem}</li>`;
-                    }).join('') + '</ul>';
-                textContent = b.items.join('\n'); // 用于PPT导出
-            } else if (b.type === 'quote') {
-                htmlContent = `<div class="quote-box">${b.content}</div>`;
-            } else {
-                // 普通文本也处理Markdown粗体
-                htmlContent = htmlContent.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-            }
-
-            return {
-                type: 'text',
-                html: `<div style="font-size:${fontSize}px; line-height:1.5">${htmlContent}</div>`,
-                text: textContent,
-                rawBlock: b, // 保留原始引用
-                x, y, w, h, fontSize
-            };
-        }
-
-        estimateBlockHeight(b, w, fontSize) {
-            if (b.type === 'image') return 220;
-            if (b.type === 'table') return (b.data.rows.length + 1) * 35 + 20; // 粗略估算
-
-            const charsPerLine = w / (fontSize * 0.55); // 更准确的字符宽度估算
-            let lines = 0;
-
-            if (b.type === 'list') {
-                // 列表项高度计算：每项基础高度 + 换行高度
-                b.items.forEach(i => {
-                    const itemLines = Math.max(1, Math.ceil(i.length / charsPerLine));
-                    lines += itemLines;
+                    if (isRight) rightColY += h + 20;
+                    else leftColY += h + 20;
                 });
-                // 列表有额外间距
-                return Math.max(lines * (fontSize * 1.6) + b.items.length * 4, 50);
-            } else if (b.type === 'quote') {
-                lines = Math.ceil((b.content || '').length / charsPerLine);
-                return Math.max(lines * (fontSize * 1.6) + 20, 60); // 引用框有padding
-            } else {
+
+                return { elements, desc: useTwoCol ? '双栏密集型' : '标准通栏', master: 'normal' };
+            }
+
+            layoutSplit(data, stats) {
+                const elements = [];
+                elements.push(this.createTitle(data.title, this.M.left, 40, this.C.w - 100));
+
+                const leftW = (this.C.w - this.M.left - this.M.right - 40) * 0.5;
+                const rightX = this.M.left + leftW + 40;
+                let currLeftY = 100;
+                let currRightY = 100;
+
+                data.blocks.forEach(b => {
+                    if (b.type === 'image') {
+                        elements.push(this.blockToElement(b, rightX, currRightY, leftW, 350, 14));
+                        currRightY += 370;
+                    } else {
+                        const h = this.estimateBlockHeight(b, leftW, 16);
+                        elements.push(this.blockToElement(b, this.M.left, currLeftY, leftW, h, 16));
+                        currLeftY += h + 20;
+                    }
+                });
+
+                return { elements, desc: '图文分栏布局', master: 'normal' };
+            }
+
+            layoutGrid(data) {
+                const elements = [];
+                elements.push(this.createTitle(data.title, this.M.left, 40, this.C.w - 100));
+
+                const items = [];
+                data.blocks.forEach(b => {
+                    if (b.type === 'list') {
+                        b.items.forEach(item => items.push({ type: 'text', content: item }));
+                    } else if (b.type === 'image') {
+                        items.push({ type: 'img', ...b });
+                    } else {
+                        items.push({ type: 'text', content: b.content || '...' });
+                    }
+                });
+
+                const count = items.length;
+                let cols = 3;
+                if (count === 1) cols = 1;
+                else if (count === 2 || count === 4) cols = 2;
+
+                const displayItems = items.slice(0, 6);
+                const startY = 110;
+                const gap = 20;
+                const totalW = this.C.w - this.M.left - this.M.right;
+                const cardW = (totalW - (cols - 1) * gap) / cols;
+                const cardH = count <= 3 ? 200 : 150;
+
+                displayItems.forEach((item, i) => {
+                    const row = Math.floor(i / cols);
+                    const col = i % cols;
+                    const x = this.M.left + col * (cardW + gap);
+                    const y = startY + row * (cardH + gap);
+
+                    elements.push({ type: 'shape', fill: '#ffffff', x, y, w: cardW, h: cardH, border: '#e0e0e0' });
+                    elements.push({ type: 'shape', fill: THEME_CONFIG.colors.primary, x, y, w: cardW, h: 4 });
+
+                    if (item.type === 'img') {
+                        elements.push({ type: 'placeholder', alt: item.alt, x: x + 15, y: y + 20, w: cardW - 30, h: cardH - 35 });
+                    } else {
+                        elements.push({
+                            type: 'text',
+                            html: `<div style="font-size:16px; color:#333; font-weight:500">${item.content}</div>`,
+                            text: item.content,
+                            x: x + 20,
+                            y: y + 25,
+                            w: cardW - 40,
+                            h: cardH - 50,
+                            fontSize: 16,
+                            align: 'left',
+                            valign: 'top'
+                        });
+                    }
+                });
+
+                return { elements, desc: `智能网格 (${cols}列)`, master: 'normal' };
+            }
+
+            createTitle(text, x, y, w) {
+                return {
+                    type: 'text',
+                    html: `<h1 style="font-size:32px; color:#000; margin:0">${text}</h1>`,
+                    text,
+                    x,
+                    y,
+                    w,
+                    h: 50,
+                    fontSize: 32,
+                    bold: true
+                };
+            }
+
+            blockToElement(b, x, y, w, h, fontSize) {
+                if (b.type === 'image') {
+                    return { type: 'placeholder', alt: b.alt, x, y, w, h: h || 200 };
+                }
+                if (b.type === 'table') {
+                    return { type: 'table', data: b.data, x, y, w, h: h || 200 };
+                }
+
+                let htmlContent = b.content || '';
+                let textContent = b.content || '';
+
+                if (b.type === 'list') {
+                    htmlContent = '<ul style="margin:0; padding-left:1.5em; line-height:1.6">' +
+                        b.items.map(i => {
+                            const processed = i.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+                            return `<li style="margin-bottom:0.4em">${processed}</li>`;
+                        }).join('') + '</ul>';
+                    textContent = b.items.join('\n');
+                } else if (b.type === 'quote') {
+                    htmlContent = `<div class="quote-box">${b.content}</div>`;
+                } else if (textContent) {
+                    htmlContent = htmlContent.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+                }
+
+                return {
+                    type: 'text',
+                    html: `<div style="font-size:${fontSize || 16}px; line-height:1.5">${htmlContent}</div>`,
+                    text: textContent,
+                    rawBlock: b,
+                    x,
+                    y,
+                    w,
+                    h,
+                    fontSize: fontSize || 16
+                };
+            }
+
+            estimateBlockHeight(b, w, fontSize) {
+                if (b.type === 'image') return 220;
+                if (b.type === 'table') return (b.data.rows.length + 1) * 35 + 20;
+
+                const charsPerLine = w / (fontSize * 0.55);
+                let lines = 0;
+
+                if (b.type === 'list') {
+                    b.items.forEach(i => {
+                        const itemLines = Math.max(1, Math.ceil(i.length / charsPerLine));
+                        lines += itemLines;
+                    });
+                    return Math.max(lines * (fontSize * 1.6) + b.items.length * 4, 50);
+                }
+
+                if (b.type === 'quote') {
+                    lines = Math.ceil((b.content || '').length / charsPerLine);
+                    return Math.max(lines * (fontSize * 1.6) + 20, 60);
+                }
+
                 lines = Math.ceil((b.content || '').length / charsPerLine);
                 return Math.max(lines * (fontSize * 1.5), 40);
             }
         }
-        }
 
-        /* -----------------------------------------------------------
-           3. Vue Application
-        ----------------------------------------------------------- */
         const DEFAULT_MD = `# 2025 季度汇报
 核心业务数据分析
 
@@ -1002,6 +987,137 @@
 * **绿色低碳**: 践行碳中和承诺。
 `;
 
+        // --- PPTX 解析工具类 ---
+        class PPTXLoader {
+            constructor() {
+                this.zip = null;
+                this.slideMasters = {};
+                this.themeColors = {};
+            }
+
+            async load(file) {
+                try {
+                    this.zip = await JSZip.loadAsync(file);
+                    await this.parseSlideMasters();
+                    return this.slideMasters;
+                } catch (e) {
+                    console.error('PPTX Parsing Error:', e);
+                    alert('解析 PPTX 模板失败，请确保文件格式正确。');
+                    return null;
+                }
+            }
+
+            async parseSlideMasters() {
+                // 1. 读取 Content_Types 找到 slideMaster
+                const contentTypesXml = await this.zip.file('[Content_Types].xml').async('text');
+                const parser = new DOMParser();
+                const contentTypesDoc = parser.parseFromString(contentTypesXml, 'text/xml');
+
+                // 简单起见，我们假设 slideMaster1 是主母版 (通常如此)
+                // 实际应该解析 rels，但这里做简化处理
+                const masterFile = this.zip.file('ppt/slideMasters/slideMaster1.xml');
+                if (!masterFile) return;
+
+                const masterXml = await masterFile.async('text');
+                const masterDoc = parser.parseFromString(masterXml, 'text/xml');
+
+                // 2. 提取背景
+                const bg = await this.extractBackground(masterDoc);
+
+                // 3. 提取标题样式 (颜色)
+                const titleStyle = this.extractTextStyle(masterDoc, 'titleStyle');
+                const bodyStyle = this.extractTextStyle(masterDoc, 'bodyStyle');
+
+                this.slideMasters = {
+                    normal: { background: bg, titleStyle, bodyStyle },
+                    cover: { background: bg, titleStyle, bodyStyle } // 暂时复用
+                };
+            }
+
+            async extractBackground(doc) {
+                const bgPr = doc.getElementsByTagName('p:bgPr')[0];
+                if (!bgPr) return null;
+
+                // 检查是否是图片填充
+                const blipFill = bgPr.getElementsByTagName('a:blipFill')[0];
+                if (blipFill) {
+                    const blip = blipFill.getElementsByTagName('a:blip')[0];
+                    const embedId = blip.getAttribute('r:embed');
+                    if (embedId) {
+                        return await this.getImageByRelId('ppt/slideMasters/_rels/slideMaster1.xml.rels', embedId);
+                    }
+                }
+
+                // 检查纯色填充
+                const solidFill = bgPr.getElementsByTagName('a:solidFill')[0];
+                if (solidFill) {
+                    return this.getColorFromNode(solidFill);
+                }
+
+                return null;
+            }
+
+            async getImageByRelId(relsPath, relId) {
+                const relsFile = this.zip.file(relsPath);
+                if (!relsFile) return null;
+
+                const relsXml = await relsFile.async('text');
+                const parser = new DOMParser();
+                const relsDoc = parser.parseFromString(relsXml, 'text/xml');
+
+                const relNode = relsDoc.querySelector(`Relationship[Id="${relId}"]`);
+                if (!relNode) return null;
+
+                let target = relNode.getAttribute('Target');
+                // Target 可能是 "../media/image1.png" 或 "media/image1.png"
+                target = target.replace('../', 'ppt/');
+                if (!target.startsWith('ppt/')) target = 'ppt/' + target;
+
+                const imgFile = this.zip.file(target);
+                if (imgFile) {
+                    const base64 = await imgFile.async('base64');
+                    const ext = target.split('.').pop();
+                    return `data:image/${ext};base64,${base64}`;
+                }
+                return null;
+            }
+
+            extractTextStyle(doc, styleName) {
+                const styleNode = doc.getElementsByTagName(`p:${styleName}`)[0];
+                if (!styleNode) return null;
+
+                // 获取第一层级 (lvl1pPr) 的样式
+                const lvl1 = styleNode.getElementsByTagName('a:lvl1pPr')[0];
+                if (!lvl1) return null;
+
+                const defRPr = lvl1.getElementsByTagName('a:defRPr')[0];
+                if (defRPr) {
+                    const solidFill = defRPr.getElementsByTagName('a:solidFill')[0];
+                    if (solidFill) {
+                        return { color: this.getColorFromNode(solidFill) };
+                    }
+                }
+                return null;
+            }
+
+            getColorFromNode(node) {
+                const srgbClr = node.getElementsByTagName('a:srgbClr')[0];
+                if (srgbClr) {
+                    return '#' + srgbClr.getAttribute('val');
+                }
+                const schemeClr = node.getElementsByTagName('a:schemeClr')[0];
+                if (schemeClr) {
+                    // 简化：如果是主题色，暂时返回黑色或特定色，因为解析主题色表太复杂
+                    const val = schemeClr.getAttribute('val');
+                    if (val === 'tx1') return '#000000';
+                    if (val === 'bg1') return '#FFFFFF';
+                    if (val === 'accent1') return '#C8102E'; // 默认华为红
+                    return '#666666';
+                }
+                return null;
+            }
+        }
+
         createApp({
             setup() {
                 const markdownInput = ref(DEFAULT_MD);
@@ -1009,12 +1125,13 @@
                 const currentPageIndex = ref(0);
                 const previewScale = ref(0.8);
                 const engine = new LayoutEngine();
-                const slideStates = ref({}); // 存储每页的用户选择
+                const slideStates = ref({});
+                const fileInput = ref(null);
+                const customTheme = ref(null); // 存储导入的模板样式
+                let inputTimer;
 
-                // 解析 Markdown
                 const processMarkdown = () => {
                     const rawSlides = markdownInput.value.split(/^---$/m);
-
                     slides.value = rawSlides.map((raw, idx) => {
                         const tokens = marked.lexer(raw);
                         const slideData = { title: '未命名幻灯片', subtitle: '', blocks: [] };
@@ -1029,7 +1146,6 @@
                                 if (img) {
                                     slideData.blocks.push({ type: 'image', alt: img[1] });
                                 } else if (t.text.trim()) {
-                                    // 如果刚找到标题，且还没有内容块，将第一段作为副标题
                                     if (foundTitle && slideData.blocks.length === 0 && !slideData.subtitle) {
                                         slideData.subtitle = t.text.trim();
                                     } else {
@@ -1041,7 +1157,6 @@
                             } else if (t.type === 'blockquote') {
                                 slideData.blocks.push({ type: 'quote', content: t.text });
                             } else if (t.type === 'table') {
-                                // Table 处理
                                 slideData.blocks.push({
                                     type: 'table',
                                     data: {
@@ -1052,31 +1167,26 @@
                             }
                         });
 
-                        // 生成布局
                         const { layouts, best } = engine.generateLayouts(slideData);
-
-                        // 保持用户选择
                         const savedState = slideStates.value[idx];
                         const selectedLayout = savedState ? savedState.selectedLayout : best;
-
-                        // 更新状态
                         slideStates.value[idx] = { selectedLayout };
 
                         return { data: slideData, layouts, selectedLayout };
                     });
 
-                    // 修正页码
-                    if (currentPageIndex.value >= slides.value.length) currentPageIndex.value = slides.value.length - 1;
+                    if (slides.value.length === 0) {
+                        currentPageIndex.value = 0;
+                    } else if (currentPageIndex.value >= slides.value.length) {
+                        currentPageIndex.value = slides.value.length - 1;
+                    }
                 };
 
-                // 防抖监听
-                let timer;
                 const handleInput = () => {
-                    clearTimeout(timer);
-                    timer = setTimeout(processMarkdown, 500);
+                    clearTimeout(inputTimer);
+                    inputTimer = setTimeout(processMarkdown, 500);
                 };
 
-                // 计算当前页结果
                 const currentSlide = computed(() => slides.value[currentPageIndex.value]);
                 const currentLayouts = computed(() => currentSlide.value?.layouts || {});
                 const currentSlideResult = computed(() => {
@@ -1084,207 +1194,298 @@
                     return currentSlide.value.layouts[currentSlide.value.selectedLayout];
                 });
 
-                // 获取指定幻灯片的渲染结果
-                const getSlideResult = (slide) => {
-                    if (!slide) return { elements: [] };
+                const getSlideResult = slide => {
+                    if (!slide) return { elements: [], master: 'normal' };
                     return slide.layouts[slide.selectedLayout];
                 };
 
-                // 选择幻灯片
-                const selectSlide = (index) => {
+                const selectSlide = index => {
                     currentPageIndex.value = index;
-                    // 不需要滚动，因为用户已经通过点击选择了页面
                 };
 
-                const selectLayout = (key) => {
+                const selectLayout = key => {
                     if (currentSlide.value) {
                         currentSlide.value.selectedLayout = key;
                         slideStates.value[currentPageIndex.value].selectedLayout = key;
                     }
                 };
 
-                // 样式转换 helper
-                const getElementClass = (type) => (type === 'text' ? 'slide-text' : '');
-                const getElementStyle = (el) => {
-                    const s = { left: el.x + 'px', top: el.y + 'px', width: el.w + 'px' };
-                    if (el.h) s.height = el.h + 'px';
-                    if (el.fontSize) s.fontSize = el.fontSize + 'px';
-                    if (el.color) s.color = el.color;
-                    return s;
+                const getElementClass = type => (type === 'text' ? 'slide-text' : '');
+                const getElementStyle = el => {
+                    const style = {
+                        left: `${el.x}px`,
+                        top: `${el.y}px`,
+                        width: `${el.w}px`
+                    };
+                    if (el.h != null) style.height = `${el.h}px`;
+                    if (el.fontSize) style.fontSize = `${el.fontSize}px`;
+                    if (el.color) style.color = el.color.startsWith('#') ? el.color : `#${el.color}`;
+                    if (el.align) style.textAlign = el.align;
+
+                    // 应用自定义模板的字体颜色
+                    if (customTheme.value && customTheme.value.normal && customTheme.value.normal.bodyStyle) {
+                        // 简单覆盖：如果元素没有显式指定颜色（通常标题有，正文没有），则使用模板色
+                        // 这里需要更精细的判断，暂时只对普通文本生效
+                        if (!el.bold && el.type === 'text') { // 假设非粗体为正文
+                            const customColor = customTheme.value.normal.bodyStyle.color;
+                            if (customColor) style.color = customColor;
+                        }
+                    }
+
+                    return style;
                 };
 
                 const resetContent = () => {
                     if (confirm('确定恢复默认内容吗？')) {
                         markdownInput.value = DEFAULT_MD;
+                        customTheme.value = null; // 重置模板
                         processMarkdown();
                     }
                 };
 
-                // 鼠标滚轮缩放
-                const handleWheel = (e) => {
+                const handleWheel = e => {
                     if (e.ctrlKey) {
                         const delta = e.deltaY > 0 ? -0.1 : 0.1;
                         previewScale.value = Math.min(Math.max(0.3, previewScale.value + delta), 2.0);
                     }
                 };
 
-                // --- 导出逻辑 (PptxGenJS + Master Slides) ---
+                // --- 导入相关逻辑 ---
+                const triggerImport = () => {
+                    fileInput.value.click();
+                };
+
+                const handleFileImport = async (event) => {
+                    const file = event.target.files[0];
+                    if (!file) return;
+
+                    const loader = new PPTXLoader();
+                    const masters = await loader.load(file);
+
+                    if (masters) {
+                        customTheme.value = masters;
+                        alert('模板导入成功！背景和基础样式已更新。');
+                    }
+
+                    // 清空 input 以便重复选择同一文件
+                    event.target.value = '';
+                };
+
+                // 获取当前背景样式
+                const getSlideBackground = (layoutMaster) => {
+                    if (customTheme.value) {
+                        const master = customTheme.value[layoutMaster] || customTheme.value.normal;
+                        if (master && master.background) {
+                            if (master.background.startsWith('data:image')) {
+                                return `<div style="position:absolute; top:0; left:0; width:100%; height:100%; background-image: url('${master.background}'); background-size: cover; background-position: center;"></div>`;
+                            } else {
+                                return `<div style="position:absolute; top:0; left:0; width:100%; height:100%; background-color: ${master.background};"></div>`;
+                            }
+                        }
+                    }
+                    // 默认背景
+                    return THEME_CONFIG.decorSvg[layoutMaster || 'normal'];
+                };
+
+
                 const exportPPTX = () => {
+                    if (!slides.value.length) {
+                        alert('没有幻灯片可导出');
+                        return;
+                    }
+
                     const pptx = new PptxGenJS();
                     pptx.layout = 'LAYOUT_16x9';
 
-                    // 1. 定义母版 (Master Slides)
-                    // MASTER_NORMAL: 顶部细红条，底部Logo
-                    pptx.defineSlideMaster({
-                        title: 'MASTER_NORMAL',
-                        background: { color: 'FFFFFF' },
-                        objects: [
-                            { rect: { x: 0, y: 0, w: 10, h: 0.06, fill: { color: 'C8102E' } } }, // 顶部红条
-                            { rect: { x: 9.4, y: 5.2, w: 0.4, h: 0.2, fill: { color: 'EEEEEE' } } }, // Logo 占位
-                            { text: { text: "LOGO", options: { x: 9.4, y: 5.2, w: 0.4, h: 0.2, align: 'center', fontSize: 8, color: '999999' } } }
-                        ],
-                        slideNumber: { x: 0.3, y: 5.3, color: '999999', fontSize: 10 }
+                    // 定义母版
+                    if (customTheme.value) {
+                        // 使用自定义模板
+                        const defineCustomMaster = (name, masterData) => {
+                            const bgObj = {};
+                            if (masterData.background) {
+                                if (masterData.background.startsWith('data:image')) {
+                                    bgObj.data = masterData.background; // PPTXGenJS 支持 data:image
+                                } else {
+                                    bgObj.color = masterData.background.replace('#', '');
+                                }
+                            } else {
+                                bgObj.color = 'FFFFFF';
+                            }
+
+                            pptx.defineSlideMaster({
+                                title: name,
+                                background: bgObj,
+                                objects: [] // 既然有了背景图，就不需要额外的 rect 装饰了
+                            });
+                        };
+
+                        defineCustomMaster('MASTER_NORMAL', customTheme.value.normal);
+                        defineCustomMaster('MASTER_COVER', customTheme.value.cover || customTheme.value.normal);
+
+                    } else {
+                        // 默认母版
+                        pptx.defineSlideMaster({
+                            title: 'MASTER_NORMAL',
+                            background: { color: 'FFFFFF' },
+                            objects: [
+                                { rect: { x: 0, y: 0, w: 10, h: 0.06, fill: { color: 'C8102E' } } },
+                                { rect: { x: 9.4, y: 5.2, w: 0.4, h: 0.2, fill: { color: 'EEEEEE' } } },
+                                { text: { text: 'LOGO', options: { x: 9.4, y: 5.2, w: 0.4, h: 0.2, align: 'center', fontSize: 8, color: '999999' } } }
+                            ],
+                            slideNumber: { x: 0.3, y: 5.3, color: '999999', fontSize: 10 }
+                        });
+
+                        pptx.defineSlideMaster({
+                            title: 'MASTER_COVER',
+                            background: { color: 'FFFFFF' },
+                            objects: [
+                                { rect: { x: 0, y: 0, w: 4, h: 5.625, fill: { color: 'C8102E' } } },
+                                { rect: { x: 4, y: 0, w: 0.1, h: 5.625, fill: { color: 'C8102E', transparency: 90 } } }
+                            ]
+                        });
+                    }
+
+                    const pxToInch = value => (value * 10) / 960;
+                    const masterMap = { cover: 'MASTER_COVER', normal: 'MASTER_NORMAL' };
+
+                    slides.value.forEach(slide => {
+                        const layout = slide.layouts[slide.selectedLayout];
+                        const pptSlide = pptx.addSlide({ masterName: masterMap[layout.master] || 'MASTER_NORMAL' });
+
+                        layout.elements.forEach(el => {
+                            const props = {
+                                x: pxToInch(el.x),
+                                y: pxToInch(el.y),
+                                w: pxToInch(el.w)
+                            };
+                            if (el.h != null) props.h = pxToInch(el.h);
+
+                            // 颜色处理：如果有自定义模板且元素未显式指定颜色，尝试使用模板色
+                            let textColor = el.color ? el.color.replace('#', '') : '333333';
+                            if (customTheme.value && !el.color) {
+                                // 简单逻辑：正文用 bodyStyle 颜色
+                                if (el.type === 'text' && !el.bold && customTheme.value.normal.bodyStyle) {
+                                    textColor = customTheme.value.normal.bodyStyle.color.replace('#', '');
+                                }
+                            }
+
+                            const fontSize = (el.fontSize || 14) * 0.75;
+
+                            if (el.type === 'text') {
+                                const textProps = { ...props, color: textColor, fontSize, valign: 'top' };
+                                if (el.align) textProps.align = el.align;
+                                if (el.bold) textProps.bold = true;
+
+                                if (el.rawBlock && el.rawBlock.type === 'quote') {
+                                    pptSlide.addShape(pptx.ShapeType.rect, {
+                                        x: props.x,
+                                        y: props.y,
+                                        w: 0.05,
+                                        h: props.h || 1,
+                                        fill: { color: 'C8102E' }
+                                    });
+                                    const quoteX = (textProps.x || 0) + 0.2;
+                                    const quoteW = (textProps.w || 0) - 0.2;
+                                    pptSlide.addShape(pptx.ShapeType.rect, {
+                                        x: quoteX - 0.1,
+                                        y: props.y,
+                                        w: quoteW + 0.1,
+                                        h: props.h || 1,
+                                        fill: { color: 'F9F9F9' }
+                                    });
+                                    textProps.x = quoteX;
+                                    textProps.w = quoteW;
+                                }
+
+                                if (el.rawBlock && el.rawBlock.type === 'list') {
+                                    el.rawBlock.items.forEach((item, idx) => {
+                                        const segments = [];
+                                        const boldRegex = /\*\*(.*?)\*\*/g;
+                                        let lastIndex = 0;
+                                        let match;
+                                        while ((match = boldRegex.exec(item)) !== null) {
+                                            if (match.index > lastIndex) {
+                                                segments.push({ text: item.substring(lastIndex, match.index), options: {} });
+                                            }
+                                            segments.push({ text: match[1], options: { bold: true } });
+                                            lastIndex = boldRegex.lastIndex;
+                                        }
+                                        if (lastIndex < item.length) {
+                                            segments.push({ text: item.substring(lastIndex), options: {} });
+                                        }
+
+                                        pptSlide.addText(segments.length ? segments : item, {
+                                            ...textProps,
+                                            y: textProps.y + idx * 0.4,
+                                            h: 0.4,
+                                            bullet: true
+                                        });
+                                    });
+                                } else {
+                                    pptSlide.addText(el.text, textProps);
+                                }
+                            } else if (el.type === 'table') {
+                                const rows = [el.data.header, ...el.data.rows];
+                                const colCount = el.data.header.length;
+                                pptSlide.addTable(rows, {
+                                    x: props.x,
+                                    y: props.y,
+                                    w: props.w,
+                                    border: { pt: 1, color: 'DDDDDD' },
+                                    fill: { color: 'FFFFFF' },
+                                    color: '333333',
+                                    fontSize: 11,
+                                    fontFace: 'Arial',
+                                    valign: 'middle',
+                                    rowH: [0.45, ...el.data.rows.map(() => 0.4)],
+                                    colW: Array(colCount).fill(props.w / colCount),
+                                    autoPage: false,
+                                    rowOpts: [
+                                        { fill: { color: 'C8102E' }, color: 'FFFFFF', bold: true, fontSize: 11 }
+                                    ]
+                                });
+                            } else if (el.type === 'placeholder') {
+                                pptSlide.addText(`[图: ${el.alt}]`, { ...props, fill: { color: 'F4F6F8' }, align: 'center' });
+                            } else if (el.type === 'shape') {
+                                pptSlide.addShape(pptx.ShapeType.rect, { ...props, fill: { color: el.fill ? el.fill.replace('#', '') : 'FFFFFF' } });
+                            }
+                        });
                     });
 
-                    // MASTER_COVER: 现代分割封面 (左红右白)
-                    pptx.defineSlideMaster({
-                        title: 'MASTER_COVER',
-                        background: { color: 'FFFFFF' },
-                        objects: [
-                            // 左侧红色色块 (梯形效果用 Shape 模拟，这里简化为矩形+三角形或直接矩形)
-                            // PptxGenJS 不支持复杂 Path，用矩形代替
-                            { rect: { x: 0, y: 0, w: 4, h: 5.625, fill: { color: 'C8102E' } } },
-                            // 装饰性线条
-                            { rect: { x: 4, y: 0, w: 0.1, h: 5.625, fill: { color: 'C8102E', transparency: 90 } } }
-                        ]
-                    });
+                    pptx.writeFile({ fileName: `Huawei-SmartSlide-Master-${new Date().toISOString().slice(0, 10)}.pptx` });
+                };
+
+                onMounted(() => {
+                    processMarkdown();
                 });
 
-        slides.value.forEach(slide => {
-            const layout = slide.layouts[slide.selectedLayout];
-
-            // 使用布局引擎返回的 master 属性
-            const masterMap = { 'cover': 'MASTER_COVER', 'normal': 'MASTER_NORMAL' };
-            const masterName = masterMap[layout.master] || 'MASTER_NORMAL';
-
-            const pptSlide = pptx.addSlide({ masterName });
-
-            // 2. 遍历元素
-            layout.elements.forEach(el => {
-                // px to inch conversion (960px = 10 inches)
-                const factor = 10 / 960;
-                const props = {
-                    x: el.x * factor,
-                    y: el.y * factor,
-                    w: el.w * factor,
-                    h: el.h ? el.h * factor : null,
-                    color: el.color ? el.color.replace('#', '') : '333333',
-                    fontSize: (el.fontSize || 14) * 0.75 // pt approx
+                return {
+                    markdownInput,
+                    slides,
+                    currentPageIndex,
+                    previewScale,
+                    currentSlide,
+                    currentLayouts,
+                    currentSlideResult,
+                    themeConfig: THEME_CONFIG,
+                    handleInput,
+                    selectLayout,
+                    selectSlide,
+                    getSlideResult,
+                    getElementClass,
+                    getElementStyle,
+                    exportPPTX,
+                    resetContent,
+                    handleWheel,
+                    triggerImport,
+                    handleFileImport,
+                    fileInput,
+                    getSlideBackground
                 };
-
-                if (el.type === 'text') {
-                    // 处理引用块 (Quote)
-                    if (el.rawBlock && el.rawBlock.type === 'quote') {
-                        // 添加左侧红线
-                        pptSlide.addShape(pptx.ShapeType.rect, {
-                            x: props.x, y: props.y, w: 0.05, h: props.h || 1,
-                            fill: { color: 'C8102E' }
-                        });
-                        // 调整文本位置
-                        props.x += 0.2;
-                        props.w -= 0.2;
-                        // 灰色背景
-                        pptSlide.addShape(pptx.ShapeType.rect, {
-                            x: props.x - 0.1, y: props.y, w: props.w + 0.1, h: props.h || 1,
-                            fill: { color: 'F9F9F9' }
-                        });
-                    }
-
-                    // 处理列表
-                    if (el.rawBlock && el.rawBlock.type === 'list') {
-                        el.rawBlock.items.forEach((item, idx) => {
-                            // 解析 Markdown 格式（粗体 **text**）
-                            const textParts = [];
-                            let lastIndex = 0;
-                            const boldRegex = /\*\*(.*?)\*\*/g;
-                            let match;
-
-                            while ((match = boldRegex.exec(item)) !== null) {
-                                if (match.index > lastIndex) {
-                                    textParts.push({ text: item.substring(lastIndex, match.index), options: {} });
-                                }
-                                textParts.push({ text: match[1], options: { bold: true } });
-                                lastIndex = boldRegex.lastIndex;
-                            }
-                            if (lastIndex < item.length) {
-                                textParts.push({ text: item.substring(lastIndex), options: {} });
-                            }
-
-                            if (textParts.length === 0) {
-                                pptSlide.addText(item, {
-                                    ...props, y: props.y + (idx * 0.4), h: 0.4,
-                                    bullet: true, valign: 'top'
-                                });
-                            } else {
-                                pptSlide.addText(textParts, {
-                                    ...props, y: props.y + (idx * 0.4), h: 0.4,
-                                    bullet: true, valign: 'top'
-                                });
-                            }
-                        });
-                    } else {
-                        const textProps = { ...props, valign: 'top' };
-                        if (el.align) textProps.align = el.align;
-                        if (el.bold) textProps.bold = true;
-                        pptSlide.addText(el.text, textProps);
-                    }
-                }
-                else if (el.type === 'table') {
-                    const rows = [el.data.header, ...el.data.rows];
-                    const colCount = el.data.header.length;
-
-                    pptSlide.addTable(rows, {
-                        x: props.x,
-                        y: props.y,
-                        w: props.w,
-                        border: { pt: 1, color: 'DDDDDD' },
-                        fill: { color: 'FFFFFF' },
-                        color: '333333',
-                        fontSize: 11,
-                        fontFace: 'Arial',
-                        valign: 'middle',
-                        rowH: [0.45, ...el.data.rows.map(() => 0.4)],
-                        colW: Array(colCount).fill(props.w / colCount),
-                        autoPage: false,
-                        rowOpts: [
-                            { fill: { color: 'C8102E' }, color: 'FFFFFF', bold: true, fontSize: 11 }
-                        ]
-                    });
-                }
-                else if (el.type === 'placeholder') {
-                    pptSlide.addText(`[图: ${el.alt}]`, { ...props, fill: { color: 'F4F6F8' }, align: 'center' });
-                }
-                else if (el.type === 'shape') {
-                    pptSlide.addShape(pptx.ShapeType.rect, { ...props, fill: { color: el.fill ? el.fill.replace('#', '') : 'FFFFFF' } });
-                }
-            });
-        });
-
-        pptx.writeFile({ fileName: `Huawei-SmartSlide-Master-${new Date().toISOString().slice(0, 10)}.pptx` });
-                };
-
-        onMounted(() => {
-            processMarkdown();
-        });
-
-        return {
-            markdownInput, slides, currentPageIndex, previewScale,
-            currentSlideResult, currentLayouts, currentSlide, themeConfig: THEME_CONFIG,
-            handleInput, selectLayout, selectSlide, getSlideResult, getElementClass, getElementStyle, exportPPTX, resetContent, handleWheel
-        };
             }
         }).mount('#app');
     </script>
+
 
 </body>
 

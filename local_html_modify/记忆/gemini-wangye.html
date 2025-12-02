@@ -318,14 +318,39 @@
         #mobile-controls {
             display: none;
             position: absolute;
-            bottom: 100px;
-            left: 20px;
-            width: 120px;
-            height: 120px;
+            bottom: 60px;
+            left: 0;
+            width: 100%;
+            padding: 0 20px;
+            box-sizing: border-box;
+            pointer-events: none;
+            z-index: 15;
+        }
+
+        .mobile-joystick {
+            width: 140px;
+            height: 140px;
+            position: absolute;
             pointer-events: auto;
         }
 
-        #joystick-base {
+        #move-joystick {
+            left: 20px;
+        }
+
+        #look-joystick {
+            right: 20px;
+        }
+
+        .joystick-label {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 12px;
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .joystick-base {
             width: 100%;
             height: 100%;
             background: rgba(255, 255, 255, 0.2);
@@ -333,16 +358,16 @@
             position: relative;
         }
 
-        #joystick-stick {
-            width: 50px;
-            height: 50px;
-            background: rgba(255, 255, 255, 0.8);
+        .joystick-stick {
+            width: 55px;
+            height: 55px;
+            background: rgba(255, 255, 255, 0.85);
             border-radius: 50%;
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            transition: all 0.1s;
+            transition: transform 0.1s;
         }
 
         @media (max-width: 768px) {
@@ -401,8 +426,17 @@
 
     <!-- 移动端虚拟摇杆 -->
     <div id="mobile-controls">
-        <div id="joystick-base">
-            <div id="joystick-stick"></div>
+        <div class="mobile-joystick" id="move-joystick">
+            <div class="joystick-label">移动</div>
+            <div class="joystick-base" id="move-joystick-base">
+                <div class="joystick-stick" id="move-joystick-stick"></div>
+            </div>
+        </div>
+        <div class="mobile-joystick" id="look-joystick">
+            <div class="joystick-label">视角</div>
+            <div class="joystick-base" id="look-joystick-base">
+                <div class="joystick-stick" id="look-joystick-stick"></div>
+            </div>
         </div>
     </div>
 
@@ -593,8 +627,10 @@
 
             // 移动端
             isMobile: /Android|iPhone|iPad/i.test(navigator.userAgent),
-            joystickActive: false,
-            joystickDir: { x: 0, y: 0 }
+            mobileJoysticks: {
+                move: { active: false, x: 0, y: 0 },
+                look: { active: false, x: 0, y: 0 }
+            }
         };
 
         // Three.js 核心对象
@@ -1032,40 +1068,73 @@
         // =========================
         function animate() {
             requestAnimationFrame(animate);
-            const delta = (performance.now() - prevTime) / 1000;
-            prevTime = performance.now();
+            const now = performance.now();
+            const delta = (now - prevTime) / 1000;
+            prevTime = now;
 
             // 自动导航模式
             if (state.mode === 'AUTO_NAVIGATE' && state.autoNavTarget) {
                 updateAutoNavigation(delta);
-            } else if (controls.isLocked) {
-                // 手动移动
-                velocity.x -= velocity.x * 10.0 * delta;
-                velocity.z -= velocity.z * 10.0 * delta;
+            } else {
+                const allowManualControl = controls.isLocked || state.isMobile;
 
-                if (state.isMobile && state.joystickActive) {
-                    direction.z = -state.joystickDir.y;
-                    direction.x = state.joystickDir.x;
-                } else {
-                    direction.z = Number(moveF) - Number(moveB);
-                    direction.x = Number(moveR) - Number(moveL);
+                if (allowManualControl) {
+                    velocity.x -= velocity.x * 10.0 * delta;
+                    velocity.z -= velocity.z * 10.0 * delta;
+
+                    let inputX = 0;
+                    let inputZ = 0;
+
+                    if (state.isMobile) {
+                        const moveJoystick = state.mobileJoysticks.move;
+                        if (moveJoystick.active) {
+                            inputZ = -moveJoystick.y;
+                            inputX = moveJoystick.x;
+                        }
+                    } else {
+                        inputZ = Number(moveF) - Number(moveB);
+                        inputX = Number(moveR) - Number(moveL);
+                    }
+
+                    direction.set(inputX, 0, inputZ);
+
+                    if (direction.lengthSq() > 0) {
+                        direction.normalize();
+                        velocity.z -= direction.z * 40.0 * delta;
+                        velocity.x -= direction.x * 40.0 * delta;
+                    }
+
+                    if (state.isMobile) {
+                        applyMobileLook(delta);
+                    }
+
+                    controls.moveRight(-velocity.x * delta);
+                    controls.moveForward(-velocity.z * delta);
+
+                    // 射线检测
+                    updateRaycaster();
                 }
-                direction.normalize();
-
-                if (direction.z !== 0) velocity.z -= direction.z * 40.0 * delta;
-                if (direction.x !== 0) velocity.x -= direction.x * 40.0 * delta;
-
-                controls.moveRight(-velocity.x * delta);
-                controls.moveForward(-velocity.z * delta);
-
-                // 射线检测
-                updateRaycaster();
             }
 
             // 更新卡片视觉状态 (复习提醒)
             updateCardVisuals();
 
             renderer.render(scene, camera);
+        }
+
+        function applyMobileLook(delta) {
+            const look = state.mobileJoysticks.look;
+            if (!look.active) return;
+
+            const yawObject = controls.getObject();
+            const pitchObject = yawObject.children[0] || camera;
+            const lookSpeed = 2.5;
+            const clamp = Math.PI / 2 - 0.05;
+
+            yawObject.rotation.y -= look.x * lookSpeed * delta;
+
+            const nextPitch = THREE.MathUtils.clamp(pitchObject.rotation.x - look.y * lookSpeed * delta, -clamp, clamp);
+            pitchObject.rotation.x = nextPitch;
         }
 
         function updateCardVisuals() {
@@ -1904,27 +1973,28 @@
         // 移动端控制
         // =========================
         function initMobileControls() {
-            const base = document.getElementById('joystick-base');
-            const stick = document.getElementById('joystick-stick');
+            const mobileControls = document.getElementById('mobile-controls');
+            mobileControls.style.display = 'block';
+            setupJoystick('move', 'move-joystick-base', 'move-joystick-stick', 45);
+            setupJoystick('look', 'look-joystick-base', 'look-joystick-stick', 35);
+        }
 
-            base.addEventListener('touchstart', (e) => {
-                e.preventDefault();
-                state.joystickActive = true;
-            });
+        function setupJoystick(type, baseId, stickId, maxDistance = 40) {
+            const base = document.getElementById(baseId);
+            const stick = document.getElementById(stickId);
+            if (!base || !stick) return;
 
-            base.addEventListener('touchmove', (e) => {
-                e.preventDefault();
-                if (!state.joystickActive) return;
+            const joystickState = state.mobileJoysticks[type];
+            let activeTouchId = null;
 
-                const touch = e.touches[0];
+            const updateFromTouch = (touch) => {
                 const rect = base.getBoundingClientRect();
                 const centerX = rect.left + rect.width / 2;
                 const centerY = rect.top + rect.height / 2;
 
                 let dx = touch.clientX - centerX;
                 let dy = touch.clientY - centerY;
-                const distance = Math.sqrt(dx * dx + dy * dy);
-                const maxDistance = 35;
+                const distance = Math.hypot(dx, dy) || 0.0001;
 
                 if (distance > maxDistance) {
                     dx = (dx / distance) * maxDistance;
@@ -1932,17 +2002,58 @@
                 }
 
                 stick.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+                joystickState.x = dx / maxDistance;
+                joystickState.y = dy / maxDistance;
+            };
 
-                state.joystickDir.x = dx / maxDistance;
-                state.joystickDir.y = dy / maxDistance;
-            });
-
-            base.addEventListener('touchend', () => {
-                state.joystickActive = false;
+            const resetStick = () => {
+                joystickState.active = false;
+                joystickState.x = 0;
+                joystickState.y = 0;
+                activeTouchId = null;
                 stick.style.transform = 'translate(-50%, -50%)';
-                state.joystickDir.x = 0;
-                state.joystickDir.y = 0;
-            });
+            };
+
+            base.addEventListener('touchstart', (e) => {
+                if (activeTouchId !== null) return;
+                for (let i = 0; i < e.changedTouches.length; i++) {
+                    const touch = e.changedTouches[i];
+                    if (touch.target === base || base.contains(touch.target)) {
+                        e.preventDefault();
+                        activeTouchId = touch.identifier;
+                        joystickState.active = true;
+                        updateFromTouch(touch);
+                        break;
+                    }
+                }
+            }, { passive: false });
+
+            window.addEventListener('touchmove', (e) => {
+                if (activeTouchId === null) return;
+                for (let i = 0; i < e.changedTouches.length; i++) {
+                    const touch = e.changedTouches[i];
+                    if (touch.identifier === activeTouchId) {
+                        e.preventDefault();
+                        updateFromTouch(touch);
+                        break;
+                    }
+                }
+            }, { passive: false });
+
+            const endHandler = (e) => {
+                if (activeTouchId === null) return;
+                for (let i = 0; i < e.changedTouches.length; i++) {
+                    const touch = e.changedTouches[i];
+                    if (touch.identifier === activeTouchId) {
+                        e.preventDefault();
+                        resetStick();
+                        break;
+                    }
+                }
+            };
+
+            window.addEventListener('touchend', endHandler, { passive: false });
+            window.addEventListener('touchcancel', endHandler, { passive: false });
         }
 
         // Toast 提示

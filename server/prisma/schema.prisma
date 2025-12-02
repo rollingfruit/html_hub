@@ -44,10 +44,8 @@ model FileRequest {
   requesterName String?
   requesterEmail String?
   reason        String?
+  pendingContent String?      // For MODIFY requests
   status        String        @default("PENDING")
-  accessToken   String?       @unique
-  clientSecretHash String?
-  expiresAt     DateTime?
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
 }

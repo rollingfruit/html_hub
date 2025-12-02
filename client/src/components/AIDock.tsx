@@ -84,7 +84,7 @@ const AIDock = ({ currentPrompt }: Props) => {
   };
 
   return (
-    <div className="ai-dock-wrapper">
+    <div className="ai-dock-wrapper" id="ai-dock-container">
       <div className="ai-dock-hint">
         <Sparkles size={16} />
         <span>粘贴好所需Prompt，选择 AI 平台去创作</span>

@@ -25,9 +25,8 @@ export interface FileRequest {
   requesterName?: string | null;
   requesterEmail?: string | null;
   reason?: string | null;
+  pendingContent?: string | null;
   status: RequestStatus;
-  accessToken?: string | null;
-  expiresAt?: string | null;
   createdAt: string;
   updatedAt?: string;
 }
