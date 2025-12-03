@@ -3,7 +3,10 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="mobile-web-app-capable" content="yes">
     <title>记忆宫殿 - SRS智能复习系统</title>
     <style>
         :root {
@@ -20,6 +23,18 @@
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             background: #000;
             touch-action: none;
+            position: fixed;
+            width: 100%;
+            height: 100vh;
+            height: 100dvh; /* 动态视口高度 */
+            -webkit-overflow-scrolling: touch;
+        }
+
+        html {
+            overflow: hidden;
+            position: fixed;
+            width: 100%;
+            height: 100%;
         }
 
         /* HUD 层 */
@@ -317,19 +332,20 @@
         /* 移动端虚拟摇杆 */
         #mobile-controls {
             display: none;
-            position: absolute;
-            bottom: 60px;
+            position: fixed;
+            bottom: max(140px, env(safe-area-inset-bottom, 0px) + 120px);
             left: 0;
             width: 100%;
-            padding: 0 20px;
+            padding: 0 max(20px, env(safe-area-inset-left, 0px));
+            padding-right: max(20px, env(safe-area-inset-right, 0px));
             box-sizing: border-box;
             pointer-events: none;
             z-index: 15;
         }
 
         .mobile-joystick {
-            width: 140px;
-            height: 140px;
+            width: 110px;
+            height: 110px;
             position: absolute;
             pointer-events: auto;
         }
@@ -339,6 +355,7 @@
         }
 
         #look-joystick {
+            display: none; /* 隐藏视角摇杆，改用触摸滑动 */
             right: 20px;
         }
 
@@ -370,18 +387,155 @@
             transition: transform 0.1s;
         }
 
+        #mobile-menu-buttons {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            display: none;
+            gap: 10px;
+            pointer-events: auto;
+            z-index: 15;
+        }
+
+        .mobile-menu-btn {
+            background: rgba(0, 0, 0, 0.6);
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 999px;
+            padding: 8px 16px;
+            font-size: 12px;
+            letter-spacing: 1px;
+            cursor: pointer;
+        }
+
+        .mobile-menu-btn:active {
+            transform: scale(0.97);
+        }
+
+        /* 全屏按钮样式 */
+        #fullscreen-btn {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: rgba(59, 130, 246, 0.9);
+            color: white;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            width: 56px;
+            height: 56px;
+            font-size: 24px;
+            cursor: pointer;
+            backdrop-filter: blur(10px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            pointer-events: auto;
+            z-index: 20;
+            transition: all 0.3s;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        #fullscreen-btn:active {
+            transform: scale(0.95);
+            background: rgba(59, 130, 246, 1);
+        }
+
+        #fullscreen-btn.in-fullscreen {
+            background: rgba(239, 68, 68, 0.9);
+        }
+
         @media (max-width: 768px) {
+            #fullscreen-btn {
+                display: flex;
+                top: max(20px, env(safe-area-inset-top, 0px) + 10px);
+                left: max(20px, env(safe-area-inset-left, 0px) + 10px);
+            }
             #mobile-controls {
                 display: block;
             }
 
+            #mobile-menu-buttons {
+                display: flex;
+                top: max(20px, env(safe-area-inset-top, 0px) + 10px);
+                right: max(20px, env(safe-area-inset-right, 0px) + 10px);
+            }
+
             #action-bar {
-                bottom: 10px;
+                bottom: max(10px, env(safe-area-inset-bottom, 0px) + 10px);
             }
 
             .action-btn {
                 padding: 8px 16px;
                 font-size: 12px;
+            }
+
+            #progress-bar {
+                top: max(10px, env(safe-area-inset-top, 0px) + 10px);
+                padding: 8px 15px;
+                font-size: 12px;
+                gap: 10px;
+            }
+
+            .modal {
+                max-height: 90vh;
+                max-height: 90dvh;
+                width: 90%;
+            }
+
+            #detail-card {
+                padding: 20px;
+                max-height: 85vh;
+                max-height: 85dvh;
+            }
+
+            .mobile-joystick {
+                width: 100px;
+                height: 100px;
+            }
+
+            #move-joystick {
+                left: 15px;
+            }
+
+            #look-joystick {
+                display: none;
+            }
+        }
+
+        /* 全屏模式下的额外优化 */
+        @media (max-width: 768px) and (orientation: landscape) {
+            #progress-bar {
+                top: 5px;
+                padding: 5px 10px;
+                font-size: 11px;
+                gap: 8px;
+            }
+
+            #fullscreen-btn {
+                width: 48px;
+                height: 48px;
+                font-size: 20px;
+                top: 10px;
+                left: 10px;
+            }
+
+            .mobile-joystick {
+                width: 90px;
+                height: 90px;
+            }
+
+            #mobile-controls {
+                bottom: max(100px, env(safe-area-inset-bottom, 0px) + 80px);
+            }
+
+            #mobile-menu-buttons {
+                top: 10px;
+                right: 10px;
+            }
+
+            .mobile-menu-btn {
+                padding: 6px 12px;
+                font-size: 11px;
             }
         }
     </style>
@@ -404,6 +558,16 @@
             <div class="progress-item">
                 ✅ 已完成: <span class="progress-num" id="done-count">0</span>
             </div>
+        </div>
+
+        <!-- 全屏按钮 -->
+        <button id="fullscreen-btn" onclick="toggleFullscreen()" title="切换全屏">
+            <span id="fullscreen-icon">⛶</span>
+        </button>
+
+        <div id="mobile-menu-buttons">
+            <button id="mobile-open-menu" class="mobile-menu-btn" onclick="openMobileMenu()">ESC</button>
+            <button id="mobile-close-menu" class="mobile-menu-btn" onclick="closeMobileMenu()" style="display:none;">关闭</button>
         </div>
 
         <div id="crosshair"></div>
@@ -572,6 +736,14 @@
             3. 拿起卡片,在房间中找绿色光圈放置<br>
             4. 看着卡片按 <span class="key-badge">E</span> 或点击复习<br>
             5. 根据记忆情况选择 忘记/模糊/记得
+            <br><br>
+            <strong style="color: #3b82f6;">📱 移动端操作指南:</strong><br>
+            <span style="color: #10b981;">🕹️ 左下摇杆：控制角色移动（前后左右）</span><br>
+            <span style="color: #10b981;">👆 屏幕滑动：控制视角转向（上下左右）</span><br>
+            <br>
+            <strong style="color: #3b82f6;">📱 最佳体验建议:</strong><br>
+            <span style="color: #fbbf24;">⚡ iOS用户：点击分享按钮 → "添加到主屏幕" 获得全屏体验</span><br>
+            <span style="color: #fbbf24;">⚡ Android用户：浏览器菜单 → "安装应用" 或 "添加到主屏幕"</span>
         </div>
         <div
             style="margin-top: 40px; padding: 12px 30px; border: 2px solid white; border-radius: 30px; cursor: pointer; font-weight: bold;">
@@ -629,7 +801,7 @@
             isMobile: /Android|iPhone|iPad/i.test(navigator.userAgent),
             mobileJoysticks: {
                 move: { active: false, x: 0, y: 0 },
-                look: { active: false, x: 0, y: 0 }
+                look: { active: false, lastX: 0, lastY: 0 }
             }
         };
 
@@ -687,11 +859,13 @@
             // 控制器
             controls = new PointerLockControls(camera, document.body);
             controls.addEventListener('unlock', () => {
+                if (state.isMobile) return;
                 if (state.mode !== 'AUTO_NAVIGATE') {
                     document.getElementById('action-bar').style.display = 'flex';
                 }
             });
             controls.addEventListener('lock', () => {
+                if (state.isMobile) return;
                 document.getElementById('action-bar').style.display = 'none';
                 closeAllModals();
             });
@@ -705,6 +879,8 @@
             // 移动端摇杆
             if (state.isMobile) {
                 initMobileControls();
+            } else {
+                setMobileMenuVisible(false);
             }
 
             raycaster = new THREE.Raycaster();
@@ -1104,10 +1280,6 @@
                         velocity.x -= direction.x * 40.0 * delta;
                     }
 
-                    if (state.isMobile) {
-                        applyMobileLook(delta);
-                    }
-
                     controls.moveRight(-velocity.x * delta);
                     controls.moveForward(-velocity.z * delta);
 
@@ -1120,21 +1292,6 @@
             updateCardVisuals();
 
             renderer.render(scene, camera);
-        }
-
-        function applyMobileLook(delta) {
-            const look = state.mobileJoysticks.look;
-            if (!look.active) return;
-
-            const yawObject = controls.getObject();
-            const pitchObject = yawObject.children[0] || camera;
-            const lookSpeed = 2.5;
-            const clamp = Math.PI / 2 - 0.05;
-
-            yawObject.rotation.y -= look.x * lookSpeed * delta;
-
-            const nextPitch = THREE.MathUtils.clamp(pitchObject.rotation.x - look.y * lookSpeed * delta, -clamp, clamp);
-            pitchObject.rotation.x = nextPitch;
         }
 
         function updateCardVisuals() {
@@ -1903,15 +2060,182 @@
             document.querySelectorAll('.modal').forEach(el => el.style.display = 'none');
         };
 
+        function getFullscreenElement() {
+            return document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement;
+        }
+
+        function enterMobileFullscreen() {
+            if (!state.isMobile) return;
+            if (getFullscreenElement()) return;
+            const element = document.documentElement;
+            const request = element.requestFullscreen || element.webkitRequestFullscreen || element.msRequestFullscreen;
+            if (request) {
+                try {
+                    const result = request.call(element);
+                    if (result && typeof result.catch === 'function') {
+                        result.catch(() => { /* ignore */ });
+                    }
+                } catch (err) {
+                    console.warn('Fullscreen request failed', err);
+                }
+            }
+        }
+
+        function exitMobileFullscreen() {
+            if (!state.isMobile) return;
+            if (!getFullscreenElement()) return;
+            const exit = document.exitFullscreen || document.webkitExitFullscreen || document.msExitFullscreen;
+            if (exit) {
+                try {
+                    const result = exit.call(document);
+                    if (result && typeof result.catch === 'function') {
+                        result.catch(() => { /* ignore */ });
+                    }
+                } catch (err) {
+                    console.warn('Exit fullscreen failed', err);
+                }
+            }
+        }
+
+        window.toggleFullscreen = function () {
+            const fullscreenBtn = document.getElementById('fullscreen-btn');
+            const fullscreenIcon = document.getElementById('fullscreen-icon');
+
+            // 移动端：使用滚动隐藏地址栏的方式
+            if (state.isMobile) {
+                hideAddressBar();
+                fullscreenBtn.classList.add('in-fullscreen');
+                showToast('💡 提示：向下滑动可隐藏浏览器地址栏');
+
+                // 如果支持真正的全屏，也尝试使用
+                if (document.documentElement.requestFullscreen) {
+                    const element = document.documentElement;
+                    const request = element.requestFullscreen || element.webkitRequestFullscreen;
+                    if (request) {
+                        request.call(element).catch(() => {
+                            // 静默失败，已经显示了滚动提示
+                        });
+                    }
+                }
+            } else {
+                // 桌面端：使用标准全屏API
+                if (getFullscreenElement()) {
+                    const exit = document.exitFullscreen || document.webkitExitFullscreen || document.msExitFullscreen;
+                    if (exit) {
+                        exit.call(document).then(() => {
+                            fullscreenBtn.classList.remove('in-fullscreen');
+                            fullscreenIcon.textContent = '⛶';
+                        }).catch(err => console.warn('Exit fullscreen failed', err));
+                    }
+                } else {
+                    const element = document.documentElement;
+                    const request = element.requestFullscreen || element.webkitRequestFullscreen || element.msRequestFullscreen;
+                    if (request) {
+                        request.call(element).then(() => {
+                            fullscreenBtn.classList.add('in-fullscreen');
+                            fullscreenIcon.textContent = '⛶';
+                        }).catch(err => console.warn('Enter fullscreen failed', err));
+                    }
+                }
+            }
+        };
+
+        // 隐藏地址栏的辅助函数
+        function hideAddressBar() {
+            // 方法1: 滚动到顶部
+            window.scrollTo(0, 1);
+            setTimeout(() => window.scrollTo(0, 0), 0);
+
+            // 方法2: 调整body高度触发
+            if (state.isMobile) {
+                document.body.style.height = `${window.innerHeight + 1}px`;
+                setTimeout(() => {
+                    window.scrollTo(0, 1);
+                    setTimeout(() => {
+                        document.body.style.height = '100dvh';
+                        window.scrollTo(0, 0);
+                    }, 50);
+                }, 100);
+            }
+        }
+
+        // 监听全屏状态变化
+        document.addEventListener('fullscreenchange', updateFullscreenButton);
+        document.addEventListener('webkitfullscreenchange', updateFullscreenButton);
+        document.addEventListener('msfullscreenchange', updateFullscreenButton);
+
+        function updateFullscreenButton() {
+            const fullscreenBtn = document.getElementById('fullscreen-btn');
+            const fullscreenIcon = document.getElementById('fullscreen-icon');
+            if (!fullscreenBtn || !fullscreenIcon) return;
+
+            if (getFullscreenElement()) {
+                fullscreenBtn.classList.add('in-fullscreen');
+                fullscreenIcon.textContent = '⛶';
+            } else {
+                fullscreenBtn.classList.remove('in-fullscreen');
+                fullscreenIcon.textContent = '⛶';
+            }
+        }
+
+        function setMobileMenuVisible(visible) {
+            const actionBar = document.getElementById('action-bar');
+            const openBtn = document.getElementById('mobile-open-menu');
+            const closeBtn = document.getElementById('mobile-close-menu');
+            if (!actionBar || !openBtn || !closeBtn) return;
+
+            if (!state.isMobile) {
+                openBtn.style.display = 'none';
+                closeBtn.style.display = 'none';
+                return;
+            }
+
+            actionBar.style.display = visible ? 'flex' : 'none';
+            openBtn.style.display = visible ? 'none' : 'inline-flex';
+            closeBtn.style.display = visible ? 'inline-flex' : 'none';
+        }
+
+        window.openMobileMenu = function () {
+            if (!state.isMobile) return;
+            exitMobileFullscreen();
+            setMobileMenuVisible(true);
+        };
+
+        window.closeMobileMenu = function () {
+            if (!state.isMobile) return;
+            enterMobileFullscreen();
+            setMobileMenuVisible(false);
+        };
+
         window.startApp = function () {
             document.getElementById('overlay').style.display = 'none';
             if (!state.isMobile) {
                 controls.lock();
             } else {
-                // 移动端不使用 PointerLock
-                document.getElementById('action-bar').style.display = 'none';
+                // 移动端：尝试隐藏地址栏
+                hideAddressBar();
+                // 尝试进入全屏（如果支持）
+                enterMobileFullscreen();
+                // 移动端仅显示虚拟摇杆，菜单默认隐藏
+                setMobileMenuVisible(false);
             }
         };
+
+        // 页面加载后自动尝试隐藏地址栏
+        if (state.isMobile) {
+            window.addEventListener('load', () => {
+                setTimeout(() => {
+                    hideAddressBar();
+                }, 100);
+            });
+
+            // 监听视口变化，确保布局正确
+            window.addEventListener('resize', () => {
+                if (renderer) {
+                    onResize();
+                }
+            });
+        }
 
         function updateProgressBar() {
             const newCount = state.pendingQueue.length;
@@ -1975,16 +2299,20 @@
         function initMobileControls() {
             const mobileControls = document.getElementById('mobile-controls');
             mobileControls.style.display = 'block';
-            setupJoystick('move', 'move-joystick-base', 'move-joystick-stick', 45);
-            setupJoystick('look', 'look-joystick-base', 'look-joystick-stick', 35);
+            setupMoveJoystick();
+            setupTouchLook(); // 使用全屏触摸控制视角
+            setMobileMenuVisible(false);
         }
 
-        function setupJoystick(type, baseId, stickId, maxDistance = 40) {
+        function setupMoveJoystick() {
+            const baseId = 'move-joystick-base';
+            const stickId = 'move-joystick-stick';
+            const maxDistance = 45;
             const base = document.getElementById(baseId);
             const stick = document.getElementById(stickId);
             if (!base || !stick) return;
 
-            const joystickState = state.mobileJoysticks[type];
+            const joystickState = state.mobileJoysticks.move;
             let activeTouchId = null;
 
             const updateFromTouch = (touch) => {
@@ -2054,6 +2382,97 @@
 
             window.addEventListener('touchend', endHandler, { passive: false });
             window.addEventListener('touchcancel', endHandler, { passive: false });
+        }
+
+        // 全屏触摸控制视角（右侧区域或非摇杆区域）
+        function setupTouchLook() {
+            let lookTouchId = null;
+            let lastLookX = 0;
+            let lastLookY = 0;
+            const moveJoystickBase = document.getElementById('move-joystick-base');
+
+            // 检查触摸点是否在移动摇杆区域内
+            function isTouchOnMoveJoystick(touch) {
+                if (!moveJoystickBase) return false;
+                const rect = moveJoystickBase.getBoundingClientRect();
+                const x = touch.clientX;
+                const y = touch.clientY;
+                // 扩大判定区域，避免误触
+                const padding = 30;
+                return (
+                    x >= rect.left - padding &&
+                    x <= rect.right + padding &&
+                    y >= rect.top - padding &&
+                    y <= rect.bottom + padding
+                );
+            }
+
+            // 检查触摸点是否在按钮或模态框上
+            function isTouchOnUI(touch) {
+                const target = document.elementFromPoint(touch.clientX, touch.clientY);
+                if (!target) return false;
+                // 检查是否是按钮、模态框等UI元素
+                return target.closest('.action-btn, .modal, #fullscreen-btn, #mobile-menu-buttons');
+            }
+
+            document.addEventListener('touchstart', (e) => {
+                if (lookTouchId !== null) return;
+
+                // 查找一个不在移动摇杆上的触摸点
+                for (let i = 0; i < e.changedTouches.length; i++) {
+                    const touch = e.changedTouches[i];
+                    if (!isTouchOnMoveJoystick(touch) && !isTouchOnUI(touch)) {
+                        lookTouchId = touch.identifier;
+                        lastLookX = touch.clientX;
+                        lastLookY = touch.clientY;
+                        break;
+                    }
+                }
+            }, { passive: true });
+
+            document.addEventListener('touchmove', (e) => {
+                if (lookTouchId === null) return;
+
+                for (let i = 0; i < e.touches.length; i++) {
+                    const touch = e.touches[i];
+                    if (touch.identifier === lookTouchId) {
+                        const deltaX = touch.clientX - lastLookX;
+                        const deltaY = touch.clientY - lastLookY;
+                        lastLookX = touch.clientX;
+                        lastLookY = touch.clientY;
+
+                        // 控制视角
+                        rotateCameraFromSwipe(deltaX, deltaY);
+                        break;
+                    }
+                }
+            }, { passive: true });
+
+            const endHandler = (e) => {
+                if (lookTouchId === null) return;
+                for (let i = 0; i < e.changedTouches.length; i++) {
+                    const touch = e.changedTouches[i];
+                    if (touch.identifier === lookTouchId) {
+                        lookTouchId = null;
+                        break;
+                    }
+                }
+            };
+
+            document.addEventListener('touchend', endHandler, { passive: true });
+            document.addEventListener('touchcancel', endHandler, { passive: true });
+        }
+
+        function rotateCameraFromSwipe(deltaX, deltaY) {
+            const yawObject = controls.getObject();
+            const pitchObject = yawObject.children[0] || camera;
+            // 提高灵敏度，让触摸控制更顺畅
+            const sensitivity = 0.006;
+            const clamp = Math.PI / 2 - 0.05;
+
+            yawObject.rotation.y -= deltaX * sensitivity;
+            const nextPitch = THREE.MathUtils.clamp(pitchObject.rotation.x - deltaY * sensitivity, -clamp, clamp);
+            pitchObject.rotation.x = nextPitch;
         }
 
         // Toast 提示
