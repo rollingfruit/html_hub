@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import AdminLogin from '../components/AdminLogin';
 import AdminRequestsList from '../components/AdminRequestsList';
 import AdminFileManager from '../components/AdminFileManager';
+import AdminLogs from '../components/AdminLogs';
 import { fetchAdminRequests } from '../api';
 import { FileRequest } from '../types';
 
@@ -15,6 +16,7 @@ const AdminPage = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [authMessage, setAuthMessage] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'files' | 'logs'>('files');
 
   const loadRequests = useCallback(async () => {
     if (!token) {
@@ -72,6 +74,8 @@ const AdminPage = () => {
     );
   }
 
+
+
   return (
     <div className="admin-page">
       <section className="card">
@@ -89,7 +93,49 @@ const AdminPage = () => {
         {error && <p className="status-error">{error}</p>}
         <AdminRequestsList token={token} requests={requests} onRefresh={loadRequests} />
       </section>
-      <AdminFileManager token={token} />
+
+      <div className="tabs-container" style={{ margin: '1rem 0' }}>
+        <button
+          className={activeTab === 'files' ? 'tab active' : 'tab'}
+          onClick={() => setActiveTab('files')}
+        >
+          文件管理
+        </button>
+        <button
+          className={activeTab === 'logs' ? 'tab active' : 'tab'}
+          onClick={() => setActiveTab('logs')}
+        >
+          操作日志
+        </button>
+      </div>
+
+      {activeTab === 'files' ? (
+        <AdminFileManager token={token} />
+      ) : (
+        <AdminLogs token={token} />
+      )}
+
+      <style>{`
+        .tabs-container {
+          display: flex;
+          gap: 1rem;
+          border-bottom: 1px solid var(--border-color);
+          padding-bottom: 0.5rem;
+        }
+        .tab {
+          background: none;
+          border: none;
+          padding: 0.5rem 1rem;
+          cursor: pointer;
+          font-weight: 600;
+          color: var(--text-muted);
+          border-bottom: 2px solid transparent;
+        }
+        .tab.active {
+          color: var(--text-primary);
+          border-bottom-color: var(--primary-color);
+        }
+      `}</style>
     </div>
   );
 };

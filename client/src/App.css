@@ -686,8 +686,7 @@
 }
 
 .directory-chips-wrapper {
-  display: none;
-  /* 隐藏文件夹chips，因为左侧已有目录树 */
+  display: block;
   overflow-x: auto;
   margin: 0 -0.25rem;
   padding: 0 0.25rem;

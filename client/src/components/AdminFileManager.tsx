@@ -2,8 +2,10 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import FileExplorer from './FileExplorer';
 import UploadForm from './UploadForm';
 import DeleteForm from './DeleteForm';
-import { fetchProjects } from '../api';
+import { fetchProjects, moveFile, createDirectory } from '../api';
 import { Project, TreeNode } from '../types';
+import { DndContext, DragEndEvent, useDroppable, DragOverlay, useSensor, useSensors, PointerSensor } from '@dnd-kit/core';
+import { DroppableFolder } from './FileExplorer';
 
 type Props = {
   token: string;
@@ -32,7 +34,9 @@ const AdminFileManager = ({ token }: Props) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
-  const [modalType, setModalType] = useState<'UPLOAD' | 'DELETE' | null>(null);
+
+  const [modalType, setModalType] = useState<'UPLOAD' | 'DELETE' | 'NEW_FOLDER' | null>(null);
+  const [newFolderName, setNewFolderName] = useState('');
   const [prefill, setPrefill] = useState({
     uploadPath: '',
     uploadFilename: '',
@@ -117,6 +121,26 @@ const AdminFileManager = ({ token }: Props) => {
     setModalType('UPLOAD');
   };
 
+  const handleNewFolder = () => {
+    setNewFolderName('');
+    setModalType('NEW_FOLDER');
+  };
+
+  const createNewFolder = async () => {
+    if (!newFolderName.trim()) return;
+    try {
+      await createDirectory({
+        path: currentPath ? `${currentPath}/${newFolderName}` : newFolderName,
+        systemPrompt: '',
+        description: '',
+      });
+      loadProjects();
+      closeModal();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '创建失败');
+    }
+  };
+
   const closeModal = () => setModalType(null);
 
   const handleUploadSuccess = () => {
@@ -129,12 +153,65 @@ const AdminFileManager = ({ token }: Props) => {
     closeModal();
   };
 
+  const handleMove = async (sourcePath: string, targetPath: string) => {
+    const { fileName } = splitPath(sourcePath);
+    const newPath = targetPath ? `${targetPath}/${fileName}` : fileName;
+
+    try {
+      await moveFile({ oldPath: sourcePath, newPath, adminToken: token });
+      loadProjects();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '移动失败');
+    }
+  };
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    })
+  );
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over) return;
+
+    const sourcePath = active.id as string;
+    const targetPath = over.id as string;
+
+    if (sourcePath !== targetPath) {
+      if (targetPath.startsWith(sourcePath + '/')) return;
+      handleMove(sourcePath, targetPath);
+    }
+  };
+
   const modalTitle =
     modalType === 'UPLOAD'
       ? prefill.uploadFilename
         ? '编辑 HTML'
         : '新建 HTML 页面'
-      : '删除文件';
+      : modalType === 'NEW_FOLDER'
+        ? '新建文件夹'
+        : '删除文件';
+
+  const DroppableBreadcrumb = ({ path, children }: { path: string; children: React.ReactNode }) => {
+    const { setNodeRef, isOver } = useDroppable({
+      id: path,
+      data: { type: 'folder', path },
+    });
+
+    const style = {
+      outline: isOver ? '2px dashed var(--primary-color)' : undefined,
+      borderRadius: '4px',
+    };
+
+    return (
+      <div ref={setNodeRef} style={style} className="crumb-wrapper">
+        {children}
+      </div>
+    );
+  };
 
   return (
     <section className="card admin-manager">
@@ -153,6 +230,9 @@ const AdminFileManager = ({ token }: Props) => {
           <button className="secondary" onClick={loadProjects} disabled={loading}>
             {loading ? '刷新中...' : '刷新'}
           </button>
+          <button className="secondary" onClick={handleNewFolder}>
+            + 新建文件夹
+          </button>
           <button className="primary" onClick={handleNewFile}>
             + 新建页面
           </button>
@@ -161,28 +241,34 @@ const AdminFileManager = ({ token }: Props) => {
 
       <div className="admin-manager-breadcrumbs">
         {breadcrumbs.map((crumb, index) => (
-          <button
-            key={crumb.path || 'root'}
-            type="button"
-            className={index === breadcrumbs.length - 1 ? 'crumb active' : 'crumb'}
-            onClick={() => setCurrentPath(crumb.path)}
-          >
-            {crumb.label}
-          </button>
+          <DroppableBreadcrumb key={crumb.path || 'root'} path={crumb.path}>
+            <button
+              type="button"
+              className={index === breadcrumbs.length - 1 ? 'crumb active' : 'crumb'}
+              onClick={() => setCurrentPath(crumb.path)}
+            >
+              {crumb.label}
+            </button>
+          </DroppableBreadcrumb>
         ))}
       </div>
 
       {error && <p className="status-error">{error}</p>}
       {loading && !error && <p className="muted">加载中...</p>}
 
-      <FileExplorer
-        tree={tree}
-        currentPath={currentPath}
-        onPathChange={setCurrentPath}
-        searchTerm={search}
-        flatResults={searchResults}
-        onFileMenuClick={handleFileMenuClick}
-      />
+      <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+        <FileExplorer
+          tree={tree}
+          currentPath={currentPath}
+          onPathChange={setCurrentPath}
+          searchTerm={search}
+          flatResults={searchResults}
+          onFileMenuClick={handleFileMenuClick}
+          enableDrag={true}
+          onMove={handleMove}
+        />
+        <DragOverlay />
+      </DndContext>
 
       {contextMenu && (
         <div className="context-menu" style={{ top: contextMenu.y, left: contextMenu.x }}>
@@ -213,6 +299,22 @@ const AdminFileManager = ({ token }: Props) => {
                   defaultFilename={prefill.uploadFilename}
                   adminToken={token}
                 />
+              ) : modalType === 'NEW_FOLDER' ? (
+                <div className="form-group">
+                  <label>文件夹名称</label>
+                  <input
+                    type="text"
+                    value={newFolderName}
+                    onChange={(e) => setNewFolderName(e.target.value)}
+                    placeholder="输入文件夹名称"
+                    autoFocus
+                  />
+                  <div className="form-actions" style={{ marginTop: '1rem' }}>
+                    <button className="primary" onClick={createNewFolder}>
+                      创建
+                    </button>
+                  </div>
+                </div>
               ) : (
                 <DeleteForm defaultPath={prefill.deletePath} adminToken={token} onDeleted={handleDeleteSuccess} />
               )}

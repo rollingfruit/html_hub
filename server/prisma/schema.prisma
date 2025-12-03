@@ -49,3 +49,12 @@ model FileRequest {
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
 }
+
+model Log {
+  id        Int      @id @default(autoincrement())
+  action    String
+  targetPath String
+  operator  String
+  details   String?
+  createdAt DateTime @default(now())
+}

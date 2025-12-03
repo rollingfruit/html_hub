@@ -2,6 +2,8 @@ import { MouseEvent as ReactMouseEvent, useMemo, useState } from 'react';
 import { FileCode, FileImage, FileText, File } from 'lucide-react';
 import { Project, TreeNode } from '../types';
 import { buildSiteUrl } from '../lib/url';
+import { useDraggable, useDroppable } from '@dnd-kit/core';
+import { CSS } from '@dnd-kit/utilities';
 
 type Props = {
   tree: TreeNode[];
@@ -10,6 +12,8 @@ type Props = {
   searchTerm: string;
   flatResults?: Project[];
   onFileMenuClick: (node: TreeNode, position: { x: number; y: number }) => void;
+  enableDrag?: boolean;
+  onMove?: (sourcePath: string, targetPath: string) => void;
 };
 
 const getNodesAtPath = (tree: TreeNode[], segments: string[]) => {
@@ -95,6 +99,47 @@ const HighlightedText = ({ text, highlight }: { text: string; highlight: string 
   );
 };
 
+export const DraggableItem = ({ id, data, children, disabled }: { id: string; data: any; children: React.ReactNode; disabled?: boolean }) => {
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    id,
+    data,
+    disabled,
+  });
+
+  const style = {
+    transform: CSS.Translate.toString(transform),
+    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 100 : undefined,
+    position: 'relative' as const,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} {...listeners} {...attributes}>
+      {children}
+    </div>
+  );
+};
+
+export const DroppableFolder = ({ id, data, children, disabled }: { id: string; data: any; children: React.ReactNode; disabled?: boolean }) => {
+  const { setNodeRef, isOver } = useDroppable({
+    id,
+    data,
+    disabled,
+  });
+
+  const style = {
+    outline: isOver ? '2px dashed var(--primary-color)' : undefined,
+    outlineOffset: '4px',
+    borderRadius: '8px',
+  };
+
+  return (
+    <div ref={setNodeRef} style={style}>
+      {children}
+    </div>
+  );
+};
+
 const FileExplorer = ({
   tree,
   currentPath,
@@ -102,7 +147,10 @@ const FileExplorer = ({
   searchTerm,
   flatResults = [],
   onFileMenuClick,
+  enableDrag = false,
+  onMove,
 }: Props) => {
+
   // 默认使用网格视图，更像应用商店
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const segments = useMemo(() => (currentPath ? currentPath.split('/') : []), [currentPath]);
@@ -158,8 +206,8 @@ const FileExplorer = ({
         isFile: true,
         project: item.project
           ? {
-              ...item.project,
-            }
+            ...item.project,
+          }
           : undefined,
         children: [],
       };
@@ -169,7 +217,7 @@ const FileExplorer = ({
 
   const itemsToRender = isSearchMode ? searchItems : normalFileItems;
 
-  return (
+  const content = (
     <div className="file-explorer">
       <div className="explorer-toolbar">
         <div className="view-toggle">
@@ -198,16 +246,29 @@ const FileExplorer = ({
       {!isSearchMode && directories.length > 0 && (
         <div className="directory-chips-wrapper">
           <div className="directory-chips">
-            {directories.map((dir) => (
-              <button key={dir.path} type="button" className="folder-chip" onClick={() => onPathChange(dir.path)}>
-                <div className="chip-header">
-                  <span>📁 {dir.name}</span>
-                  <span className="muted">{dir.children?.length || 0} 项</span>
-                </div>
-                {dir.meta?.systemPrompt && <p className="chip-prompt">{dir.meta.systemPrompt}</p>}
-                {dir.meta?.description && <p className="chip-desc">{dir.meta.description}</p>}
-              </button>
-            ))}
+            {directories.map((dir) => {
+              const content = (
+                <button key={dir.path} type="button" className="folder-chip" onClick={() => onPathChange(dir.path)}>
+                  <div className="chip-header">
+                    <span>📁 {dir.name}</span>
+                    <span className="muted">{dir.children?.length || 0} 项</span>
+                  </div>
+                  {dir.meta?.systemPrompt && <p className="chip-prompt">{dir.meta.systemPrompt}</p>}
+                  {dir.meta?.description && <p className="chip-desc">{dir.meta.description}</p>}
+                </button>
+              );
+
+              if (enableDrag) {
+                return (
+                  <DroppableFolder key={dir.path} id={dir.path} data={{ type: 'folder', path: dir.path }} disabled={!enableDrag}>
+                    <DraggableItem id={dir.path} data={{ type: 'folder', path: dir.path }} disabled={!enableDrag}>
+                      {content}
+                    </DraggableItem>
+                  </DroppableFolder>
+                );
+              }
+              return content;
+            })}
           </div>
         </div>
       )}
@@ -217,9 +278,8 @@ const FileExplorer = ({
           const isImage = isImageFile(item.name);
           const shouldShowIframe = !isImage && isCodeFile(item.name);
 
-          return (
+          const cardContent = (
             <article
-              key={item.key}
               className={viewMode === 'grid' ? 'file-card grid' : 'file-card list'}
               onClick={() => item.url && window.open(buildSiteUrl(item.url), '_blank', 'noopener,noreferrer')}
               style={{ cursor: item.url ? 'pointer' : 'default' }}
@@ -259,12 +319,22 @@ const FileExplorer = ({
                     event.stopPropagation(); // 阻止事件冒泡，避免触发卡片点击
                     handleMenuClick(event, item);
                   }}
+                  onPointerDown={(e) => e.stopPropagation()} // Prevent drag start on menu button
                 >
                   ⋯
                 </button>
               </footer>
             </article>
           );
+
+          if (enableDrag) {
+            return (
+              <DraggableItem key={item.key} id={item.path} data={{ type: 'file', path: item.path }} disabled={!enableDrag}>
+                {cardContent}
+              </DraggableItem>
+            );
+          }
+          return <div key={item.key}>{cardContent}</div>;
         })}
         {itemsToRender.length === 0 && !isSearchMode && directories.length === 0 && (
           <div className="empty-placeholder">
@@ -278,6 +348,10 @@ const FileExplorer = ({
       </div>
     </div>
   );
+
+
+
+  return content;
 };
 
 export default FileExplorer;

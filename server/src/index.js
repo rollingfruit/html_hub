@@ -323,6 +323,21 @@ const validateAccessToken = async (relativePath, token, type) => {
   });
 };
 
+const createLog = async (action, targetPath, operator, details = null) => {
+  try {
+    await prisma.log.create({
+      data: {
+        action,
+        targetPath,
+        operator,
+        details: details ? JSON.stringify(details) : null,
+      },
+    });
+  } catch (error) {
+    console.error('Failed to create log:', error);
+  }
+};
+
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', time: new Date().toISOString() });
 });
@@ -450,6 +465,14 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
       message: exists ? '文件已更新' : '上传成功',
       project: mapProject(project),
     });
+
+    // Log the action
+    createLog(
+      exists ? 'MODIFY' : 'UPLOAD',
+      relativePath,
+      adminUser ? adminUser.username : 'guest',
+      { method: hasFileUpload ? 'file' : 'text' }
+    );
   } catch (error) {
     console.error(error);
     if (req.file && req.file.path) {
@@ -501,10 +524,57 @@ app.put('/api/files', async (req, res) => {
     await fsp.rename(oldAbsolutePath, newAbsolutePath);
 
     // 更新数据库记录
-    await prisma.project.update({
-      where: { path: oldRelativePath },
-      data: { path: newRelativePath },
-    });
+    // Check if it's a directory
+    const stat = await fsp.stat(newAbsolutePath); // It's already renamed, so check new path
+    const isDirectory = stat.isDirectory();
+
+    if (isDirectory) {
+      // Update all related projects
+      const projects = await prisma.project.findMany({
+        where: { path: { startsWith: oldRelativePath + '/' } },
+      });
+      for (const p of projects) {
+        const newProjPath = p.path.replace(oldRelativePath, newRelativePath);
+        await prisma.project.update({
+          where: { id: p.id },
+          data: { path: newProjPath },
+        });
+      }
+
+      // Update all related directory metas
+      const metas = await prisma.directoryMeta.findMany({
+        where: {
+          OR: [
+            { path: oldRelativePath },
+            { path: { startsWith: oldRelativePath + '/' } },
+          ],
+        },
+      });
+      for (const m of metas) {
+        const newMetaPath = m.path.replace(oldRelativePath, newRelativePath);
+        await prisma.directoryMeta.update({
+          where: { id: m.id },
+          data: { path: newMetaPath },
+        });
+      }
+    } else {
+      // Update single file record
+      // Check if project exists first (it might not if it's a raw file upload without project record, though upload creates one)
+      const project = await prisma.project.findUnique({ where: { path: oldRelativePath } });
+      if (project) {
+        await prisma.project.update({
+          where: { path: oldRelativePath },
+          data: { path: newRelativePath },
+        });
+      }
+    }
+
+    createLog(
+      'MOVE',
+      oldRelativePath,
+      adminUser.username,
+      { newPath: newRelativePath, isDirectory }
+    );
 
     res.json({ message: '重命名成功', newPath: newRelativePath });
   } catch (error) {
@@ -533,7 +603,29 @@ app.delete('/api/files', async (req, res) => {
     return res.status(403).json({ message: '权限不足，仅管理员可操作' });
   }
   await fsp.rm(absolutePath, { force: true });
-  await prisma.project.delete({ where: { path: relativePath } }).catch(() => null);
+  await fsp.rm(absolutePath, { force: true, recursive: true });
+
+  // Clean up DB
+  // If it's a directory, we should technically clean up children too, but for now let's just handle the target
+  // Actually, if we delete a directory, we should delete all projects inside it
+  await prisma.project.deleteMany({
+    where: {
+      OR: [
+        { path: relativePath },
+        { path: { startsWith: relativePath + '/' } }
+      ]
+    }
+  });
+  await prisma.directoryMeta.deleteMany({
+    where: {
+      OR: [
+        { path: relativePath },
+        { path: { startsWith: relativePath + '/' } }
+      ]
+    }
+  });
+
+  createLog('DELETE', relativePath, adminUser.username);
   res.json({ message: '删除成功' });
 });
 
@@ -591,6 +683,23 @@ app.get('/api/admin/requests', authenticateAdmin, async (req, res) => {
   res.json({ requests });
 });
 
+app.get('/api/admin/logs', authenticateAdmin, async (req, res) => {
+  const page = Number(req.query.page) || 1;
+  const limit = Number(req.query.limit) || 50;
+  const skip = (page - 1) * limit;
+
+  const [logs, total] = await Promise.all([
+    prisma.log.findMany({
+      orderBy: { createdAt: 'desc' },
+      skip,
+      take: limit,
+    }),
+    prisma.log.count(),
+  ]);
+
+  res.json({ logs, total, page, totalPages: Math.ceil(total / limit) });
+});
+
 app.post('/api/admin/approve', authenticateAdmin, async (req, res) => {
   const { requestId, action } = req.body;
   if (!requestId || !['APPROVE', 'REJECT'].includes(action)) {
@@ -630,6 +739,14 @@ app.post('/api/admin/approve', authenticateAdmin, async (req, res) => {
       where: { id: numericId },
       data: { status: REQUEST_STATUS.APPROVED },
     });
+
+    createLog(
+      request.requestType === REQUEST_TYPE.DELETE ? 'DELETE' : 'MODIFY',
+      request.projectPath,
+      req.user.username, // Admin who approved
+      { requestId: numericId, requester: request.requesterName }
+    );
+
     res.json({ message: '已批准', request: updated });
   } catch (error) {
     console.error('Approval execution failed:', error);

@@ -203,3 +203,31 @@ export const approveRequest = async (
   });
   return handleResponse(resp) as Promise<{ message: string; request: FileRequest }>;
 };
+
+export const fetchLogs = async (
+  token: string,
+  page = 1,
+  limit = 50,
+): Promise<{ logs: any[]; total: number; page: number; totalPages: number }> => {
+  const params = new URLSearchParams();
+  params.set('page', page.toString());
+  params.set('limit', limit.toString());
+  const resp = await fetch(`${API_BASE}/admin/logs?${params.toString()}`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  return handleResponse(resp);
+};
+
+export const moveFile = async ({
+  oldPath,
+  newPath,
+  adminToken,
+}: {
+  oldPath: string;
+  newPath: string;
+  adminToken: string;
+}) => {
+  return renameFile({ oldPath, newPath, adminToken });
+};
