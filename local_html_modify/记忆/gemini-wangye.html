@@ -3,7 +3,8 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="mobile-web-app-capable" content="yes">
@@ -26,7 +27,8 @@
             position: fixed;
             width: 100%;
             height: 100vh;
-            height: 100dvh; /* 动态视口高度 */
+            height: 100dvh;
+            /* 动态视口高度 */
             -webkit-overflow-scrolling: touch;
         }
 
@@ -46,7 +48,7 @@
             height: 100%;
             pointer-events: none;
             user-select: none;
-            z-index: 10;
+            z-index: 20;
         }
 
         /* 今日进度条 */
@@ -127,7 +129,7 @@
             transform: translateX(-50%);
             display: flex;
             gap: 15px;
-            pointer-events: auto;
+            pointer-events: none;
             flex-wrap: wrap;
             justify-content: center;
             max-width: 90%;
@@ -141,6 +143,7 @@
             border-radius: 30px;
             font-weight: 500;
             cursor: pointer;
+            pointer-events: auto;
             backdrop-filter: blur(10px);
             transition: all 0.2s;
             display: flex;
@@ -355,7 +358,8 @@
         }
 
         #look-joystick {
-            display: none; /* 隐藏视角摇杆，改用触摸滑动 */
+            display: none;
+            /* 隐藏视角摇杆，改用触摸滑动 */
             right: 20px;
         }
 
@@ -450,6 +454,7 @@
                 top: max(20px, env(safe-area-inset-top, 0px) + 10px);
                 left: max(20px, env(safe-area-inset-left, 0px) + 10px);
             }
+
             #mobile-controls {
                 display: block;
             }
@@ -567,7 +572,8 @@
 
         <div id="mobile-menu-buttons">
             <button id="mobile-open-menu" class="mobile-menu-btn" onclick="openMobileMenu()">ESC</button>
-            <button id="mobile-close-menu" class="mobile-menu-btn" onclick="closeMobileMenu()" style="display:none;">关闭</button>
+            <button id="mobile-close-menu" class="mobile-menu-btn" onclick="closeMobileMenu()"
+                style="display:none;">关闭</button>
         </div>
 
         <div id="crosshair"></div>
@@ -1753,7 +1759,7 @@
         // UI 功能
         // =========================
         window.openImportModal = function () {
-            document.exitPointerLock();
+            if (!state.isMobile) document.exitPointerLock();
             document.getElementById('import-modal').style.display = 'block';
         };
 
@@ -1808,7 +1814,7 @@
         };
 
         window.openInputModal = function () {
-            document.exitPointerLock();
+            if (!state.isMobile) document.exitPointerLock();
             document.getElementById('input-modal').style.display = 'block';
             document.getElementById('inp-word').focus();
         };
@@ -1839,7 +1845,7 @@
         };
 
         window.openDetail = function (data) {
-            document.exitPointerLock();
+            if (!state.isMobile) document.exitPointerLock();
             state.currentDetailData = data;
             const rich = data.richData || {};
 
@@ -1964,7 +1970,7 @@
         };
 
         window.openDataModal = function () {
-            document.exitPointerLock();
+            if (!state.isMobile) document.exitPointerLock();
             document.getElementById('total-cards').innerText = state.pendingQueue.length + state.placedWords.length;
             document.getElementById('placed-cards').innerText = state.placedWords.length;
             document.getElementById('data-modal').style.display = 'block';
@@ -2197,7 +2203,7 @@
 
         window.openMobileMenu = function () {
             if (!state.isMobile) return;
-            exitMobileFullscreen();
+            // exitMobileFullscreen(); // Removed to prevent layout shifts
             setMobileMenuVisible(true);
         };
 
@@ -2411,14 +2417,28 @@
             function isTouchOnUI(touch) {
                 const target = document.elementFromPoint(touch.clientX, touch.clientY);
                 if (!target) return false;
-                // 检查是否是按钮、模态框等UI元素
-                return target.closest('.action-btn, .modal, #fullscreen-btn, #mobile-menu-buttons');
+
+                // 检查action-bar是否可见
+                const actionBar = document.getElementById('action-bar');
+                const isActionBarVisible = actionBar && window.getComputedStyle(actionBar).display !== 'none';
+
+                // 如果action-bar可见且触摸在上面，返回true
+                if (isActionBarVisible && target.closest('#action-bar')) {
+                    return true;
+                }
+
+                // 检查是否是其他UI元素
+                return target.closest(
+                    '.action-btn, .modal, #fullscreen-btn, ' +
+                    '#mobile-menu-buttons, #progress-bar, .review-btn, ' +
+                    'button, input, textarea, select, #detail-card'
+                );
             }
 
             document.addEventListener('touchstart', (e) => {
                 if (lookTouchId !== null) return;
 
-                // 查找一个不在移动摇杆上的触摸点
+                // 查找一个不在移动摇杆和UI上的触摸点
                 for (let i = 0; i < e.changedTouches.length; i++) {
                     const touch = e.changedTouches[i];
                     if (!isTouchOnMoveJoystick(touch) && !isTouchOnUI(touch)) {
@@ -2436,6 +2456,12 @@
                 for (let i = 0; i < e.touches.length; i++) {
                     const touch = e.touches[i];
                     if (touch.identifier === lookTouchId) {
+                        // 检查触摸点是否移动到UI上，如果是则停止控制
+                        if (isTouchOnUI(touch)) {
+                            lookTouchId = null;
+                            break;
+                        }
+
                         const deltaX = touch.clientX - lastLookX;
                         const deltaY = touch.clientY - lastLookY;
                         lastLookX = touch.clientX;

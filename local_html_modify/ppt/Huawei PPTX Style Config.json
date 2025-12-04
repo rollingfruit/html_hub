@@ -1,0 +1,108 @@
+{
+  "meta": {
+    "name": "Apple Style",
+    "version": "1.0"
+  },
+  "canvas": {
+    "w": 960,
+    "h": 540
+  },
+  "margins": {
+    "top": 80,
+    "bottom": 50,
+    "left": 60,
+    "right": 60
+  },
+  "palette": {
+    "primary": "#0071e3",
+    "text": "#1d1d1f",
+    "secondaryText": "#86868b",
+    "accentBg": "#f5f5f7",
+    "background": "#ffffff"
+  },
+  "typography": {
+    "title": {
+      "fontSize": 40,
+      "color": "#1d1d1f",
+      "bold": true
+    },
+    "subtitle": {
+      "fontSize": 28,
+      "color": "#86868b"
+    },
+    "body": {
+      "fontSize": 18,
+      "color": "#1d1d1f",
+      "lineHeight": 1.6
+    },
+    "caption": {
+      "fontSize": 14,
+      "color": "#86868b"
+    }
+  },
+  "masters": {
+    "normal": {
+      "background": {
+        "type": "svg",
+        "value": "\n                        <svg width=\"100%\" height=\"100%\" viewBox=\"0 0 960 540\" preserveAspectRatio=\"none\">\n                            <rect x=\"0\" y=\"0\" width=\"960\" height=\"540\" fill=\"#ffffff\" />\n                            <circle cx=\"920\" cy=\"40\" r=\"20\" fill=\"#f5f5f7\" />\n                            <path d=\"M915 35 L925 45 M925 35 L915 45\" stroke=\"#d2d2d7\" stroke-width=\"2\" />\n                        </svg>\n                    "
+      },
+      "exportObjects": [
+        {
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 10,
+            "h": 5.625,
+            "fill": {
+              "color": "FFFFFF"
+            }
+          }
+        },
+        {
+          "text": {
+            "text": " Confidential",
+            "options": {
+              "x": 0.5,
+              "y": 5.2,
+              "w": 2,
+              "h": 0.2,
+              "align": "left",
+              "fontSize": 9,
+              "color": "86868b"
+            }
+          }
+        }
+      ]
+    },
+    "cover": {
+      "background": {
+        "type": "svg",
+        "value": "\n                        <svg width=\"100%\" height=\"100%\" viewBox=\"0 0 960 540\" preserveAspectRatio=\"none\">\n                            <rect x=\"0\" y=\"0\" width=\"960\" height=\"540\" fill=\"#ffffff\" />\n                            <circle cx=\"480\" cy=\"200\" r=\"80\" fill=\"#f5f5f7\" />\n                            <path d=\"M460 200 L500 200\" stroke=\"#0071e3\" stroke-width=\"4\" />\n                        </svg>\n                    "
+      },
+      "exportObjects": [
+        {
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 10,
+            "h": 5.625,
+            "fill": {
+              "color": "FFFFFF"
+            }
+          }
+        },
+        {
+          "rect": {
+            "x": 4.5,
+            "y": 2,
+            "w": 1,
+            "h": 0.05,
+            "fill": {
+              "color": "0071e3"
+            }
+          }
+        }
+      ]
+    }
+  }
+}
