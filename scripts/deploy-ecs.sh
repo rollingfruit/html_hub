@@ -186,6 +186,17 @@ RUN_COMPOSE() {
 }
 RUN_COMPOSE down || true
 RUN_COMPOSE up -d --build
+
+# 等待容器启动
+sleep 5
+
+# 执行数据库迁移
+echo "[deploy] 执行数据库迁移..."
+RUN_COMPOSE exec -T server npx prisma db push
+
+# 重载 Nginx 配置
+echo "[deploy] 重载 Nginx 配置..."
+RUN_COMPOSE exec -T nginx nginx -s reload || RUN_COMPOSE restart nginx
 EOF_REMOTE
 
 echo "[deploy] 6/7 验证部署状态"

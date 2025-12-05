@@ -507,40 +507,151 @@
             }
         }
 
-        /* 全屏模式下的额外优化 */
+        /* 新增：移动端选中按钮样式 */
+        #mobile-shoot-btn {
+            position: absolute;
+            bottom: 40px;
+            right: 40px;
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: rgba(239, 68, 68, 0.8);
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            font-size: 16px;
+            font-weight: bold;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            pointer-events: auto;
+            backdrop-filter: blur(5px);
+            box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4);
+            z-index: 20;
+            transition: transform 0.1s;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+
+        #mobile-shoot-btn:active {
+            transform: scale(0.9);
+            background: rgba(239, 68, 68, 1);
+        }
+
+        /* 移动端显示选中按钮 */
+        @media (max-width: 768px) {
+            #mobile-shoot-btn {
+                display: flex;
+                bottom: max(40px, env(safe-area-inset-bottom, 20px) + 20px);
+                right: max(30px, env(safe-area-inset-right, 20px) + 10px);
+            }
+
+            #mobile-controls {
+                bottom: 0;
+                height: 100%;
+                pointer-events: none;
+            }
+
+            #move-joystick {
+                bottom: max(40px, env(safe-area-inset-bottom, 20px) + 20px);
+                left: max(30px, env(safe-area-inset-left, 20px) + 10px);
+                top: auto;
+                position: absolute;
+            }
+        }
+
+        /* 全屏模式下的额外优化 - 修复横屏适配 */
         @media (max-width: 768px) and (orientation: landscape) {
             #progress-bar {
                 top: 5px;
                 padding: 5px 10px;
                 font-size: 11px;
                 gap: 8px;
+                transform: translateX(-50%) scale(0.85);
             }
 
             #fullscreen-btn {
-                width: 48px;
-                height: 48px;
-                font-size: 20px;
+                width: 44px;
+                height: 44px;
+                font-size: 18px;
                 top: 10px;
-                left: 10px;
+                left: max(20px, env(safe-area-inset-left, 10px));
             }
 
             .mobile-joystick {
-                width: 90px;
-                height: 90px;
+                width: 85px;
+                height: 85px;
             }
 
+            /* 修复：不要设置 bottom，保持默认的 0 */
             #mobile-controls {
-                bottom: max(100px, env(safe-area-inset-bottom, 0px) + 80px);
+                bottom: 0;
             }
 
+            /* 修复：确保 ESC 按钮在横屏时可见 */
             #mobile-menu-buttons {
-                top: 10px;
-                right: 10px;
+                top: 10px !important;
+                right: max(20px, env(safe-area-inset-right, 10px)) !important;
+                display: flex !important;
             }
 
             .mobile-menu-btn {
                 padding: 6px 12px;
                 font-size: 11px;
+            }
+
+            /* 横屏时调整选中按钮 - 强制显示 */
+            #mobile-shoot-btn {
+                display: flex !important;
+                width: 65px;
+                height: 65px;
+                font-size: 14px;
+                bottom: max(15px, env(safe-area-inset-bottom, 0px) + 10px);
+                right: max(15px, env(safe-area-inset-right, 0px) + 10px);
+            }
+
+            #move-joystick {
+                bottom: max(15px, env(safe-area-inset-bottom, 0px) + 10px);
+                left: max(15px, env(safe-area-inset-left, 0px) + 10px);
+            }
+        }
+
+        /* 针对极小高度的横屏设备(如iPhone横屏) */
+        @media (max-height: 450px) and (orientation: landscape) {
+            #progress-bar {
+                top: 3px;
+                padding: 4px 8px;
+                font-size: 10px;
+                transform: translateX(-50%) scale(0.75);
+            }
+
+            #fullscreen-btn {
+                width: 38px;
+                height: 38px;
+                font-size: 16px;
+                top: 8px;
+            }
+
+            #mobile-shoot-btn {
+                display: flex !important;
+                width: 55px;
+                height: 55px;
+                font-size: 12px;
+                bottom: max(10px, env(safe-area-inset-bottom, 0px) + 5px) !important;
+                right: max(10px, env(safe-area-inset-right, 0px) + 5px) !important;
+            }
+
+            .mobile-joystick {
+                width: 75px;
+                height: 75px;
+            }
+
+            #move-joystick {
+                bottom: max(10px, env(safe-area-inset-bottom, 0px) + 5px) !important;
+                left: max(10px, env(safe-area-inset-left, 0px) + 5px) !important;
+            }
+
+            #mobile-menu-buttons {
+                top: 8px !important;
             }
         }
     </style>
@@ -602,7 +713,11 @@
                 <div class="joystick-stick" id="move-joystick-stick"></div>
             </div>
         </div>
-        <div class="mobile-joystick" id="look-joystick">
+
+        <!-- 新增：右下角选中/发射按钮 -->
+        <button id="mobile-shoot-btn">🎯 选中</button>
+
+        <div class="mobile-joystick" id="look-joystick" style="display:none;">
             <div class="joystick-label">视角</div>
             <div class="joystick-base" id="look-joystick-base">
                 <div class="joystick-stick" id="look-joystick-stick"></div>
@@ -757,6 +872,9 @@
         </div>
     </div>
 
+    <!-- GSAP 动画库 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+
     <script type="importmap">
         {
             "imports": {
@@ -769,6 +887,12 @@
     <script type="module">
         import * as THREE from 'three';
         import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js';
+        import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
+        import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+        import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+        import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+        import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+        import { SSAOPass } from 'three/addons/postprocessing/SSAOPass.js';
 
         // =========================
         // 全局状态与配置
@@ -802,6 +926,7 @@
             autoNavTarget: null,
             autoNavStartPos: null,
             autoNavStartTime: 0,
+            autoNavCompleted: false,
 
             // 移动端
             isMobile: /Android|iPhone|iPad/i.test(navigator.userAgent),
@@ -813,6 +938,7 @@
 
         // Three.js 核心对象
         let scene, camera, renderer, controls;
+        let composer, bloomPass, ssaoPass; // 后期处理
         let raycaster, mouse;
         let inboxMesh = null;
         let inboxLabel = null;
@@ -840,27 +966,36 @@
         // animate(); // Moved to bottom
 
         function init() {
-            // 场景
+            // 场景 - 修复背景色
             scene = new THREE.Scene();
-            scene.background = new THREE.Color(0xf1f5f9);
-            scene.fog = new THREE.Fog(0xf1f5f9, 0, 20);
+            scene.background = new THREE.Color(0xdfe3e8);
+            scene.fog = new THREE.Fog(0xdfe3e8, 10, 30);
 
             camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 100);
             camera.position.set(0, 1.6, 3);
 
-            // 灯光
-            const hemi = new THREE.HemisphereLight(0xffffff, 0xffffff, 0.7);
-            scene.add(hemi);
-            const dir = new THREE.DirectionalLight(0xfff7ed, 0.8);
-            dir.position.set(5, 8, 5);
-            dir.castShadow = true;
-            scene.add(dir);
-
-            // 渲染器
-            renderer = new THREE.WebGLRenderer({ antialias: true });
+            // 渲染器 - 降低曝光度
+            renderer = new THREE.WebGLRenderer({
+                antialias: true,
+                powerPreference: "high-performance"
+            });
             renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
             renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            renderer.toneMapping = THREE.ACESFilmicToneMapping;
+            renderer.toneMappingExposure = 0.8;  // 从1.2降低到0.8
+            renderer.outputColorSpace = THREE.SRGBColorSpace;
             document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+            // 增强灯光系统
+            setupLighting();
+
+            // 加载 HDRI 环境贴图 (使用备用的纯色环境如果加载失败)
+            loadEnvironment();
+
+            // 后期处理效果
+            setupPostProcessing();
 
             // 控制器
             controls = new PointerLockControls(camera, document.body);
@@ -902,13 +1037,207 @@
         }
 
         // =========================
+        // 光照系统设置
+        // =========================
+        function setupLighting() {
+            // 环境光 - 降低强度
+            const ambient = new THREE.AmbientLight(0xffffff, 0.5);
+            scene.add(ambient);
+
+            // 主光源 - 降低强度,避免过亮
+            const mainLight = new THREE.DirectionalLight(0xfff7ed, 0.8);
+            mainLight.position.set(5, 10, 5);
+            mainLight.castShadow = true;
+            mainLight.shadow.mapSize.width = 2048;
+            mainLight.shadow.mapSize.height = 2048;
+            mainLight.shadow.camera.near = 0.5;
+            mainLight.shadow.camera.far = 50;
+            mainLight.shadow.camera.left = -15;
+            mainLight.shadow.camera.right = 15;
+            mainLight.shadow.camera.top = 15;
+            mainLight.shadow.camera.bottom = -15;
+            mainLight.shadow.bias = -0.0001;
+            scene.add(mainLight);
+
+            // 补光 - 降低强度
+            const fillLight = new THREE.DirectionalLight(0xafc5e0, 0.3);
+            fillLight.position.set(-5, 3, -5);
+            scene.add(fillLight);
+
+            // 点光源 - 降低强度
+            const pointLight1 = new THREE.PointLight(0xffd699, 0.4, 8);
+            pointLight1.position.set(-3, 2.5, -5);
+            scene.add(pointLight1);
+
+            const pointLight2 = new THREE.PointLight(0xffa07a, 0.3, 6);
+            pointLight2.position.set(3, 2, 3);
+            scene.add(pointLight2);
+        }
+
+        // =========================
+        // 环境贴图加载
+        // =========================
+        function loadEnvironment() {
+            // 使用 HDRI 环境贴图 (降级方案：使用纯色)
+            const rgbeLoader = new RGBELoader();
+
+            // 尝试从 Poly Haven 加载 1k HDRI（这里使用备用CDN）
+            rgbeLoader.load(
+                'https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k/studio_small_08_1k.hdr',
+                (texture) => {
+                    texture.mapping = THREE.EquirectangularReflectionMapping;
+                    scene.environment = texture;
+                    // 不设置 background，保持当前背景色
+                    console.log('✅ HDRI 环境光加载成功');
+                },
+                undefined,
+                (error) => {
+                    console.warn('⚠️ HDRI加载失败，使用备用方案', error);
+                    // 备用方案：使用 PMREMGenerator 创建简单环境
+                    const pmremGenerator = new THREE.PMREMGenerator(renderer);
+                    pmremGenerator.compileEquirectangularShader();
+
+                    const envScene = new THREE.Scene();
+                    envScene.background = new THREE.Color(0x2a2a4e);
+                    const envMap = pmremGenerator.fromScene(envScene).texture;
+                    scene.environment = envMap;
+                    pmremGenerator.dispose();
+                }
+            );
+        }
+
+        // =========================
+        // 后期处理效果
+        // =========================
+        function setupPostProcessing() {
+            composer = new EffectComposer(renderer);
+
+            // 1. 基础渲染通道
+            const renderPass = new RenderPass(scene, camera);
+            composer.addPass(renderPass);
+
+            // 2. 辉光效果 (Bloom) - 降低强度,只用于卡片发光
+            bloomPass = new UnrealBloomPass(
+                new THREE.Vector2(window.innerWidth, window.innerHeight),
+                0.3,  // strength 降低
+                0.3,  // radius 降低
+                0.9   // threshold 提高,只有很亮的物体才会发光
+            );
+            composer.addPass(bloomPass);
+
+            // 3. SSAO (屏幕空间环境光遮蔽) - 降低强度
+            ssaoPass = new SSAOPass(scene, camera, window.innerWidth, window.innerHeight);
+            ssaoPass.kernelRadius = 4;      // 降低
+            ssaoPass.minDistance = 0.005;
+            ssaoPass.maxDistance = 0.08;    // 降低
+            ssaoPass.output = SSAOPass.OUTPUT.Default;
+            composer.addPass(ssaoPass);
+
+            // 4. 输出通道
+            const outputPass = new OutputPass();
+            composer.addPass(outputPass);
+        }
+
+        // =========================
+        // 程序化纹理生成
+        // =========================
+        function createProceduralTexture(type) {
+            const canvas = document.createElement('canvas');
+            canvas.width = 512;
+            canvas.height = 512;
+            const ctx = canvas.getContext('2d');
+
+            if (type === 'wood') {
+                // 木纹纹理 - 降低亮度
+                const gradient = ctx.createLinearGradient(0, 0, 512, 512);
+                gradient.addColorStop(0, '#4a3a2a');
+                gradient.addColorStop(0.5, '#5c4d3f');
+                gradient.addColorStop(1, '#6d5e4f');
+                ctx.fillStyle = gradient;
+                ctx.fillRect(0, 0, 512, 512);
+
+                // 添加木纹细节
+                for (let i = 0; i < 30; i++) {
+                    const x = Math.random() * 512;
+                    ctx.strokeStyle = `rgba(${60 + Math.random() * 30}, ${50 + Math.random() * 20}, ${30 + Math.random() * 15}, ${0.15 + Math.random() * 0.2})`;
+                    ctx.lineWidth = 1 + Math.random() * 3;
+                    ctx.beginPath();
+                    ctx.moveTo(x, 0);
+                    ctx.lineTo(x + (Math.random() - 0.5) * 100, 512);
+                    ctx.stroke();
+                }
+
+                // 噪点 - 减少数量和亮度
+                for (let i = 0; i < 2000; i++) {
+                    const x = Math.random() * 512;
+                    const y = Math.random() * 512;
+                    ctx.fillStyle = `rgba(${Math.random() * 80}, ${Math.random() * 60}, ${Math.random() * 40}, ${Math.random() * 0.08})`;
+                    ctx.fillRect(x, y, 1, 1);
+                }
+            } else if (type === 'plaster') {
+                // 石膏墙面纹理 - 降低亮度
+                ctx.fillStyle = '#e0e2e5';
+                ctx.fillRect(0, 0, 512, 512);
+
+                // 添加细微的纹理
+                for (let i = 0; i < 5000; i++) {
+                    const x = Math.random() * 512;
+                    const y = Math.random() * 512;
+                    const brightness = 210 + Math.random() * 20;
+                    ctx.fillStyle = `rgba(${brightness}, ${brightness}, ${brightness}, ${Math.random() * 0.2})`;
+                    ctx.fillRect(x, y, 2, 2);
+                }
+            }
+
+            const texture = new THREE.CanvasTexture(canvas);
+            texture.colorSpace = THREE.SRGBColorSpace;
+            return texture;
+        }
+
+        // =========================
         // 场景构建 - 支持扩展
         // =========================
         function buildRoom() {
-            const matFloor = new THREE.MeshStandardMaterial({ color: 0x94a3b8, roughness: 0.5 });
-            const matWall = new THREE.MeshStandardMaterial({ color: 0xffffff });
-            const matWood = new THREE.MeshStandardMaterial({ color: 0xd4a373 });
-            const matTable = new THREE.MeshStandardMaterial({ color: 0xe2e8f0 });
+            // 程序化生成地板纹理
+            const floorTexture = createProceduralTexture('wood');
+            floorTexture.wrapS = floorTexture.wrapT = THREE.RepeatWrapping;
+            floorTexture.repeat.set(6, 6);
+
+            // 修复材质参数 - 降低亮度
+            const matFloor = new THREE.MeshStandardMaterial({
+                map: floorTexture,
+                color: 0x8b7355,  // 更深的木色
+                roughness: 0.85,
+                metalness: 0.0,
+                envMapIntensity: 0.3
+            });
+
+            // 墙面纹理
+            const wallTexture = createProceduralTexture('plaster');
+            wallTexture.wrapS = wallTexture.wrapT = THREE.RepeatWrapping;
+            wallTexture.repeat.set(2, 1);
+
+            const matWall = new THREE.MeshStandardMaterial({
+                map: wallTexture,
+                color: 0xe5e7eb,  // 稍微暗一点的灰色
+                roughness: 0.95,
+                metalness: 0.0,
+                envMapIntensity: 0.1
+            });
+
+            const matWood = new THREE.MeshStandardMaterial({
+                color: 0xd4a574,  // 更自然的木色
+                roughness: 0.7,
+                metalness: 0.0,
+                envMapIntensity: 0.3
+            });
+
+            const matTable = new THREE.MeshStandardMaterial({
+                color: 0xdfe3e8,  // 茶几改为浅灰色
+                roughness: 0.4,
+                metalness: 0.1,
+                envMapIntensity: 0.4
+            });
 
             // 地板
             const floor = new THREE.Mesh(new THREE.PlaneGeometry(12, 12), matFloor);
@@ -942,10 +1271,15 @@
             addLocus(-3.5, 0.81, -5, -Math.PI / 2, 0, 0);
             addLocus(-2.5, 0.81, -5, -Math.PI / 2, 0, 0);
 
-            createProp(-3, 1.5, -5.2, 2, 1.2, 0.1, new THREE.MeshStandardMaterial({ color: 0x111 }));
+            createProp(-3, 1.5, -5.2, 2, 1.2, 0.1, new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.8 }));
             addLocus(-3, 1.5, -5.14, 0, 0, 0);
 
-            createProp(3, 1.2, -5, 1.2, 2.4, 1.2, new THREE.MeshStandardMaterial({ color: 0xffffff, metalness: 0.3 }));
+            createProp(3, 1.2, -5, 1.2, 2.4, 1.2, new THREE.MeshStandardMaterial({
+                color: 0xe8eaf0,
+                roughness: 0.3,
+                metalness: 0.2,
+                envMapIntensity: 0.4
+            }));
             addLocus(3, 1.8, -4.39, 0, 0, 0);
             addLocus(3, 1.2, -4.39, 0, 0, 0);
             addLocus(2.39, 1.5, -5, 0, -Math.PI / 2, 0);
@@ -1241,8 +1575,8 @@
             if (!isCardDue(card)) {
                 return { color: 0xffffff, emissive: 0x000000, emissiveIntensity: 0 };
             }
-            // 需要复习 - 红色发光
-            return { color: 0xff6b6b, emissive: 0xff0000, emissiveIntensity: 0.3 };
+            // 需要复习 - 强烈的红色发光（配合 Bloom 后处理）
+            return { color: 0xff4444, emissive: 0xff0033, emissiveIntensity: 1.5 };
         }
 
         // =========================
@@ -1289,6 +1623,15 @@
                     controls.moveRight(-velocity.x * delta);
                     controls.moveForward(-velocity.z * delta);
 
+                    // === 修复问题2：强制锁定高度，防止移动端"飞天" ===
+                    // 只有在非自动导航模式下才锁定
+                    if (state.mode !== 'AUTO_NAVIGATE') {
+                        // 获取控制器对象 (YawObject)
+                        const camObj = controls.getObject();
+                        // 强制将 Y 坐标锁定在 1.6 (原本设定的人物高度)
+                        camObj.position.y = 1.6;
+                    }
+
                     // 射线检测
                     updateRaycaster();
                 }
@@ -1297,7 +1640,12 @@
             // 更新卡片视觉状态 (复习提醒)
             updateCardVisuals();
 
-            renderer.render(scene, camera);
+            // 使用后期处理渲染
+            if (composer) {
+                composer.render();
+            } else {
+                renderer.render(scene, camera);
+            }
         }
 
         function updateCardVisuals() {
@@ -1450,8 +1798,22 @@
         }
 
         // =========================
-        // 自动导航
+        // 自动导航 (使用 GSAP)
         // =========================
+
+        function updateAutoNavigation(delta) {
+            // 使用 GSAP 处理平滑的相机移动
+            // 注意：这个函数现在主要用于检测导航完成
+            // GSAP 动画在 autoNavigateToNextReview 中启动
+            if (state.autoNavCompleted) {
+                state.mode = 'ROAM';
+                state.autoNavTarget = null;
+                state.autoNavCompleted = false;
+                showToast("✅ 已到达!可以操作了");
+            }
+        }
+
+        // 更新 autoNavigateToNextReview 以使用 GSAP
         window.autoNavigateToNextReview = function () {
             // 找到下一个需要复习或新学习的卡片
             let target = null;
@@ -1478,51 +1840,43 @@
             // 开始自动导航
             state.mode = 'AUTO_NAVIGATE';
             state.autoNavTarget = target;
-            state.autoNavStartPos = camera.position.clone();
-            state.autoNavStartTime = Date.now();
 
-            if (!controls.isLocked) {
+            if (!controls.isLocked && !state.isMobile) {
                 controls.lock();
             }
 
             showToast("🎯 正在飞向目标卡片...");
-        };
 
-        function updateAutoNavigation(delta) {
-            const duration = 1500; // 1.5秒飞行时间
-            const elapsed = Date.now() - state.autoNavStartTime;
-            const progress = Math.min(elapsed / duration, 1);
+            // 使用 GSAP 创建平滑的飞行动画
+            const targetPos = target.isInbox
+                ? target.pos
+                : target.mesh.position.clone().add(new THREE.Vector3(0, 0, 1.5));
 
-            // 缓动函数
-            const easeProgress = 1 - Math.pow(1 - progress, 3);
-
-            const targetPos = state.autoNavTarget.isInbox
-                ? state.autoNavTarget.pos
-                : state.autoNavTarget.mesh.position.clone().add(new THREE.Vector3(0, 0, 1.5));
-
-            camera.position.lerpVectors(state.autoNavStartPos, targetPos, easeProgress);
-
-            // 看向目标
-            const lookTarget = state.autoNavTarget.isInbox
+            const lookTarget = target.isInbox
                 ? new THREE.Vector3(0, 1, 0)
-                : state.autoNavTarget.mesh.position;
-            camera.lookAt(lookTarget);
+                : target.mesh.position;
 
-            if (progress >= 1) {
-                // 导航完成
-                state.mode = 'ROAM';
-                state.autoNavTarget = null;
-                showToast("✅ 已到达!可以操作了");
-
-                // 如果是卡片,自动打开详情
-                if (!state.autoNavTarget?.isInbox) {
-                    setTimeout(() => {
-                        const card = state.placedWords.find(c => c.mesh === state.hoveredObj);
-                        if (card) openDetail(card);
-                    }, 300);
+            // 相机位置动画
+            gsap.to(camera.position, {
+                x: targetPos.x,
+                y: targetPos.y,
+                z: targetPos.z,
+                duration: 1.8,
+                ease: "power2.inOut",
+                onUpdate: () => {
+                    camera.lookAt(lookTarget);
+                },
+                onComplete: () => {
+                    state.autoNavCompleted = true;
+                    // 如果是卡片,自动打开详情
+                    if (!target.isInbox) {
+                        setTimeout(() => {
+                            openDetail(target);
+                        }, 300);
+                    }
                 }
-            }
-        }
+            });
+        };
 
         // =========================
         // 交互事件
@@ -1601,19 +1955,22 @@
         function placeCard(locus) {
             const word = state.holdingWord;
 
-            // 创建卡片 Mesh
+            // 创建卡片 Mesh - 增强视觉效果
             const tex = generateWordTexture(word);
             const mat = new THREE.MeshStandardMaterial({
                 map: tex,
                 emissive: 0x000000,
                 emissiveIntensity: 0,
-                roughness: 0.4,
-                metalness: 0.1
+                roughness: 0.2,
+                metalness: 0.3,
+                envMapIntensity: 1.2
             });
             const mesh = new THREE.Mesh(cardGeometry, mat);
             mesh.position.copy(locus.pos);
             mesh.rotation.copy(locus.rot);
             mesh.translateZ(0.01);
+            mesh.castShadow = true;
+            mesh.receiveShadow = true;
 
             mesh.userData = { ...word, locusId: locus.id };
             scene.add(mesh);
@@ -2297,6 +2654,14 @@
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
+
+            // 更新后期处理大小
+            if (composer) {
+                composer.setSize(window.innerWidth, window.innerHeight);
+            }
+            if (ssaoPass) {
+                ssaoPass.setSize(window.innerWidth, window.innerHeight);
+            }
         }
 
         // =========================
@@ -2308,6 +2673,31 @@
             setupMoveJoystick();
             setupTouchLook(); // 使用全屏触摸控制视角
             setMobileMenuVisible(false);
+
+            // === 新增：绑定移动端选中按钮事件 ===
+            const shootBtn = document.getElementById('mobile-shoot-btn');
+            if (shootBtn) {
+                // 使用 touchstart 保证响应速度，且 preventDefault 防止触发其他点击
+                shootBtn.addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation(); // 防止事件穿透导致视角转动
+                    shootBtn.style.transform = "scale(0.9)"; // 按下效果
+
+                    // 执行原本 onMouseDown 的逻辑
+                    if (state.mode === 'ROAM' && state.hoveredObj === "INBOX") {
+                        pickUpNextCard();
+                    } else if (state.mode === 'HOLDING' && state.hoveredLocus) {
+                        placeCard(state.hoveredLocus);
+                    } else if (state.mode === 'ROAM' && state.hoveredObj && typeof state.hoveredObj === 'object') {
+                        openDetail(state.hoveredObj.userData);
+                    }
+                }, { passive: false });
+
+                shootBtn.addEventListener('touchend', (e) => {
+                    e.preventDefault();
+                    shootBtn.style.transform = "scale(1)"; // 恢复效果
+                }, { passive: false });
+            }
         }
 
         function setupMoveJoystick() {
@@ -2427,11 +2817,11 @@
                     return true;
                 }
 
-                // 检查是否是其他UI元素
+                // 检查是否是其他UI元素 (包括新的选中按钮)
                 return target.closest(
                     '.action-btn, .modal, #fullscreen-btn, ' +
                     '#mobile-menu-buttons, #progress-bar, .review-btn, ' +
-                    'button, input, textarea, select, #detail-card'
+                    '#mobile-shoot-btn, button, input, textarea, select, #detail-card'
                 );
             }
 
@@ -2456,6 +2846,11 @@
                 for (let i = 0; i < e.touches.length; i++) {
                     const touch = e.touches[i];
                     if (touch.identifier === lookTouchId) {
+                        // === 关键：防止浏览器默认滚动 ===
+                        if (e.cancelable) {
+                            e.preventDefault();
+                        }
+
                         // 检查触摸点是否移动到UI上，如果是则停止控制
                         if (isTouchOnUI(touch)) {
                             lookTouchId = null;
@@ -2472,7 +2867,7 @@
                         break;
                     }
                 }
-            }, { passive: true });
+            }, { passive: false });
 
             const endHandler = (e) => {
                 if (lookTouchId === null) return;

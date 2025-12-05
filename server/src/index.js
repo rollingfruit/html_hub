@@ -48,6 +48,86 @@ app.use(cors());
 app.use(express.json({ limit: '2mb' }));
 app.use(express.urlencoded({ extended: true }));
 
+app.use('/sites', async (req, res, next) => {
+  if (req.method !== 'GET') return next();
+
+  const requestPath = decodeURIComponent(req.path);
+  // Remove leading slash if present
+  const relativePath = requestPath.startsWith('/') ? requestPath.slice(1) : requestPath;
+
+  // Simple check: if it ends with .html or is a directory (which might serve index.html)
+  // We want to count visits to the "page".
+  // Note: This is a heuristic. Nginx or Express static might serve index.html for directories.
+  // If the path has an extension that is NOT html, skip.
+  const ext = path.extname(relativePath).toLowerCase();
+  const isHtmlOrDir = !ext || ext === '.html' || ext === '.htm';
+
+  // Skip if it is a preview request
+  if (req.query.preview) {
+    return next();
+  }
+
+  if (isHtmlOrDir && relativePath) {
+    try {
+      // We need to find the project that matches this path.
+      // The path might be "subdir/index.html", so the project path is "subdir/index.html".
+      // Or if it is "subdir/", it might map to "subdir/index.html".
+      // Let's try to update the exact match first.
+
+      // However, the user might be visiting "subdir/" and the file is "subdir/index.html".
+      // The `Project` table stores the file path, e.g. "subdir/index.html".
+
+      let targetPath = relativePath;
+      if (!ext) {
+        // It's a directory or extensionless path. 
+        // If it ends with /, append index.html. If not, maybe append /index.html?
+        // Express static redirects leaf without slash to leaf/ if it is a dir.
+        // Let's assume we want to count the "index.html" corresponding to this dir.
+        if (targetPath.endsWith('/')) {
+          targetPath += 'index.html';
+        } else {
+          // If it doesn't end with slash, it might be a file without extension or a dir.
+          // If it is a dir, express static redirects.
+          // Let's just try to update exact match or match with /index.html
+          // But for simplicity, let's just try to update the project with this path.
+        }
+      }
+
+      // Actually, let's just try to update the project where path equals relativePath
+      // If relativePath is a directory "foo/", we probably don't have a project named "foo/".
+      // We have "foo/index.html".
+
+      const candidates = [relativePath];
+      if (!ext) {
+        candidates.push(path.join(relativePath, 'index.html'));
+        if (!relativePath.endsWith('/')) {
+          candidates.push(relativePath + '/index.html');
+        }
+      }
+
+      // We can use updateMany to be safe, or findFirst then update.
+      // updateMany doesn't support increment on SQLite in some old versions? No, it should.
+      // But let's just try to update the most likely candidate.
+
+      // Let's just try to update the exact match first.
+      await prisma.project.updateMany({
+        where: {
+          path: { in: candidates }
+        },
+        data: {
+          visits: { increment: 1 }
+        }
+      });
+
+    } catch (error) {
+      // Ignore errors (e.g. record not found) to not block the request
+      console.error('Visit count error:', error);
+    }
+  }
+
+  next();
+});
+
 app.use(
   '/sites',
   express.static(UPLOAD_DIR, {
@@ -136,6 +216,7 @@ const mapProject = (project) => ({
   owner: project.owner ? project.owner.username : 'anonymous',
   url: `/sites/${project.path}`,
   createdAt: project.createdAt.toISOString(),
+  visits: project.visits || 0,
 });
 
 const mapDirectoryMeta = (meta) => ({

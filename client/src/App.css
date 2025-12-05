@@ -2078,3 +2078,18 @@ textarea {
     font-size: 0.6rem;
   }
 }
+.file-info-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.file-visits {
+  font-size: 0.75rem;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}

@@ -166,6 +166,7 @@ const FileExplorer = ({
         path: node.path,
         url: node.project?.url,
         node,
+        project: node.project,
       })),
     [files],
   );
@@ -287,7 +288,7 @@ const FileExplorer = ({
               <div className="file-preview">
                 {isImage && item.url ? (
                   <img
-                    src={buildSiteUrl(item.url)}
+                    src={`${buildSiteUrl(item.url)}?preview=1`}
                     alt={item.name}
                     loading="lazy"
                     style={{ width: '100%', height: '100%', objectFit: 'contain' }}
@@ -295,7 +296,7 @@ const FileExplorer = ({
                 ) : shouldShowIframe && item.url ? (
                   <iframe
                     title={item.name}
-                    src={buildSiteUrl(item.url)}
+                    src={`${buildSiteUrl(item.url)}?preview=1`}
                     loading="lazy"
                     sandbox="allow-same-origin allow-scripts allow-forms"
                   />
@@ -307,10 +308,17 @@ const FileExplorer = ({
                 )}
               </div>
               <footer className="file-meta">
-                <p className="file-name" title={item.path}>
-                  <FileTypeIcon filename={item.name} />
-                  <HighlightedText text={item.name} highlight={searchTerm} />
-                </p>
+                <div className="file-info-group">
+                  <p className="file-name" title={item.path}>
+                    <FileTypeIcon filename={item.name} />
+                    <HighlightedText text={item.name} highlight={searchTerm} />
+                  </p>
+                  {item.project && (
+                    <span className="file-visits" title="访问次数">
+                      👁️ {item.project.visits}
+                    </span>
+                  )}
+                </div>
                 <button
                   type="button"
                   aria-label="更多操作"

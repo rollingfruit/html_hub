@@ -24,6 +24,7 @@ model Project {
   ownerId   Int?
   owner     User?     @relation(fields: [ownerId], references: [id])
   createdAt DateTime  @default(now())
+  visits    Int       @default(0)
 }
 
 model DirectoryMeta {

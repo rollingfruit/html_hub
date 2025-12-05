@@ -4,6 +4,7 @@ export interface Project {
   owner: string;
   url: string;
   createdAt: string;
+  visits: number;
 }
 
 export interface TreeNode {
