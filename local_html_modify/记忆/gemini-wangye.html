@@ -561,20 +561,43 @@
 
         /* 全屏模式下的额外优化 - 修复横屏适配 */
         @media (max-width: 768px) and (orientation: landscape) {
+            /* 进度条左移,为右侧按钮留出空间 */
             #progress-bar {
                 top: 5px;
+                left: 40%;
                 padding: 5px 10px;
                 font-size: 11px;
                 gap: 8px;
                 transform: translateX(-50%) scale(0.85);
             }
 
+            /* 全屏按钮移到进度条右边 */
             #fullscreen-btn {
-                width: 44px;
-                height: 44px;
-                font-size: 18px;
-                top: 10px;
-                left: max(20px, env(safe-area-inset-left, 10px));
+                position: fixed;
+                top: 5px;
+                left: auto;
+                right: 80px;
+                width: 36px;
+                height: 36px;
+                font-size: 16px;
+                display: flex !important;
+            }
+
+            /* ESC按钮移到进度条最右边 */
+            #mobile-menu-buttons {
+                position: fixed !important;
+                top: 5px !important;
+                left: auto !important;
+                right: 10px !important;
+                display: flex !important;
+            }
+
+            /* 强制显示 ESC 按钮(覆盖 JS 内联样式) */
+            #mobile-open-menu,
+            #mobile-close-menu {
+                display: inline-flex !important;
+                padding: 6px 12px;
+                font-size: 11px;
             }
 
             .mobile-joystick {
@@ -585,18 +608,6 @@
             /* 修复：不要设置 bottom，保持默认的 0 */
             #mobile-controls {
                 bottom: 0;
-            }
-
-            /* 修复：确保 ESC 按钮在横屏时可见 */
-            #mobile-menu-buttons {
-                top: 10px !important;
-                right: max(20px, env(safe-area-inset-right, 10px)) !important;
-                display: flex !important;
-            }
-
-            .mobile-menu-btn {
-                padding: 6px 12px;
-                font-size: 11px;
             }
 
             /* 横屏时调整选中按钮 - 强制显示 */
@@ -617,20 +628,43 @@
 
         /* 针对极小高度的横屏设备(如iPhone横屏) */
         @media (max-height: 450px) and (orientation: landscape) {
+            /* 进度条 */
             #progress-bar {
                 top: 3px;
-                padding: 4px 8px;
-                font-size: 10px;
-                transform: translateX(-50%) scale(0.75);
+                left: 35%;
+                padding: 3px 6px;
+                font-size: 9px;
+                transform: translateX(-50%) scale(0.7);
             }
 
+            /* 全屏按钮 */
             #fullscreen-btn {
-                width: 38px;
-                height: 38px;
-                font-size: 16px;
-                top: 8px;
+                position: fixed !important;
+                top: 3px !important;
+                right: 65px !important;
+                left: auto !important;
+                width: 32px;
+                height: 32px;
+                font-size: 14px;
             }
 
+            /* ESC按钮 */
+            #mobile-menu-buttons {
+                position: fixed !important;
+                top: 3px !important;
+                right: 8px !important;
+                left: auto !important;
+            }
+
+            /* 强制显示按钮 */
+            #mobile-open-menu,
+            #mobile-close-menu {
+                display: inline-flex !important;
+                padding: 5px 10px;
+                font-size: 10px;
+            }
+
+            /* 选中按钮 */
             #mobile-shoot-btn {
                 display: flex !important;
                 width: 55px;
@@ -640,6 +674,7 @@
                 right: max(10px, env(safe-area-inset-right, 0px) + 5px) !important;
             }
 
+            /* 摇杆 */
             .mobile-joystick {
                 width: 75px;
                 height: 75px;
@@ -648,10 +683,6 @@
             #move-joystick {
                 bottom: max(10px, env(safe-area-inset-bottom, 0px) + 5px) !important;
                 left: max(10px, env(safe-area-inset-left, 0px) + 5px) !important;
-            }
-
-            #mobile-menu-buttons {
-                top: 8px !important;
             }
         }
     </style>

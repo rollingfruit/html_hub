@@ -1,4 +1,5 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Lightbulb, ArrowRight } from 'lucide-react';
 import UploadForm from '../components/UploadForm';
 import DeleteForm from '../components/DeleteForm';
@@ -36,7 +37,26 @@ const UserHome = () => {
   const [directoryMetaMap, setDirectoryMetaMap] = useState<Record<string, DirectoryMeta>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [currentPath, setCurrentPath] = useState('');
+
+
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  // Derived state from URL
+  const currentPath = useMemo(() => {
+    const path = decodeURIComponent(location.pathname);
+    // Remove leading slash
+    return path.startsWith('/') ? path.slice(1) : path;
+  }, [location.pathname]);
+
+  const handlePathChange = (newPath: string) => {
+    if (!newPath) {
+      navigate('/');
+    } else {
+      navigate('/' + newPath);
+    }
+  };
+
   const [search, setSearch] = useState('');
   const [modalType, setModalType] = useState<ModalType>(null);
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
@@ -238,7 +258,7 @@ const UserHome = () => {
         description: newFolderDescription,
       });
       await loadProjects();
-      setCurrentPath(nextPath);
+      handlePathChange(nextPath);
       closeModal();
     } catch (err) {
       setModalError(err instanceof Error ? err.message : '创建失败');
@@ -354,7 +374,7 @@ const UserHome = () => {
 
         <div className="sidebar-section">
           <p className="section-title">目录</p>
-          <DirectoryTree nodes={tree} activePath={currentPath} onSelectPath={setCurrentPath} />
+          <DirectoryTree nodes={tree} activePath={currentPath} onSelectPath={handlePathChange} />
         </div>
         <div className="sidebar-footer">
           <p className="muted">作品数量：{projects.length}</p>
@@ -377,7 +397,7 @@ const UserHome = () => {
                 key={crumb.path || 'root'}
                 type="button"
                 className={index === breadcrumbs.length - 1 ? 'crumb active' : 'crumb'}
-                onClick={() => setCurrentPath(crumb.path)}
+                onClick={() => handlePathChange(crumb.path)}
               >
                 {crumb.label}
               </button>
@@ -408,7 +428,7 @@ const UserHome = () => {
               <FileExplorer
                 tree={tree}
                 currentPath={currentPath}
-                onPathChange={setCurrentPath}
+                onPathChange={handlePathChange}
                 searchTerm={search}
                 flatResults={searchResults}
                 onFileMenuClick={handleFileMenuClick}
