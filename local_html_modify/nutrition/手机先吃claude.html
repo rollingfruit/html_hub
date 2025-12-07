@@ -1,0 +1,1551 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>AI 膳食手机先吃</title>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Vue 3 -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+
+    <!-- html2canvas -->
+    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Noto Sans SC', 'DM Sans', 'system-ui', 'sans-serif'],
+                        display: ['DM Sans', 'Noto Sans SC', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#fff7ed',
+                            100: '#ffedd5',
+                            200: '#fed7aa',
+                            300: '#fdba74',
+                            400: '#fb923c',
+                            500: '#f97316',
+                            600: '#ea580c',
+                            700: '#c2410c',
+                        },
+                        surface: {
+                            50: '#fafaf9',
+                            100: '#f5f5f4',
+                            200: '#e7e5e4',
+                            800: '#292524',
+                            900: '#1c1917',
+                            950: '#0c0a09',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        * {
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: 'Noto Sans SC', 'DM Sans', system-ui, sans-serif;
+            overscroll-behavior: none;
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(0, 0, 0, 0.15);
+            border-radius: 2px;
+        }
+
+        /* Masonry layout */
+        .masonry-grid {
+            column-count: 2;
+            column-gap: 12px;
+        }
+
+        .masonry-item {
+            break-inside: avoid;
+            margin-bottom: 12px;
+        }
+
+        /* Glassmorphism */
+        .glass {
+            background: rgba(255, 255, 255, 0.72);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+
+        .glass-dark {
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+        }
+
+        /* Slide animations */
+        .slide-up-enter-active,
+        .slide-up-leave-active {
+            transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .slide-up-enter-from,
+        .slide-up-leave-to {
+            transform: translateY(100%);
+            opacity: 0;
+        }
+
+        .fade-enter-active,
+        .fade-leave-active {
+            transition: opacity 0.25s ease;
+        }
+
+        .fade-enter-from,
+        .fade-leave-to {
+            opacity: 0;
+        }
+
+        /* Loading spinner */
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .animate-spin-slow {
+            animation: spin 2s linear infinite;
+        }
+
+        /* Pulse glow */
+        @keyframes pulse-glow {
+
+            0%,
+            100% {
+                box-shadow: 0 0 0 0 rgba(249, 115, 22, 0.4);
+            }
+
+            50% {
+                box-shadow: 0 0 0 12px rgba(249, 115, 22, 0);
+            }
+        }
+
+        .pulse-glow {
+            animation: pulse-glow 2s ease-in-out infinite;
+        }
+
+        /* Skeleton loading */
+        @keyframes shimmer {
+            0% {
+                background-position: -200% 0;
+            }
+
+            100% {
+                background-position: 200% 0;
+            }
+        }
+
+        .skeleton {
+            background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+        }
+
+        /* Range slider custom */
+        input[type="range"] {
+            -webkit-appearance: none;
+            appearance: none;
+            background: transparent;
+            cursor: pointer;
+        }
+
+        input[type="range"]::-webkit-slider-track {
+            height: 6px;
+            background: #e7e5e4;
+            border-radius: 3px;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 22px;
+            height: 22px;
+            background: #f97316;
+            border-radius: 50%;
+            margin-top: -8px;
+            box-shadow: 0 2px 8px rgba(249, 115, 22, 0.4);
+        }
+
+        /* Poster specific styles */
+        .poster-container {
+            position: relative;
+            width: 100%;
+            background: #000;
+            display: flex;
+            flex-direction: column;
+            /* min-height: 100vh; Removed to fix bottom black space */
+            height: auto;
+            overflow: hidden;
+        }
+
+        /* Indicator pill */
+        .indicator-pill {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 500;
+        }
+
+        .indicator-green {
+            background: rgba(34, 197, 94, 0.15);
+            color: #16a34a;
+        }
+
+        .indicator-red {
+            background: rgba(244, 63, 94, 0.15);
+            color: #e11d48;
+        }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 12px 24px;
+            background: #292524;
+            color: white;
+            border-radius: 24px;
+            font-size: 14px;
+            z-index: 1000;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+        }
+    </style>
+</head>
+
+<body class="bg-surface-50 text-surface-900 min-h-screen">
+    <div id="app">
+        <!-- Toast Notification -->
+        <transition name="fade">
+            <div v-if="toast.show" class="toast">{{ toast.message }}</div>
+        </transition>
+
+        <!-- ========== HOME VIEW ========== -->
+        <div v-if="currentView === 'home'" class="min-h-screen pb-24">
+            <!-- Header -->
+            <header class="sticky top-0 z-40 glass border-b border-surface-200/50">
+                <div class="px-5 py-4 flex items-center justify-between">
+                    <div>
+                        <h1 class="font-display font-bold text-xl text-brand-600">手机先吃</h1>
+                        <p class="text-xs text-surface-500 mt-0.5">{{ todayDateStr }}</p>
+                    </div>
+                    <button @click="currentView = 'settings'"
+                        class="w-10 h-10 rounded-full bg-surface-100 flex items-center justify-center hover:bg-surface-200 transition-colors">
+                        <i class="ph ph-gear text-xl text-surface-600"></i>
+                    </button>
+                </div>
+
+                <!-- Today's Stats -->
+                <div v-if="todayStats.calories > 0" class="px-5 pb-4">
+                    <div class="bg-gradient-to-r from-brand-500 to-brand-400 rounded-2xl p-4 text-white">
+                        <div class="text-xs opacity-80 mb-1">今日摄入</div>
+                        <div class="flex items-baseline gap-2">
+                            <span class="text-3xl font-bold">{{ todayStats.calories }}</span>
+                            <span class="text-sm opacity-80">kcal</span>
+                        </div>
+                        <div class="flex gap-4 mt-3 text-xs">
+                            <span><span class="opacity-70">蛋白质</span> {{ todayStats.protein }}g</span>
+                            <span><span class="opacity-70">脂肪</span> {{ todayStats.fat }}g</span>
+                            <span><span class="opacity-70">碳水</span> {{ todayStats.carbs }}g</span>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Empty State -->
+            <div v-if="history.length === 0" class="flex flex-col items-center justify-center px-8 pt-20">
+                <div class="w-32 h-32 rounded-full bg-brand-50 flex items-center justify-center mb-6">
+                    <i class="ph ph-bowl-food text-5xl text-brand-400"></i>
+                </div>
+                <h2 class="text-lg font-semibold text-surface-800 mb-2">开始记录你的饮食</h2>
+                <p class="text-sm text-surface-500 text-center">拍摄食物照片，AI 将自动分析营养成分并生成精美海报</p>
+            </div>
+
+            <!-- History Grid -->
+            <div v-else class="px-4 pt-4">
+                <div class="masonry-grid">
+                    <div v-for="record in history" :key="record.id" class="masonry-item" @click="viewRecord(record)">
+                        <div
+                            class="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow cursor-pointer">
+                            <div class="relative">
+                                <img :src="record.thumbnail" class="w-full object-cover"
+                                    :style="{ aspectRatio: record.aspectRatio || '4/3' }">
+                                <div class="absolute top-2 right-2">
+                                    <span :class="[
+                    'px-2 py-1 rounded-full text-xs font-medium',
+                    record.healthScore >= 7 ? 'bg-green-500 text-white' : 
+                    record.healthScore >= 4 ? 'bg-yellow-500 text-white' : 'bg-rose-500 text-white'
+                  ]">
+                                        {{ record.healthScore }}/10
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="p-3">
+                                <div class="flex items-center gap-2 text-xs text-surface-500 mb-1">
+                                    <i class="ph ph-clock"></i>
+                                    <span>{{ getMealTypeLabel(record.mealType) }} · {{ formatTime(record.timestamp)
+                                        }}</span>
+                                </div>
+                                <div class="font-semibold text-lg text-surface-800">{{ record.totalStats.calories }}
+                                    <span class="text-sm font-normal text-surface-500">kcal</span>
+                                </div>
+                                <!-- Mini indicators -->
+                                <div class="flex flex-wrap gap-1 mt-2">
+                                    <span v-for="(value, key) in getTopIndicators(record.indicators)" :key="key"
+                                        :class="['w-2 h-2 rounded-full', value ? 'bg-green-500' : 'bg-rose-400']"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bottom Action Bar -->
+            <div
+                class="fixed bottom-0 left-0 right-0 p-5 bg-gradient-to-t from-surface-50 via-surface-50 to-transparent z-50">
+                <div class="flex gap-4">
+                    <!-- Album Button -->
+                    <button @click="startCapture('album')"
+                        class="flex-1 py-4 bg-white text-surface-900 rounded-2xl font-semibold shadow-lg shadow-surface-200/50 flex items-center justify-center gap-2 active:scale-[0.98] transition-transform">
+                        <i class="ph ph-image text-2xl text-brand-500"></i>
+                        <span>相册</span>
+                    </button>
+
+                    <!-- Camera Button -->
+                    <button @click="startCapture('camera')"
+                        class="flex-1 py-4 bg-brand-500 text-white rounded-2xl font-semibold shadow-lg shadow-brand-500/30 flex items-center justify-center gap-2 active:scale-[0.98] transition-transform pulse-glow">
+                        <i class="ph ph-camera text-2xl"></i>
+                        <span>拍照</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Hidden file inputs -->
+            <input ref="fileInputCamera" type="file" accept="image/*" capture="environment" @change="handleFileSelect"
+                class="hidden">
+            <input ref="fileInputAlbum" type="file" accept="image/*" @change="handleFileSelect" class="hidden">
+        </div>
+
+        <!-- ========== SETTINGS VIEW ========== -->
+        <div v-if="currentView === 'settings'" class="min-h-screen bg-surface-50">
+            <header class="sticky top-0 z-40 glass border-b border-surface-200/50">
+                <div class="px-5 py-4 flex items-center gap-4">
+                    <button @click="currentView = 'home'"
+                        class="w-10 h-10 rounded-full bg-surface-100 flex items-center justify-center">
+                        <i class="ph ph-arrow-left text-xl"></i>
+                    </button>
+                    <h1 class="font-display font-semibold text-lg">设置</h1>
+                </div>
+            </header>
+
+            <div class="p-5 space-y-6">
+                <!-- API Settings -->
+                <div class="bg-white rounded-2xl p-5 shadow-sm">
+                    <h3 class="font-semibold mb-4 flex items-center gap-2">
+                        <i class="ph ph-key text-brand-500"></i>
+                        API 配置
+                    </h3>
+
+                    <div class="space-y-4">
+                        <!-- Provider Selection -->
+                        <div>
+                            <label class="text-sm text-surface-600 mb-2 block">API 提供商</label>
+                            <div class="grid grid-cols-2 gap-2">
+                                <button @click="setProvider('custom')" :class="['py-2.5 px-4 rounded-xl text-sm font-medium transition-all border', 
+                                    settings.provider === 'custom' 
+                                        ? 'bg-brand-50 border-brand-500 text-brand-600 ring-1 ring-brand-500/20' 
+                                        : 'bg-surface-50 border-surface-200 text-surface-600 hover:bg-surface-100']">
+                                    自定义 (OpenAI)
+                                </button>
+                                <button @click="setProvider('siliconflow')" :class="['py-2.5 px-4 rounded-xl text-sm font-medium transition-all border', 
+                                    settings.provider === 'siliconflow' 
+                                        ? 'bg-brand-50 border-brand-500 text-brand-600 ring-1 ring-brand-500/20' 
+                                        : 'bg-surface-50 border-surface-200 text-surface-600 hover:bg-surface-100']">
+                                    SiliconFlow
+                                </button>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="text-sm text-surface-600 mb-1.5 block">API Key</label>
+                            <input v-model="settings.apiKey" type="password" placeholder=""
+                                class="w-full px-4 py-3 bg-surface-50 rounded-xl border border-surface-200 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-none transition-all">
+                        </div>
+
+                        <div>
+                            <label class="text-sm text-surface-600 mb-1.5 block">API Base URL</label>
+                            <input v-model="settings.apiBaseUrl" type="url" placeholder="https://b.apiyi.com/v1"
+                                :disabled="settings.provider === 'siliconflow'"
+                                :class="['w-full px-4 py-3 bg-surface-50 rounded-xl border border-surface-200 outline-none transition-all',
+                                    settings.provider === 'siliconflow' ? 'opacity-60 cursor-not-allowed' : 'focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20']">
+                        </div>
+
+                        <div>
+                            <label class="text-sm text-surface-600 mb-1.5 block">模型名称</label>
+                            <input v-model="settings.modelName" type="text" placeholder="gpt-4.1-mini"
+                                class="w-full px-4 py-3 bg-surface-50 rounded-xl border border-surface-200 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-none transition-all">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Data Management -->
+                <div class="bg-white rounded-2xl p-5 shadow-sm">
+                    <h3 class="font-semibold mb-4 flex items-center gap-2">
+                        <i class="ph ph-database text-brand-500"></i>
+                        数据管理
+                    </h3>
+
+                    <div class="text-sm text-surface-600 mb-4">
+                        已存储 {{ history.length }} 条记录
+                    </div>
+
+                    <button @click="clearAllData"
+                        class="w-full py-3 bg-rose-50 text-rose-600 rounded-xl font-medium hover:bg-rose-100 transition-colors">
+                        清除所有数据
+                    </button>
+                </div>
+
+                <!-- Save Button -->
+                <button @click="saveSettings"
+                    class="w-full py-4 bg-brand-500 text-white rounded-xl font-semibold shadow-lg shadow-brand-500/20 active:scale-[0.98] transition-transform">
+                    保存设置
+                </button>
+            </div>
+        </div>
+
+        <!-- ========== LOADING VIEW ========== -->
+        <div v-if="currentView === 'loading'"
+            class="min-h-screen flex flex-col items-center justify-center px-8 bg-gradient-to-b from-brand-50 to-white">
+            <div class="w-24 h-24 rounded-full bg-brand-100 flex items-center justify-center mb-8">
+                <i class="ph ph-brain text-4xl text-brand-500 animate-spin-slow"></i>
+            </div>
+            <h2 class="text-xl font-semibold text-surface-800 mb-2">AI 正在分析中...</h2>
+            <p class="text-sm text-surface-500 text-center">识别食物、计算营养成分</p>
+
+            <!-- Skeleton Preview -->
+            <div class="w-full max-w-sm mt-10 space-y-3">
+                <div class="skeleton h-4 rounded-full w-3/4"></div>
+                <div class="skeleton h-4 rounded-full w-full"></div>
+                <div class="skeleton h-4 rounded-full w-2/3"></div>
+            </div>
+        </div>
+
+        <!-- ========== ANALYSIS VIEW ========== -->
+        <div v-if="currentView === 'analysis'" class="min-h-screen bg-surface-50 pb-32">
+            <header class="sticky top-0 z-40 glass border-b border-surface-200/50">
+                <div class="px-5 py-4 flex items-center justify-between">
+                    <button @click="cancelAnalysis"
+                        class="w-10 h-10 rounded-full bg-surface-100 flex items-center justify-center">
+                        <i class="ph ph-x text-xl"></i>
+                    </button>
+                    <h1 class="font-display font-semibold">调整份量</h1>
+                    <button @click="proceedToPoster" class="text-brand-500 font-semibold">下一步</button>
+                </div>
+            </header>
+
+            <!-- Image Preview -->
+            <div class="px-5 pt-4">
+                <div class="rounded-2xl overflow-hidden shadow-md">
+                    <img :src="sessionData.previewImage" class="w-full aspect-video object-cover">
+                </div>
+            </div>
+
+            <!-- Total Stats Card -->
+            <div class="px-5 pt-4">
+                <div class="bg-gradient-to-r from-surface-800 to-surface-700 rounded-2xl p-5 text-white">
+                    <div class="text-sm opacity-70 mb-1">预估总热量</div>
+                    <div class="text-4xl font-bold">{{ calculatedTotalCalories }} <span
+                            class="text-lg font-normal opacity-70">kcal</span></div>
+                    <div class="flex gap-6 mt-3 text-sm">
+                        <div>
+                            <span class="opacity-60">蛋白质</span>
+                            <div class="font-semibold">{{ calculatedTotals.protein }}g</div>
+                        </div>
+                        <div>
+                            <span class="opacity-60">脂肪</span>
+                            <div class="font-semibold">{{ calculatedTotals.fat }}g</div>
+                        </div>
+                        <div>
+                            <span class="opacity-60">碳水</span>
+                            <div class="font-semibold">{{ calculatedTotals.carbs }}g</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Food Items Editor -->
+            <div class="px-5 pt-6">
+                <h3 class="font-semibold text-surface-700 mb-3">食物明细 <span
+                        class="text-surface-400 font-normal text-sm">(滑动调整份量)</span></h3>
+
+                <div class="space-y-3">
+                    <div v-for="(food, index) in sessionData.foods" :key="index"
+                        class="bg-white rounded-2xl p-4 shadow-sm">
+                        <div class="flex items-center justify-between mb-3">
+                            <div>
+                                <div class="font-medium text-surface-800">{{ food.name }}</div>
+                                <div class="text-sm text-surface-500">{{ food.adjustedWeight || food.weight_g }}g · {{
+                                    getAdjustedCalories(food) }} kcal</div>
+                            </div>
+                            <div class="flex items-center gap-1 text-xs">
+                                <span class="px-2 py-1 bg-blue-50 text-blue-600 rounded-full">P {{
+                                    getAdjustedNutrient(food, 'p') }}</span>
+                                <span class="px-2 py-1 bg-amber-50 text-amber-600 rounded-full">F {{
+                                    getAdjustedNutrient(food, 'f') }}</span>
+                                <span class="px-2 py-1 bg-green-50 text-green-600 rounded-full">C {{
+                                    getAdjustedNutrient(food, 'c') }}</span>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center gap-3">
+                            <button @click="adjustWeight(index, -10)"
+                                class="w-8 h-8 rounded-full bg-surface-100 flex items-center justify-center text-surface-600 active:bg-surface-200">
+                                <i class="ph ph-minus text-sm"></i>
+                            </button>
+                            <input type="range" :min="Math.max(10, food.weight_g * 0.2)" :max="food.weight_g * 3"
+                                :value="food.adjustedWeight || food.weight_g"
+                                @input="e => setWeight(index, parseInt(e.target.value))" class="flex-1">
+                            <button @click="adjustWeight(index, 10)"
+                                class="w-8 h-8 rounded-full bg-surface-100 flex items-center justify-center text-surface-600 active:bg-surface-200">
+                                <i class="ph ph-plus text-sm"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Health Indicators -->
+            <div class="px-5 pt-6">
+                <h3 class="font-semibold text-surface-700 mb-3">健康指标</h3>
+                <div class="grid grid-cols-2 gap-2">
+                    <div v-for="(value, key) in sessionData.indicators" :key="key"
+                        :class="['indicator-pill', value ? 'indicator-green' : 'indicator-red']">
+                        <span :class="['w-2 h-2 rounded-full', value ? 'bg-green-500' : 'bg-rose-500']"></span>
+                        {{ indicatorLabels[key] }}
+                    </div>
+                </div>
+            </div>
+
+            <!-- AI Advice -->
+            <div v-if="sessionData.summary" class="px-5 pt-6">
+                <div class="bg-brand-50 rounded-2xl p-4 flex gap-3">
+                    <i class="ph ph-lightbulb text-brand-500 text-xl flex-shrink-0"></i>
+                    <div>
+                        <div class="text-sm font-medium text-brand-700 mb-1">AI 建议</div>
+                        <p class="text-sm text-surface-700">{{ sessionData.summary }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== POSTER VIEW ========== -->
+        <div v-if="currentView === 'poster'" class="min-h-screen bg-black">
+            <!-- Poster Container (for html2canvas) -->
+            <div ref="posterContainer" class="poster-container bg-black">
+                <!-- Region A: Image Container with Right Info Panel -->
+                <div class="relative w-full flex-shrink-0">
+                    <!-- Background Image -->
+                    <img :src="sessionData.originalImage" class="w-full h-auto object-cover">
+
+                    <!-- Gradient Overlays -->
+                    <div class="absolute inset-0 bg-gradient-to-r from-transparent via-transparent to-black/85"></div>
+                    <div class="absolute inset-0 bg-gradient-to-b from-transparent to-black/60"></div>
+
+                    <!-- Right Info Panel -->
+                    <div class="absolute right-0 top-0 bottom-0 w-48 p-4 flex flex-col">
+                        <!-- Meal Type & Time -->
+                        <div class="mb-3">
+                            <div class="text-white/60 text-[10px] mb-1">{{ getMealTypeLabel(getCurrentMealType()) }} ·
+                                {{ currentTimeStr }}</div>
+                            <div v-if="sessionData.location_guess" class="text-white/40 text-[9px]">{{
+                                sessionData.location_guess }}</div>
+                        </div>
+
+                        <!-- Total Stats Card -->
+                        <div class="glass-dark rounded-2xl p-3 mb-3">
+                            <div class="text-white/60 text-[10px] mb-1">总热量</div>
+                            <div class="text-white text-3xl font-bold leading-tight">
+                                {{ calculatedTotalCalories }}
+                                <span class="text-sm font-normal opacity-60">kcal</span>
+                            </div>
+                            <div class="flex gap-3 mt-2 text-[11px]">
+                                <div class="text-white/80">
+                                    <div class="text-white/50 text-[9px]">蛋白质</div>
+                                    <div class="font-semibold">{{ calculatedTotals.protein }}g</div>
+                                </div>
+                                <div class="text-white/80">
+                                    <div class="text-white/50 text-[9px]">脂肪</div>
+                                    <div class="font-semibold">{{ calculatedTotals.fat }}g</div>
+                                </div>
+                                <div class="text-white/80">
+                                    <div class="text-white/50 text-[9px]">碳水</div>
+                                    <div class="font-semibold">{{ calculatedTotals.carbs }}g</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Food Items List -->
+                        <div class="flex-1 overflow-y-auto">
+                            <div class="space-y-2">
+                                <div v-for="food in sessionData.foods" :key="food.name"
+                                    class="glass-dark rounded-xl p-2">
+                                    <!-- Table Layout for better html2canvas alignment -->
+                                    <table class="w-full">
+                                        <tr>
+                                            <td class="text-left align-middle pb-1">
+                                                <div
+                                                    class="text-white text-xs font-medium truncate w-24 leading-relaxed py-0.5">
+                                                    {{ food.name }}</div>
+                                            </td>
+                                            <td class="text-right align-middle pb-1">
+                                                <div
+                                                    class="text-white/60 text-[10px] whitespace-nowrap leading-relaxed py-0.5">
+                                                    {{ food.adjustedWeight || food.weight_g }}g</div>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td class="text-left align-middle">
+                                                <div class="flex items-baseline">
+                                                    <span class="text-white font-bold text-sm leading-tight">{{
+                                                        getAdjustedCalories(food) }}</span>
+                                                    <span
+                                                        class="text-[10px] font-normal opacity-60 ml-0.5 leading-tight">kcal</span>
+                                                </div>
+                                            </td>
+                                            <td class="text-right align-middle">
+                                                <div class="flex justify-end gap-1">
+                                                    <div
+                                                        class="flex items-center justify-center bg-blue-500/20 rounded px-1.5 h-4">
+                                                        <span class="text-blue-300 text-[9px] mr-0.5 leading-none"
+                                                            style="margin-top: 1px;">P</span>
+                                                        <span class="text-white text-[10px] font-medium leading-none"
+                                                            style="margin-top: 1px;">{{ getAdjustedNutrient(food, 'p')
+                                                            }}</span>
+                                                    </div>
+                                                    <div
+                                                        class="flex items-center justify-center bg-amber-500/20 rounded px-1.5 h-4">
+                                                        <span class="text-amber-300 text-[9px] mr-0.5 leading-none"
+                                                            style="margin-top: 1px;">F</span>
+                                                        <span class="text-white text-[10px] font-medium leading-none"
+                                                            style="margin-top: 1px;">{{ getAdjustedNutrient(food, 'f')
+                                                            }}</span>
+                                                    </div>
+                                                    <div
+                                                        class="flex items-center justify-center bg-green-500/20 rounded px-1.5 h-4">
+                                                        <span class="text-green-300 text-[9px] mr-0.5 leading-none"
+                                                            style="margin-top: 1px;">C</span>
+                                                        <span class="text-white text-[10px] font-medium leading-none"
+                                                            style="margin-top: 1px;">{{ getAdjustedNutrient(food, 'c')
+                                                            }}</span>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Watermark -->
+                    <div class="absolute top-4 left-4 flex items-center gap-2 text-white/40">
+                        <i class="ph ph-bowl-food"></i>
+                        <span class="text-xs font-medium">手机先吃</span>
+                    </div>
+                </div>
+
+                <!-- Region B: Bottom Icon Bar -->
+                <div class="bg-black px-5 py-5">
+                    <!-- Health Indicators - Grid Layout (Single Row) -->
+                    <div class="grid grid-cols-10 gap-0.5">
+                        <div v-for="(value, key) in sessionData.indicators" :key="key"
+                            class="flex flex-col items-center gap-1 group">
+
+                            <!-- Icon -->
+                            <div :class="[
+                                'text-2xl transition-colors',
+                                value ? 'text-yellow-400' : 'text-stone-600'
+                            ]">
+                                <i :class="['ph', 'ph-fill', indicatorIcons[key]]"></i>
+                            </div>
+
+                            <!-- Divider -->
+                            <div :class="['w-4 h-0.5 rounded-full', value ? 'bg-yellow-400/30' : 'bg-stone-800']">
+                            </div>
+
+                            <!-- Label -->
+                            <span :class="[
+                                'text-[9px] font-medium tracking-wide whitespace-nowrap scale-90 origin-top',
+                                value ? 'text-stone-300' : 'text-stone-600'
+                            ]">
+                                {{ indicatorLabelsShort[key] }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action Buttons (outside poster for capture) -->
+            <div class="fixed bottom-0 left-0 right-0 p-5 bg-gradient-to-t from-black to-transparent">
+                <div class="flex gap-3">
+                    <button @click="currentView = 'analysis'"
+                        class="flex-1 py-4 bg-white/10 text-white rounded-xl font-medium backdrop-blur">
+                        <i class="ph ph-arrow-left mr-2"></i>返回编辑
+                    </button>
+                    <button @click="savePoster" class="flex-1 py-4 bg-white text-surface-900 rounded-xl font-semibold">
+                        <i class="ph ph-download-simple mr-2"></i>保存图片
+                    </button>
+                </div>
+                <button @click="saveAndFinish"
+                    class="w-full mt-3 py-4 bg-brand-500 text-white rounded-xl font-semibold shadow-lg shadow-brand-500/30">
+                    <i class="ph ph-check mr-2"></i>完成记录
+                </button>
+            </div>
+        </div>
+
+        <!-- ========== RECORD DETAIL VIEW ========== -->
+        <div v-if="currentView === 'detail'" class="min-h-screen bg-surface-50 pb-24">
+            <header class="sticky top-0 z-40 glass border-b border-surface-200/50">
+                <div class="px-5 py-4 flex items-center justify-between">
+                    <button @click="currentView = 'home'"
+                        class="w-10 h-10 rounded-full bg-surface-100 flex items-center justify-center">
+                        <i class="ph ph-arrow-left text-xl"></i>
+                    </button>
+                    <h1 class="font-display font-semibold">记录详情</h1>
+                    <button @click="deleteRecord(selectedRecord.id)"
+                        class="w-10 h-10 rounded-full bg-rose-50 flex items-center justify-center">
+                        <i class="ph ph-trash text-xl text-rose-500"></i>
+                    </button>
+                </div>
+            </header>
+
+            <div v-if="selectedRecord" class="p-5">
+                <!-- Image -->
+                <div class="rounded-2xl overflow-hidden shadow-md mb-5">
+                    <img :src="selectedRecord.thumbnail" class="w-full aspect-video object-cover">
+                </div>
+
+                <!-- Stats -->
+                <div class="bg-gradient-to-r from-surface-800 to-surface-700 rounded-2xl p-5 text-white mb-5">
+                    <div class="flex items-center gap-2 text-sm opacity-70 mb-2">
+                        <i class="ph ph-clock"></i>
+                        {{ getMealTypeLabel(selectedRecord.mealType) }} · {{ formatDateTime(selectedRecord.timestamp) }}
+                    </div>
+                    <div class="text-4xl font-bold">{{ selectedRecord.totalStats.calories }} <span
+                            class="text-lg font-normal opacity-70">kcal</span></div>
+                    <div class="flex gap-6 mt-3 text-sm">
+                        <div><span class="opacity-60">蛋白质</span> <span class="font-semibold">{{
+                                selectedRecord.totalStats.protein }}g</span></div>
+                        <div><span class="opacity-60">脂肪</span> <span class="font-semibold">{{
+                                selectedRecord.totalStats.fat }}g</span></div>
+                        <div><span class="opacity-60">碳水</span> <span class="font-semibold">{{
+                                selectedRecord.totalStats.carbs }}g</span></div>
+                    </div>
+                </div>
+
+                <!-- Indicators -->
+                <div class="bg-white rounded-2xl p-5 shadow-sm mb-5">
+                    <h3 class="font-semibold text-surface-700 mb-3">健康指标</h3>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div v-for="(value, key) in selectedRecord.indicators" :key="key"
+                            :class="['indicator-pill', value ? 'indicator-green' : 'indicator-red']">
+                            <span :class="['w-2 h-2 rounded-full', value ? 'bg-green-500' : 'bg-rose-500']"></span>
+                            {{ indicatorLabels[key] }}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Advice -->
+                <div v-if="selectedRecord.advice" class="bg-brand-50 rounded-2xl p-4 flex gap-3">
+                    <i class="ph ph-lightbulb text-brand-500 text-xl flex-shrink-0"></i>
+                    <div>
+                        <div class="text-sm font-medium text-brand-700 mb-1">AI 建议</div>
+                        <p class="text-sm text-surface-700">{{ selectedRecord.advice }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== MANUAL INPUT VIEW (Fallback) ========== -->
+        <div v-if="currentView === 'manual'" class="min-h-screen bg-surface-50 pb-32">
+            <header class="sticky top-0 z-40 glass border-b border-surface-200/50">
+                <div class="px-5 py-4 flex items-center justify-between">
+                    <button @click="currentView = 'home'"
+                        class="w-10 h-10 rounded-full bg-surface-100 flex items-center justify-center">
+                        <i class="ph ph-x text-xl"></i>
+                    </button>
+                    <h1 class="font-display font-semibold">手动记录</h1>
+                    <button @click="saveManualRecord" class="text-brand-500 font-semibold">保存</button>
+                </div>
+            </header>
+
+            <div class="p-5 space-y-4">
+                <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-800">
+                    <i class="ph ph-warning mr-2"></i>
+                    AI 分析失败，请手动输入食物信息
+                </div>
+
+                <div v-for="(item, index) in manualFoods" :key="index" class="bg-white rounded-2xl p-4 shadow-sm">
+                    <div class="flex gap-3">
+                        <input v-model="item.name" placeholder="食物名称"
+                            class="flex-1 px-3 py-2 bg-surface-50 rounded-lg border border-surface-200 outline-none focus:border-brand-500">
+                        <input v-model.number="item.calories" type="number" placeholder="热量"
+                            class="w-24 px-3 py-2 bg-surface-50 rounded-lg border border-surface-200 outline-none focus:border-brand-500">
+                    </div>
+                    <button v-if="manualFoods.length > 1" @click="manualFoods.splice(index, 1)"
+                        class="text-xs text-rose-500 mt-2">删除</button>
+                </div>
+
+                <button @click="manualFoods.push({ name: '', calories: 0 })"
+                    class="w-full py-3 border-2 border-dashed border-surface-300 rounded-xl text-surface-500 hover:border-brand-500 hover:text-brand-500 transition-colors">
+                    <i class="ph ph-plus mr-2"></i>添加食物
+                </button>
+            </div>
+        </div>
+
+        <!-- ========== SAVE OVERLAY (iOS Style) ========== -->
+        <div v-if="generatedImage"
+            class="fixed inset-0 z-[100] bg-black/90 backdrop-blur-sm flex flex-col items-center justify-center p-6"
+            @click="generatedImage = null">
+            <div class="relative w-full max-w-sm" @click.stop>
+                <img :src="generatedImage" class="w-full rounded-2xl shadow-2xl mb-6">
+
+                <div class="text-center space-y-4">
+                    <div class="flex flex-col items-center gap-2 text-white/80">
+                        <i class="ph ph-hand-tap text-2xl animate-bounce"></i>
+                        <span class="text-sm font-medium">长按图片保存到相册</span>
+                    </div>
+
+                    <div class="flex gap-3">
+                        <button @click="shareImage" v-if="canShare"
+                            class="flex-1 py-3 bg-white/10 text-white rounded-xl font-medium backdrop-blur border border-white/10">
+                            <i class="ph ph-share-network mr-2"></i>分享
+                        </button>
+                        <button @click="generatedImage = null"
+                            class="flex-1 py-3 bg-white text-surface-900 rounded-xl font-medium">
+                            关闭
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp, ref, reactive, computed, onMounted, nextTick } = Vue;
+
+        createApp({
+            setup() {
+                // ========== CONSTANTS ==========
+                const STORAGE_KEYS = {
+                    settings: 'nutrition_lens_settings',
+                    history: 'nutrition_lens_history_v1'
+                };
+
+                const indicatorLabels = {
+                    low_gi: '低GI控糖',
+                    high_protein: '优质蛋白',
+                    high_fiber: '膳食纤维',
+                    low_sodium: '低钠',
+                    good_oil: '健康油脂',
+                    carb_control: '碳水控制',
+                    anti_inflammatory: '抗炎',
+                    satiety: '饱腹感',
+                    micronutrients: '微量元素',
+                    low_cal_density: '低热量密度'
+                };
+
+                const indicatorLabelsShort = {
+                    low_gi: '控糖',
+                    high_protein: '蛋白',
+                    high_fiber: '纤维',
+                    low_sodium: '低钠',
+                    good_oil: '油脂',
+                    carb_control: '碳水',
+                    anti_inflammatory: '抗炎',
+                    satiety: '饱腹',
+                    micronutrients: '微量',
+                    low_cal_density: '密度'
+                };
+
+                const indicatorIcons = {
+                    low_gi: 'ph-chart-line-down',       // 控糖
+                    high_protein: 'ph-barbell',         // 蛋白质
+                    high_fiber: 'ph-grains',            // 膳食纤维
+                    low_sodium: 'ph-drop',              // 低钠
+                    good_oil: 'ph-fish',                // 优质油脂
+                    carb_control: 'ph-bread',           // 碳水
+                    anti_inflammatory: 'ph-shield-slash', // 抗炎
+                    satiety: 'ph-hamburger',            // 饱腹感
+                    micronutrients: 'ph-sparkle',       // 微量元素
+                    low_cal_density: 'ph-leaf'          // 低热量密度
+                };
+
+                // ========== STATE ==========
+                const currentView = ref('home');
+                const fileInputCamera = ref(null);
+                const fileInputAlbum = ref(null);
+                const posterContainer = ref(null);
+                const generatedImage = ref(null);
+                const canShare = ref(!!navigator.share);
+
+                const settings = reactive({
+                    apiKey: '',
+                    apiBaseUrl: 'https://b.apiyi.comv1',
+                    modelName: 'gpt-4.1-mini',
+                    provider: 'custom' // 'custom' | 'siliconflow'
+                });
+
+                const history = ref([]);
+                const selectedRecord = ref(null);
+
+                const sessionData = reactive({
+                    originalImage: null,
+                    previewImage: null,
+                    thumbnailImage: null,
+                    foods: [],
+                    indicators: {},
+                    summary: '',
+                    location_guess: ''
+                });
+
+                const manualFoods = ref([{ name: '', calories: 0 }]);
+
+                const toast = reactive({
+                    show: false,
+                    message: ''
+                });
+
+                // ========== COMPUTED ==========
+                const todayDateStr = computed(() => {
+                    const d = new Date();
+                    const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+                    return `${d.getMonth() + 1}月${d.getDate()}日 ${weekdays[d.getDay()]}`;
+                });
+
+                const currentTimeStr = computed(() => {
+                    const d = new Date();
+                    return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
+                });
+
+                const todayStats = computed(() => {
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    const todayTs = today.getTime();
+
+                    const todayRecords = history.value.filter(r => r.timestamp >= todayTs);
+                    return todayRecords.reduce((acc, r) => ({
+                        calories: acc.calories + (r.totalStats?.calories || 0),
+                        protein: acc.protein + (r.totalStats?.protein || 0),
+                        fat: acc.fat + (r.totalStats?.fat || 0),
+                        carbs: acc.carbs + (r.totalStats?.carbs || 0)
+                    }), { calories: 0, protein: 0, fat: 0, carbs: 0 });
+                });
+
+                const calculatedTotalCalories = computed(() => {
+                    return sessionData.foods.reduce((sum, food) => sum + getAdjustedCalories(food), 0);
+                });
+
+                const calculatedTotals = computed(() => {
+                    return sessionData.foods.reduce((acc, food) => ({
+                        protein: acc.protein + getAdjustedNutrient(food, 'p'),
+                        fat: acc.fat + getAdjustedNutrient(food, 'f'),
+                        carbs: acc.carbs + getAdjustedNutrient(food, 'c')
+                    }), { protein: 0, fat: 0, carbs: 0 });
+                });
+
+                // ========== METHODS ==========
+                function showToast(message, duration = 2000) {
+                    toast.message = message;
+                    toast.show = true;
+                    setTimeout(() => { toast.show = false; }, duration);
+                }
+
+                function loadSettings() {
+                    try {
+                        const saved = localStorage.getItem(STORAGE_KEYS.settings);
+                        if (saved) {
+                            Object.assign(settings, JSON.parse(saved));
+                        }
+                    } catch (e) {
+                        console.error('Failed to load settings:', e);
+                    }
+                }
+
+                function saveSettings() {
+                    try {
+                        localStorage.setItem(STORAGE_KEYS.settings, JSON.stringify(settings));
+                        showToast('设置已保存');
+                        currentView.value = 'home';
+                    } catch (e) {
+                        showToast('保存失败');
+                    }
+                }
+
+                function loadHistory() {
+                    try {
+                        const saved = localStorage.getItem(STORAGE_KEYS.history);
+                        if (saved) {
+                            history.value = JSON.parse(saved);
+                        }
+                    } catch (e) {
+                        console.error('Failed to load history:', e);
+                        history.value = [];
+                    }
+                }
+
+                function saveHistory() {
+                    try {
+                        // Limit to 500 records
+                        if (history.value.length > 500) {
+                            history.value = history.value.slice(0, 500);
+                        }
+                        localStorage.setItem(STORAGE_KEYS.history, JSON.stringify(history.value));
+                    } catch (e) {
+                        if (e.name === 'QuotaExceededError') {
+                            // Remove oldest 10 records and retry
+                            history.value = history.value.slice(0, -10);
+                            saveHistory();
+                        }
+                    }
+                }
+
+                function clearAllData() {
+                    if (confirm('确定要清除所有记录吗？此操作不可恢复。')) {
+                        history.value = [];
+                        localStorage.removeItem(STORAGE_KEYS.history);
+                        showToast('数据已清除');
+                    }
+                }
+
+                function startCapture(mode) {
+                    if (!settings.apiKey) {
+                        showToast('请先在设置中配置 API Key');
+                        currentView.value = 'settings';
+                        return;
+                    }
+
+                    if (mode === 'camera') {
+                        fileInputCamera.value?.click();
+                    } else {
+                        fileInputAlbum.value?.click();
+                    }
+                }
+
+                async function handleFileSelect(event) {
+                    const file = event.target.files?.[0];
+                    if (!file) return;
+
+                    try {
+                        currentView.value = 'loading';
+
+                        // Process images in parallel
+                        const [apiImage, previewImage, thumbnailImage, originalImage] = await Promise.all([
+                            processImage(file, 1024, 0.7, 200 * 1024), // For API
+                            processImage(file, 800, 0.8),              // For preview
+                            processImage(file, 100, 0.5, 5 * 1024),    // For storage
+                            processImage(file, 1920, 0.9)              // For poster
+                        ]);
+
+                        sessionData.previewImage = previewImage;
+                        sessionData.thumbnailImage = thumbnailImage;
+                        sessionData.originalImage = originalImage;
+
+                        // Call AI API
+                        await analyzeWithAI(apiImage);
+
+                        currentView.value = 'analysis';
+                    } catch (error) {
+                        console.error('Error processing image:', error);
+                        showToast('处理图片失败: ' + error.message);
+                        currentView.value = 'manual';
+                    } finally {
+                        event.target.value = '';
+                    }
+                }
+
+                function processImage(file, maxSize, quality, maxBytes = null) {
+                    return new Promise((resolve, reject) => {
+                        const reader = new FileReader();
+                        reader.onload = (e) => {
+                            const img = new Image();
+                            img.onload = () => {
+                                const canvas = document.createElement('canvas');
+                                let { width, height } = img;
+
+                                // Resize
+                                if (width > height && width > maxSize) {
+                                    height = (height * maxSize) / width;
+                                    width = maxSize;
+                                } else if (height > maxSize) {
+                                    width = (width * maxSize) / height;
+                                    height = maxSize;
+                                }
+
+                                canvas.width = width;
+                                canvas.height = height;
+                                const ctx = canvas.getContext('2d');
+                                ctx.drawImage(img, 0, 0, width, height);
+
+                                let currentQuality = quality;
+                                let result = canvas.toDataURL('image/jpeg', currentQuality);
+
+                                // Compress further if needed
+                                if (maxBytes) {
+                                    while (result.length > maxBytes * 1.37 && currentQuality > 0.1) {
+                                        currentQuality -= 0.1;
+                                        result = canvas.toDataURL('image/jpeg', currentQuality);
+                                    }
+                                }
+
+                                resolve(result);
+                            };
+                            img.onerror = reject;
+                            img.src = e.target.result;
+                        };
+                        reader.onerror = reject;
+                        reader.readAsDataURL(file);
+                    });
+                }
+
+                async function analyzeWithAI(imageBase64) {
+                    const systemPrompt = `你是一个专业的营养师和数据分析师。分析图片中的食物，输出严格的 JSON 格式。
+
+任务：
+1. 识别图中所有食物
+2. 预估每种食物的重量(克)和热量(千卡)
+3. 分析10项健康指标
+4. 提供20字以内的营养建议
+
+输出格式(仅JSON，无其他文字)：
+{
+  "foods": [
+    { "name": "食物名", "weight_g": 100, "cal": 200, "nutrients": { "p": 10, "f": 5, "c": 20 } }
+  ],
+  "indicators": {
+    "low_gi": true,
+    "high_protein": true,
+    "high_fiber": false,
+    "low_sodium": false,
+    "good_oil": false,
+    "carb_control": true,
+    "anti_inflammatory": true,
+    "satiety": true,
+    "micronutrients": true,
+    "low_cal_density": false
+  },
+  "summary": "营养建议文字",
+  "location_guess": "场景猜测如家庭餐桌"
+}`;
+
+                    let response;
+                    try {
+                        response = await fetch(`${settings.apiBaseUrl}/chat/completions`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${settings.apiKey}`
+                            },
+                            body: JSON.stringify({
+                                model: settings.modelName,
+                                messages: [
+                                    { role: 'system', content: systemPrompt },
+                                    {
+                                        role: 'user',
+                                        content: [
+                                            { type: 'text', text: '请分析这张食物图片的营养成分' },
+                                            {
+                                                type: 'image_url',
+                                                image_url: {
+                                                    url: imageBase64,
+                                                    detail: 'auto'
+                                                }
+                                            }
+                                        ]
+                                    }
+                                ],
+                                max_tokens: 1500
+                            })
+                        });
+                    } catch (e) {
+                        console.error('Network Error:', e);
+                        if (e.message === 'Failed to fetch' || e.name === 'TypeError') {
+                            throw new Error(`网络连接失败 (Failed to fetch)。请检查您的 VPN 是否开启，或 API 地址是否正确。`);
+                        }
+                        throw e;
+                    }
+
+                    if (!response.ok) {
+                        const errorText = await response.text().catch(() => '');
+                        let errorMsg = `API 请求失败: ${response.status} ${response.statusText}`;
+                        try {
+                            const errorJson = JSON.parse(errorText);
+                            if (errorJson.error?.message) {
+                                errorMsg += ` - ${errorJson.error.message}`;
+                            }
+                        } catch (e) {
+                            if (errorText) errorMsg += ` - ${errorText.substring(0, 100)}`;
+                        }
+                        throw new Error(errorMsg);
+                    }
+
+                    const data = await response.json();
+                    const content = data.choices?.[0]?.message?.content;
+
+                    if (!content) {
+                        throw new Error('AI 返回内容为空');
+                    }
+
+                    // Parse JSON from response
+                    let result;
+                    try {
+                        // Try to extract JSON from the response
+                        const jsonMatch = content.match(/\{[\s\S]*\}/);
+                        if (jsonMatch) {
+                            result = JSON.parse(jsonMatch[0]);
+                        } else {
+                            throw new Error('无法解析 JSON');
+                        }
+                    } catch (e) {
+                        throw new Error('AI 返回格式错误');
+                    }
+
+                    if (!result.foods || result.foods.length === 0) {
+                        throw new Error('未识别到食物');
+                    }
+
+                    // Update session data
+                    sessionData.foods = result.foods.map(f => ({
+                        ...f,
+                        originalWeight: f.weight_g,
+                        adjustedWeight: f.weight_g
+                    }));
+                    sessionData.indicators = result.indicators || {};
+                    sessionData.summary = result.summary || '';
+                    sessionData.location_guess = result.location_guess || '';
+                }
+
+                function getAdjustedCalories(food) {
+                    const ratio = (food.adjustedWeight || food.weight_g) / food.weight_g;
+                    return Math.round(food.cal * ratio);
+                }
+
+                function getAdjustedNutrient(food, key) {
+                    const ratio = (food.adjustedWeight || food.weight_g) / food.weight_g;
+                    return Math.round(food.nutrients[key] * ratio);
+                }
+
+                function adjustWeight(index, delta) {
+                    const food = sessionData.foods[index];
+                    const newWeight = Math.max(10, (food.adjustedWeight || food.weight_g) + delta);
+                    food.adjustedWeight = newWeight;
+                }
+
+                function setWeight(index, value) {
+                    sessionData.foods[index].adjustedWeight = value;
+                }
+
+                function cancelAnalysis() {
+                    sessionData.foods = [];
+                    sessionData.indicators = {};
+                    sessionData.summary = '';
+                    currentView.value = 'home';
+                }
+
+                function proceedToPoster() {
+                    currentView.value = 'poster';
+                }
+
+                async function savePoster() {
+                    try {
+                        showToast('正在生成图片...');
+                        await nextTick();
+
+                        const canvas = await html2canvas(posterContainer.value, {
+                            scale: 2,
+                            useCORS: true,
+                            backgroundColor: '#000'
+                        });
+
+                        // Generate image
+                        canvas.toBlob(async (blob) => {
+                            if (blob) {
+                                const url = URL.createObjectURL(blob);
+                                generatedImage.value = url;
+
+                                // Also try to convert to base64 for img src if blob url fails in some contexts, 
+                                // but blob url is generally better for memory. 
+                                // Actually for img src, data url is safer for cross-context in some webviews.
+                                // Let's use data url for the preview image source to be safe.
+                                generatedImage.value = canvas.toDataURL('image/png');
+                            }
+                        }, 'image/png');
+
+                    } catch (e) {
+                        console.error('Failed to save poster:', e);
+                        showToast('生成失败');
+                    }
+                }
+
+                async function shareImage() {
+                    if (!generatedImage.value) return;
+
+                    try {
+                        const blob = await (await fetch(generatedImage.value)).blob();
+                        const file = new File([blob], `nutrition_${Date.now()}.png`, { type: 'image/png' });
+
+                        if (navigator.share) {
+                            await navigator.share({
+                                files: [file],
+                                title: '手机先吃 - 营养分析',
+                                text: '我的健康饮食记录'
+                            });
+                            showToast('已调起分享');
+                        } else {
+                            showToast('您的设备不支持直接分享');
+                        }
+                    } catch (e) {
+                        console.error('Share failed:', e);
+                        // showToast('分享失败'); // User might have cancelled, silent fail is better
+                    }
+                }
+
+                function downloadImage(canvas) {
+                    const link = document.createElement('a');
+                    link.download = `nutrition_${Date.now()}.png`;
+                    link.href = canvas.toDataURL('image/png');
+                    link.click();
+                    showToast('图片已保存');
+                }
+
+                function saveAndFinish() {
+                    const healthScore = Object.values(sessionData.indicators).filter(v => v).length;
+
+                    const record = {
+                        id: String(Date.now()),
+                        timestamp: Date.now(),
+                        mealType: getCurrentMealType(),
+                        thumbnail: sessionData.thumbnailImage,
+                        aspectRatio: '4/3',
+                        totalStats: {
+                            calories: calculatedTotalCalories.value,
+                            protein: calculatedTotals.value.protein,
+                            fat: calculatedTotals.value.fat,
+                            carbs: calculatedTotals.value.carbs
+                        },
+                        indicators: { ...sessionData.indicators },
+                        advice: sessionData.summary,
+                        healthScore
+                    };
+
+                    history.value.unshift(record);
+                    saveHistory();
+
+                    // Clear session
+                    sessionData.foods = [];
+                    sessionData.indicators = {};
+                    sessionData.summary = '';
+                    sessionData.originalImage = null;
+
+                    showToast('记录已保存');
+                    currentView.value = 'home';
+                }
+
+                function getCurrentMealType() {
+                    const hour = new Date().getHours();
+                    if (hour >= 5 && hour < 10) return 'breakfast';
+                    if (hour >= 10 && hour < 14) return 'lunch';
+                    if (hour >= 14 && hour < 17) return 'snack';
+                    return 'dinner';
+                }
+
+                function getMealTypeLabel(type) {
+                    const labels = {
+                        breakfast: '早餐',
+                        lunch: '午餐',
+                        snack: '下午茶',
+                        dinner: '晚餐'
+                    };
+                    return labels[type] || '用餐';
+                }
+
+                function formatTime(timestamp) {
+                    const d = new Date(timestamp);
+                    return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+                }
+
+                function formatDateTime(timestamp) {
+                    const d = new Date(timestamp);
+                    return `${d.getMonth() + 1}月${d.getDate()}日 ${formatTime(timestamp)}`;
+                }
+
+                function getTopIndicators(indicators) {
+                    return Object.fromEntries(Object.entries(indicators || {}).slice(0, 5));
+                }
+
+                function viewRecord(record) {
+                    selectedRecord.value = record;
+                    currentView.value = 'detail';
+                }
+
+                function deleteRecord(id) {
+                    if (confirm('确定要删除这条记录吗？')) {
+                        history.value = history.value.filter(r => r.id !== id);
+                        saveHistory();
+                        showToast('记录已删除');
+                        currentView.value = 'home';
+                    }
+                }
+
+                function saveManualRecord() {
+                    const validFoods = manualFoods.value.filter(f => f.name && f.calories > 0);
+                    if (validFoods.length === 0) {
+                        showToast('请至少添加一项食物');
+                        return;
+                    }
+
+                    const totalCalories = validFoods.reduce((sum, f) => sum + f.calories, 0);
+
+                    const record = {
+                        id: String(Date.now()),
+                        timestamp: Date.now(),
+                        mealType: getCurrentMealType(),
+                        thumbnail: sessionData.thumbnailImage || 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect fill="%23f5f5f4" width="100" height="100"/><text x="50" y="55" text-anchor="middle" fill="%23a8a29e" font-size="12">手动记录</text></svg>',
+                        aspectRatio: '1/1',
+                        totalStats: {
+                            calories: totalCalories,
+                            protein: 0,
+                            fat: 0,
+                            carbs: 0
+                        },
+                        indicators: {},
+                        advice: '',
+                        healthScore: 5
+                    };
+
+                    history.value.unshift(record);
+                    saveHistory();
+
+                    manualFoods.value = [{ name: '', calories: 0 }];
+                    showToast('记录已保存');
+                    currentView.value = 'home';
+                }
+
+                function setProvider(provider) {
+                    settings.provider = provider;
+                    if (provider === 'siliconflow') {
+                        settings.apiBaseUrl = 'https://api.siliconflow.cn/v1';
+                        settings.modelName = 'Qwen/Qwen3-VL-30B-A3B-Instruct';
+                    } else {
+                        // Restore defaults or keep current if switching back to custom?
+                        // Let's keep it simple and maybe reset to a common default or just leave it.
+                        // If the user had custom settings, they might be lost if we overwrite them blindly.
+                        // But for now, let's just set a default if it was the SiliconFlow one.
+                        if (settings.apiBaseUrl === 'https://api.siliconflow.cn/v1') {
+                            settings.apiBaseUrl = 'https://b.apiyi.com/v1';
+                        }
+                        if (settings.modelName === 'Qwen/Qwen3-VL-30B-A3B-Instruct') {
+                            settings.modelName = 'gpt-4.1-mini';
+                        }
+                    }
+                }
+
+                // ========== LIFECYCLE ==========
+                onMounted(() => {
+                    loadSettings();
+                    loadHistory();
+                });
+
+                return {
+                    // State
+                    currentView,
+                    fileInputCamera,
+                    fileInputAlbum,
+                    posterContainer,
+                    settings,
+                    history,
+                    selectedRecord,
+                    sessionData,
+                    manualFoods,
+                    toast,
+
+                    // Constants
+                    indicatorLabels,
+                    indicatorLabelsShort,
+                    indicatorIcons,
+
+                    // Computed
+                    todayDateStr,
+                    currentTimeStr,
+                    todayStats,
+                    calculatedTotalCalories,
+                    calculatedTotals,
+
+                    // Methods
+                    showToast,
+                    saveSettings,
+                    clearAllData,
+                    startCapture,
+                    handleFileSelect,
+                    getAdjustedCalories,
+                    getAdjustedNutrient,
+                    adjustWeight,
+                    setWeight,
+                    cancelAnalysis,
+                    proceedToPoster,
+                    savePoster,
+                    saveAndFinish,
+                    getCurrentMealType,
+                    getMealTypeLabel,
+                    formatTime,
+                    formatDateTime,
+                    getTopIndicators,
+                    viewRecord,
+                    deleteRecord,
+                    saveManualRecord,
+                    generatedImage,
+                    canShare,
+                    shareImage,
+                    setProvider
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+
+</html>
