@@ -5,6 +5,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>记忆宫殿 - 艾宾浩斯记忆卡片</title>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify/dist/purify.min.js"></script>
     <style>
         :root {
             --bg-primary: #0a0f1a;
@@ -444,6 +446,42 @@
             font-size: clamp(18px, 2vw, 26px);
             line-height: 1.6;
             word-break: break-word;
+            text-align: left;
+            /* Markdown usually looks better left-aligned */
+        }
+
+        .flashcard-content a {
+            color: var(--accent-cyan);
+            text-decoration: none;
+            border-bottom: 1px dashed var(--accent-cyan);
+        }
+
+        .flashcard-content a:hover {
+            color: var(--accent-emerald);
+            border-bottom-style: solid;
+        }
+
+        .flashcard-content code {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9em;
+            color: var(--accent-amber);
+        }
+
+        .flashcard-content pre {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 12px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 12px 0;
+        }
+
+        .flashcard-content pre code {
+            background: transparent;
+            padding: 0;
+            color: inherit;
         }
 
         .flashcard-content img {
@@ -452,6 +490,46 @@
             object-fit: contain;
             border-radius: var(--radius-md);
             margin: 12px 0;
+        }
+
+        .flashcard-content blockquote {
+            border-left: 4px solid var(--accent-cyan);
+            margin: 12px 0;
+            padding-left: 16px;
+            color: var(--text-secondary);
+        }
+
+        .flashcard-hint-btn {
+            margin-top: 16px;
+            padding: 8px 16px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            color: var(--text-muted);
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s ease;
+        }
+
+        .flashcard-hint-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-primary);
+        }
+
+        .flashcard-hint-content {
+            margin-top: 12px;
+            padding: 12px;
+            background: rgba(245, 158, 11, 0.1);
+            border: 1px solid rgba(245, 158, 11, 0.2);
+            border-radius: var(--radius-md);
+            color: var(--text-secondary);
+            font-size: 14px;
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .flashcard-hint-content.active {
+            display: block;
         }
 
         .flashcard-hint {
@@ -531,6 +609,41 @@
             font-size: 12px;
             color: var(--text-muted);
             font-family: 'JetBrains Mono', 'SFMono-Regular', 'Menlo', monospace;
+        }
+
+        /* Scratchpad */
+        .scratchpad-area {
+            width: min(960px, 90vw);
+            margin-top: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .scratchpad-label {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-left: 4px;
+        }
+
+        .scratchpad-input {
+            width: 100%;
+            min-height: 80px;
+            padding: 16px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 15px;
+            resize: vertical;
+            transition: all 0.2s ease;
+        }
+
+        .scratchpad-input:focus {
+            outline: none;
+            border-color: var(--accent-cyan);
+            box-shadow: 0 0 0 3px var(--accent-cyan-dim);
         }
 
         /* Empty State */
@@ -650,6 +763,22 @@
             max-height: 120px;
             object-fit: contain;
             border-radius: var(--radius-sm);
+        }
+
+        .card-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 12px;
+        }
+
+        .tag-badge {
+            font-size: 11px;
+            padding: 2px 8px;
+            border-radius: 10px;
+            background: var(--bg-elevated);
+            color: var(--text-secondary);
+            border: 1px solid var(--border-color);
         }
 
         .card-meta {
@@ -1462,6 +1591,19 @@
                         <div class="image-size-info" id="backImageSize"></div>
                     </div>
                 </div>
+                <div class="form-group">
+                    <label class="form-label">提示（可选）</label>
+                    <input type="text" class="form-input" id="cardHint" placeholder="输入提示信息，复习时可点击查看...">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">标签（可选，空格分隔）</label>
+                    <input type="text" class="form-input" id="cardTags" placeholder="例如：英语 重点 错题本">
+                </div>
+                <div class="form-group">
+                    <div style="font-size: 12px; color: var(--text-muted); margin-top: 8px;">
+                        支持 Markdown：**加粗** `代码` [链接](url)
+                    </div>
+                </div>
                 <input type="file" id="imageFileInput" accept="image/*" style="display: none;"
                     onchange="handleFileSelect(event)">
             </div>
@@ -2004,6 +2146,32 @@
             showToast('已进入碎片复习模式', 'success');
         }
 
+        // Configure Marked to open links in new tab
+        const renderer = new marked.Renderer();
+        const linkRenderer = renderer.link;
+        renderer.link = (href, title, text) => {
+            const html = linkRenderer.call(renderer, href, title, text);
+            return html.replace(/^<a /, '<a target="_blank" rel="noopener noreferrer" ');
+        };
+        marked.use({ renderer });
+
+        function renderMarkdown(text) {
+            if (!text) return '';
+            return DOMPurify.sanitize(marked.parse(text));
+        }
+
+        function toggleHint() {
+            const content = document.getElementById('hintContent');
+            const btn = document.getElementById('hintBtn');
+            if (content.classList.contains('active')) {
+                content.classList.remove('active');
+                btn.textContent = '💡 查看提示';
+            } else {
+                content.classList.add('active');
+                btn.textContent = '💡 隐藏提示';
+            }
+        }
+
         function renderReviewCard() {
             const container = document.getElementById('reviewContainer');
 
@@ -2062,19 +2230,30 @@
                         <div class="flashcard-face flashcard-front">
                             <span class="flashcard-label">问题</span>
                             <div class="flashcard-content">
-                                ${escapeHtml(card.front)}
+                                ${renderMarkdown(card.front)}
                                 ${card.frontImage ? `<img src="${card.frontImage}" alt="图片">` : ''}
                             </div>
+                            ${card.hint ? `
+                                <button id="hintBtn" class="flashcard-hint-btn" onclick="event.stopPropagation(); toggleHint()">💡 查看提示</button>
+                                <div id="hintContent" class="flashcard-hint-content">
+                                    ${renderMarkdown(card.hint)}
+                                </div>
+                            ` : ''}
                             <span class="flashcard-hint">点击翻转查看答案</span>
                         </div>
                         <div class="flashcard-face flashcard-back">
                             <span class="flashcard-label">答案</span>
                             <div class="flashcard-content">
-                                ${escapeHtml(card.back)}
+                                ${renderMarkdown(card.back)}
                                 ${card.backImage ? `<img src="${card.backImage}" alt="图片">` : ''}
                             </div>
                         </div>
                     </div>
+                </div>
+
+                <div class="scratchpad-area">
+                    <label class="scratchpad-label">📝 草稿纸 (内容不会保存)</label>
+                    <textarea class="scratchpad-input" placeholder="在此尝试输入答案..."></textarea>
                 </div>
                 
                 ${isCramSession ? '<div class="cram-note">提前练习仅会轻微延长间隔，放心利用碎片时间巩固记忆。</div>' : ''}
@@ -2154,12 +2333,24 @@
 
             grid.innerHTML = cards.map(card => {
                 const status = getCardStatus(card);
+                // Strip markdown for preview
+                const stripMarkdown = (text) => {
+                    const tmp = document.createElement('div');
+                    tmp.innerHTML = renderMarkdown(text);
+                    return tmp.textContent || tmp.innerText || '';
+                };
+
                 return `
                     <div class="card-item" onclick="editCard('${card.id}')">
                         <div class="card-preview">
-                            ${escapeHtml(card.front).substring(0, 100)}${card.front.length > 100 ? '...' : ''}
+                            ${stripMarkdown(card.front).substring(0, 100)}${card.front.length > 100 ? '...' : ''}
                             ${card.frontImage ? `<img src="${card.frontImage}" alt="图片">` : ''}
                         </div>
+                        ${card.tags && card.tags.length > 0 ? `
+                            <div class="card-tags">
+                                ${card.tags.map(tag => `<span class="tag-badge">${tag}</span>`).join('')}
+                            </div>
+                        ` : ''}
                         <div class="card-meta">
                             <div class="card-status">
                                 <span class="status-dot ${status.class}"></span>
@@ -2195,7 +2386,8 @@
             const cards = await getAllCards();
             const filtered = cards.filter(card =>
                 card.front.toLowerCase().includes(query) ||
-                card.back.toLowerCase().includes(query)
+                card.back.toLowerCase().includes(query) ||
+                (card.tags && card.tags.some(tag => tag.toLowerCase().includes(query)))
             );
             renderCardsGrid(filtered);
         }
@@ -2209,6 +2401,8 @@
             document.getElementById('cardModalTitle').textContent = '新建卡片';
             document.getElementById('cardFront').value = '';
             document.getElementById('cardBack').value = '';
+            document.getElementById('cardHint').value = '';
+            document.getElementById('cardTags').value = '';
             document.getElementById('frontImagePreview').style.display = 'none';
             document.getElementById('backImagePreview').style.display = 'none';
             document.getElementById('cardModal').classList.add('active');
@@ -2231,6 +2425,8 @@
             document.getElementById('cardModalTitle').textContent = '编辑卡片';
             document.getElementById('cardFront').value = card.front;
             document.getElementById('cardBack').value = card.back;
+            document.getElementById('cardHint').value = card.hint || '';
+            document.getElementById('cardTags').value = (card.tags || []).join(' ');
 
             if (frontImage) {
                 document.getElementById('frontImageImg').src = frontImage;
@@ -2262,6 +2458,9 @@
             try {
                 const front = document.getElementById('cardFront').value.trim();
                 const back = document.getElementById('cardBack').value.trim();
+                const hint = document.getElementById('cardHint').value.trim();
+                const tagsStr = document.getElementById('cardTags').value.trim();
+                const tags = tagsStr ? tagsStr.split(/\s+/).filter(t => t) : [];
 
                 if (!front && !frontImage) {
                     showToast('请输入问题内容或添加图片', 'error');
@@ -2279,6 +2478,8 @@
 
                 card.front = front;
                 card.back = back;
+                card.hint = hint;
+                card.tags = tags;
                 card.frontImage = frontImage;
                 card.backImage = backImage;
                 card.updatedAt = Date.now();
