@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>记忆宫殿 - 艾宾浩斯记忆卡片</title>
+    <title>iAnki - 艾宾浩斯记忆卡片</title>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/dompurify/dist/purify.min.js"></script>
     <style>
@@ -424,12 +424,25 @@
             background: linear-gradient(145deg, var(--bg-card), var(--bg-elevated));
             border: 1px solid var(--border-color);
             box-shadow: var(--shadow-glow);
+            pointer-events: auto;
+            /* Enable clicks on front by default */
         }
 
         .flashcard-back {
             background: linear-gradient(145deg, #1a2940, #1e3048);
             border: 1px solid rgba(6, 182, 212, 0.2);
             transform: rotateY(180deg);
+            pointer-events: none;
+            /* Disable clicks on back by default (it's hidden) */
+        }
+
+        /* Toggle pointer events when flipped */
+        .flashcard.flipped .flashcard-front {
+            pointer-events: none;
+        }
+
+        .flashcard.flipped .flashcard-back {
+            pointer-events: auto;
         }
 
         .flashcard-label {
@@ -448,6 +461,17 @@
             word-break: break-word;
             text-align: left;
             /* Markdown usually looks better left-aligned */
+            cursor: zoom-in;
+            /* Indicate clickable for zoom */
+            transition: transform 0.2s ease;
+        }
+
+        .flashcard.fullscreen-active .flashcard-content {
+            cursor: zoom-out;
+        }
+
+        .flashcard-content:active {
+            transform: scale(0.98);
         }
 
         .flashcard-content a {
@@ -609,6 +633,28 @@
             font-size: 12px;
             color: var(--text-muted);
             font-family: 'JetBrains Mono', 'SFMono-Regular', 'Menlo', monospace;
+        }
+
+        .source-link-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            margin-top: 16px;
+            padding: 8px 16px;
+            background: rgba(6, 182, 212, 0.1);
+            border: 1px solid rgba(6, 182, 212, 0.3);
+            border-radius: var(--radius-md);
+            color: var(--accent-cyan);
+            text-decoration: none;
+            font-size: 14px;
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+
+        .source-link-btn:hover {
+            background: rgba(6, 182, 212, 0.2);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(6, 182, 212, 0.2);
         }
 
         /* Scratchpad */
@@ -1437,7 +1483,7 @@
         <div class="header-content">
             <div class="logo">
                 <div class="logo-icon">🧠</div>
-                <span class="logo-text">记忆宫殿</span>
+                <span class="logo-text">iAnki</span>
             </div>
             <div class="header-stats">
                 <div class="stat-item">
@@ -1590,6 +1636,10 @@
                         <button class="image-preview-remove" onclick="removeImage('back')">✕</button>
                         <div class="image-size-info" id="backImageSize"></div>
                     </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">来源链接（可选）</label>
+                    <input type="url" class="form-input" id="cardSourceUrl" placeholder="https://example.com/problem/1">
                 </div>
                 <div class="form-group">
                     <label class="form-label">提示（可选）</label>
@@ -2147,17 +2197,37 @@
         }
 
         // Configure Marked to open links in new tab
-        const renderer = new marked.Renderer();
-        const linkRenderer = renderer.link;
-        renderer.link = (href, title, text) => {
-            const html = linkRenderer.call(renderer, href, title, text);
-            return html.replace(/^<a /, '<a target="_blank" rel="noopener noreferrer" ');
-        };
-        marked.use({ renderer });
+        try {
+            if (typeof marked !== 'undefined') {
+                const renderer = new marked.Renderer();
+                const linkRenderer = renderer.link;
+                renderer.link = (href, title, text) => {
+                    const html = linkRenderer.call(renderer, href, title, text);
+                    return html.replace(/^<a /, '<a target="_blank" rel="noopener noreferrer" ');
+                };
+                marked.use({
+                    renderer,
+                    gfm: true,
+                    breaks: true
+                });
+            }
+        } catch (e) {
+            console.warn('Failed to configure marked:', e);
+        }
 
         function renderMarkdown(text) {
             if (!text) return '';
-            return DOMPurify.sanitize(marked.parse(text));
+            try {
+                if (typeof marked !== 'undefined' && typeof DOMPurify !== 'undefined') {
+                    return DOMPurify.sanitize(marked.parse(text), {
+                        ADD_ATTR: ['target', 'rel']
+                    });
+                }
+                return escapeHtml(text);
+            } catch (e) {
+                console.error('Markdown rendering failed:', e);
+                return escapeHtml(text);
+            }
         }
 
         function toggleHint() {
@@ -2225,11 +2295,11 @@
                 </div>
                 
                 <div class="flashcard-wrapper">
-                    <div class="flashcard" id="flashcard" onclick="flipCard()">
+                    <div class="flashcard" id="flashcard" onclick="flipCard(event)">
                         <button class="flashcard-fullscreen-btn" id="flashcardFullscreenBtn" type="button" onclick="toggleFlashcardFullscreen(event)">⛶</button>
                         <div class="flashcard-face flashcard-front">
                             <span class="flashcard-label">问题</span>
-                            <div class="flashcard-content">
+                            <div class="flashcard-content" onclick="toggleFlashcardFullscreen(event)">
                                 ${renderMarkdown(card.front)}
                                 ${card.frontImage ? `<img src="${card.frontImage}" alt="图片">` : ''}
                             </div>
@@ -2243,10 +2313,16 @@
                         </div>
                         <div class="flashcard-face flashcard-back">
                             <span class="flashcard-label">答案</span>
-                            <div class="flashcard-content">
+                            <div class="flashcard-content" onclick="toggleFlashcardFullscreen(event)">
                                 ${renderMarkdown(card.back)}
                                 ${card.backImage ? `<img src="${card.backImage}" alt="图片">` : ''}
                             </div>
+                            ${card.sourceUrl ? `
+                                <a href="${card.sourceUrl}" target="_blank" rel="noopener noreferrer" 
+                                   class="source-link-btn" onclick="event.stopPropagation()">
+                                   🔗 查看来源链接
+                                </a>
+                            ` : ''}
                         </div>
                     </div>
                 </div>
@@ -2280,7 +2356,25 @@
             updateFullscreenButtonState(false);
         }
 
-        function flipCard() {
+        function flipCard(event) {
+            // Prevent flip if interacting with content
+            if (event) {
+                const target = event.target;
+                // Ignore clicks on links, buttons, inputs, textareas
+                if (target.tagName === 'A' || target.closest('a') ||
+                    target.tagName === 'BUTTON' || target.closest('button') ||
+                    target.tagName === 'TEXTAREA' || target.closest('textarea') ||
+                    target.tagName === 'INPUT' || target.closest('input')) {
+                    return;
+                }
+
+                // Ignore if selecting text
+                const selection = window.getSelection();
+                if (selection.toString().length > 0) {
+                    return;
+                }
+            }
+
             const flashcard = document.getElementById('flashcard');
             const ratingButtons = document.getElementById('ratingButtons');
 
@@ -2401,6 +2495,7 @@
             document.getElementById('cardModalTitle').textContent = '新建卡片';
             document.getElementById('cardFront').value = '';
             document.getElementById('cardBack').value = '';
+            document.getElementById('cardSourceUrl').value = '';
             document.getElementById('cardHint').value = '';
             document.getElementById('cardTags').value = '';
             document.getElementById('frontImagePreview').style.display = 'none';
@@ -2425,6 +2520,7 @@
             document.getElementById('cardModalTitle').textContent = '编辑卡片';
             document.getElementById('cardFront').value = card.front;
             document.getElementById('cardBack').value = card.back;
+            document.getElementById('cardSourceUrl').value = card.sourceUrl || '';
             document.getElementById('cardHint').value = card.hint || '';
             document.getElementById('cardTags').value = (card.tags || []).join(' ');
 
@@ -2458,6 +2554,7 @@
             try {
                 const front = document.getElementById('cardFront').value.trim();
                 const back = document.getElementById('cardBack').value.trim();
+                const sourceUrl = document.getElementById('cardSourceUrl').value.trim();
                 const hint = document.getElementById('cardHint').value.trim();
                 const tagsStr = document.getElementById('cardTags').value.trim();
                 const tags = tagsStr ? tagsStr.split(/\s+/).filter(t => t) : [];
@@ -2478,6 +2575,7 @@
 
                 card.front = front;
                 card.back = back;
+                card.sourceUrl = sourceUrl;
                 card.hint = hint;
                 card.tags = tags;
                 card.frontImage = frontImage;
@@ -3821,7 +3919,18 @@
         }
 
         function toggleFlashcardFullscreen(event) {
-            if (event) event.stopPropagation();
+            if (event) {
+                // Ignore if clicking interactive elements (links, buttons, inputs)
+                const target = event.target;
+                if (target.tagName === 'A' || target.closest('a') ||
+                    target.tagName === 'BUTTON' || target.closest('button') ||
+                    target.tagName === 'TEXTAREA' || target.closest('textarea') ||
+                    target.tagName === 'INPUT' || target.closest('input')) {
+                    return;
+                }
+                event.stopPropagation();
+            }
+
             const flashcard = document.getElementById('flashcard');
             if (!flashcard) return;
 
@@ -3886,6 +3995,11 @@
 
             const reminderTime = await getSetting('reminderTime') || '20:30';
             document.getElementById('reminderTime').value = reminderTime;
+
+            // Check libraries
+            if (typeof marked === 'undefined' || typeof DOMPurify === 'undefined') {
+                showToast('Markdown 组件加载失败，将使用纯文本模式', 'error');
+            }
         }
 
         init();
