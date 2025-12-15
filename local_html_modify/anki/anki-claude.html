@@ -5,12 +5,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>记忆宫殿 - 艾宾浩斯记忆卡片</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link
-        href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap"
-        rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
     <style>
         :root {
             --bg-primary: #0a0f1a;
@@ -34,6 +28,10 @@
             --radius-xl: 28px;
         }
 
+        html {
+            height: 100%;
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -41,11 +39,14 @@
         }
 
         body {
-            font-family: 'Noto Sans SC', sans-serif;
+            font-family: 'Noto Sans SC', 'Microsoft YaHei', 'PingFang SC', sans-serif;
             background: var(--bg-primary);
             color: var(--text-primary);
             min-height: 100vh;
+            height: 100%;
             overflow-x: hidden;
+            display: flex;
+            flex-direction: column;
         }
 
         /* Background Animation */
@@ -125,7 +126,7 @@
         .stat-value {
             font-size: 24px;
             font-weight: 700;
-            font-family: 'JetBrains Mono', monospace;
+            font-family: 'JetBrains Mono', 'SFMono-Regular', 'Menlo', monospace;
         }
 
         .stat-value.cyan {
@@ -242,18 +243,36 @@
 
         /* Main Content */
         .main-content {
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 0 24px 100px;
+            flex: 1;
+            width: 100%;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
         }
 
         .view {
             display: none;
             animation: fadeIn 0.3s ease;
+            width: 100%;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 24px 100px;
         }
 
         .view.active {
             display: block;
+        }
+
+        #reviewView {
+            max-width: none;
+            width: 100%;
+            margin: 0;
+            padding: clamp(16px, 3vw, 48px) 0 80px;
+            flex: 1;
+        }
+
+        #reviewView.active {
+            display: flex;
         }
 
         @keyframes fadeIn {
@@ -270,10 +289,14 @@
 
         /* Review View */
         .review-container {
+            flex: 1;
             display: flex;
             flex-direction: column;
             align-items: center;
-            padding: 40px 0;
+            justify-content: center;
+            padding: clamp(24px, 6vw, 80px);
+            width: 100%;
+            min-height: 0;
         }
 
         .review-progress {
@@ -281,10 +304,32 @@
             align-items: center;
             gap: 16px;
             margin-bottom: 40px;
+            width: min(960px, 90vw);
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .cram-badge {
+            padding: 4px 12px;
+            border-radius: var(--radius-md);
+            border: 1px solid rgba(6, 182, 212, 0.5);
+            color: var(--accent-cyan);
+            background: rgba(6, 182, 212, 0.12);
+            font-size: 13px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .cram-note {
+            margin-top: 12px;
+            color: var(--text-muted);
+            font-size: 13px;
+            text-align: center;
         }
 
         .progress-bar {
-            width: 200px;
+            width: 220px;
             height: 6px;
             background: var(--bg-elevated);
             border-radius: 3px;
@@ -299,7 +344,7 @@
         }
 
         .progress-text {
-            font-family: 'JetBrains Mono', monospace;
+            font-family: 'JetBrains Mono', 'SFMono-Regular', 'Menlo', monospace;
             font-size: 14px;
             color: var(--text-secondary);
         }
@@ -307,21 +352,56 @@
         /* Flashcard */
         .flashcard-wrapper {
             perspective: 1500px;
-            width: 100%;
-            max-width: 600px;
+            width: min(960px, 90vw);
+            max-width: none;
+            margin: 0 auto;
+            height: min(65vh, 720px);
         }
 
         .flashcard {
             position: relative;
             width: 100%;
-            aspect-ratio: 4/3;
+            height: 100%;
+            min-height: 320px;
             cursor: pointer;
             transform-style: preserve-3d;
             transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
+        .flashcard-fullscreen-btn {
+            position: absolute;
+            top: 14px;
+            right: 14px;
+            width: 36px;
+            height: 36px;
+            border-radius: var(--radius-sm);
+            border: 1px solid rgba(148, 163, 184, 0.4);
+            background: rgba(10, 15, 26, 0.6);
+            color: var(--text-primary);
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 3;
+            transition: all 0.2s ease;
+        }
+
+        .flashcard-fullscreen-btn:hover {
+            border-color: var(--accent-cyan);
+            background: rgba(6, 182, 212, 0.2);
+        }
+
         .flashcard.flipped {
             transform: rotateY(180deg);
+        }
+
+        .flashcard.fullscreen-active {
+            border-radius: 0;
+        }
+
+        .flashcard.fullscreen-active .flashcard-face {
+            border-radius: 0;
         }
 
         .flashcard-face {
@@ -329,7 +409,7 @@
             inset: 0;
             backface-visibility: hidden;
             border-radius: var(--radius-xl);
-            padding: 40px;
+            padding: clamp(24px, 4vw, 48px);
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -361,14 +441,14 @@
         }
 
         .flashcard-content {
-            font-size: 20px;
+            font-size: clamp(18px, 2vw, 26px);
             line-height: 1.6;
             word-break: break-word;
         }
 
         .flashcard-content img {
             max-width: 100%;
-            max-height: 300px;
+            max-height: min(360px, 50vh);
             object-fit: contain;
             border-radius: var(--radius-md);
             margin: 12px 0;
@@ -384,11 +464,10 @@
         /* Rating Buttons */
         .rating-buttons {
             display: grid;
-            grid-template-columns: repeat(4, 1fr);
+            grid-template-columns: repeat(4, minmax(0, 1fr));
             gap: 12px;
             margin-top: 40px;
-            width: 100%;
-            max-width: 600px;
+            width: min(960px, 90vw);
         }
 
         .rating-btn {
@@ -451,7 +530,7 @@
         .rating-interval {
             font-size: 12px;
             color: var(--text-muted);
-            font-family: 'JetBrains Mono', monospace;
+            font-family: 'JetBrains Mono', 'SFMono-Regular', 'Menlo', monospace;
         }
 
         /* Empty State */
@@ -681,7 +760,7 @@
         .stats-card-value {
             font-size: 36px;
             font-weight: 700;
-            font-family: 'JetBrains Mono', monospace;
+            font-family: 'JetBrains Mono', 'SFMono-Regular', 'Menlo', monospace;
             margin-bottom: 4px;
         }
 
@@ -707,6 +786,12 @@
         .chart-wrapper {
             width: 100%;
             height: 300px;
+        }
+
+        .chart-wrapper canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
         }
 
         /* Modal */
@@ -1320,7 +1405,9 @@
 
             <div class="chart-container">
                 <div class="chart-title">📉 记忆曲线对比（理论 vs 实际）</div>
-                <div class="chart-wrapper" id="memoryChart"></div>
+                <div class="chart-wrapper">
+                    <canvas id="memoryChart"></canvas>
+                </div>
             </div>
 
             <div class="chart-container">
@@ -1330,7 +1417,9 @@
 
             <div class="chart-container">
                 <div class="chart-title">📊 卡片状态分布</div>
-                <div class="chart-wrapper" id="statusChart"></div>
+                <div class="chart-wrapper">
+                    <canvas id="statusChart"></canvas>
+                </div>
             </div>
         </div>
     </main>
@@ -1350,7 +1439,7 @@
                         <div class="image-upload-icon">📷</div>
                         <div class="image-upload-text">拖拽或直接粘贴图片</div>
                         <button class="image-select-btn">📁 或选择文件</button>
-                        <div class="image-upload-hint">图片将自动压缩至200KB以内</div>
+                        <div class="image-upload-hint">点击此区域一下，再Ctrl+V</div>
                     </div>
                     <div class="image-preview" id="frontImagePreview" style="display: none;">
                         <img id="frontImageImg" src="" alt="预览">
@@ -1365,7 +1454,7 @@
                         <div class="image-upload-icon">📷</div>
                         <div class="image-upload-text">拖拽或直接粘贴图片</div>
                         <button class="image-select-btn">📁 或选择文件</button>
-                        <div class="image-upload-hint">图片将自动压缩至200KB以内</div>
+                        <div class="image-upload-hint">点击此区域一下，再Ctrl+V</div>
                     </div>
                     <div class="image-preview" id="backImagePreview" style="display: none;">
                         <img id="backImageImg" src="" alt="预览">
@@ -1400,8 +1489,9 @@
                     <div class="settings-row">
                         <span>导入数据</span>
                         <div class="file-input-wrapper">
-                            <button class="btn btn-secondary">📥 导入</button>
-                            <input type="file" class="file-input" accept=".json" onchange="importData(event)">
+                            <button class="btn btn-secondary" type="button" onclick="triggerDataImport()">📥 导入</button>
+                            <input type="file" id="dataImportInput" class="file-input"
+                                accept=".json,.zip,application/zip" onchange="importData(event)" style="display: none;">
                         </div>
                     </div>
                     <div class="settings-row">
@@ -1422,7 +1512,8 @@
                     </div>
                     <div class="settings-row">
                         <span>提醒时间</span>
-                        <input type="time" id="reminderTime" value="20:30" class="time-input" onchange="saveReminderTime()">
+                        <input type="time" id="reminderTime" value="20:30" class="time-input"
+                            onchange="saveReminderTime()">
                     </div>
                 </div>
                 <div class="settings-section">
@@ -1515,6 +1606,9 @@
         // ==================== Database ====================
         const DB_NAME = 'MemoryPalaceDB';
         const DB_VERSION = 1;
+        const DAY_IN_MS = 24 * 60 * 60 * 1000;
+        const CRAM_BATCH_LIMIT = 15;
+        const CRAM_BONUS_FACTOR = 0.15;
         let db = null;
 
         async function initDB() {
@@ -1632,7 +1726,7 @@
                 try {
                     const transaction = db.transaction(['reviews'], 'readwrite');
                     const store = transaction.objectStore('reviews');
-                    const request = store.add(record);
+                    const request = store.put(record);
                     request.onsuccess = () => resolve(request.result);
                     request.onerror = () => reject(request.error);
                 } catch (error) {
@@ -1695,10 +1789,41 @@
             });
         }
 
+        async function clearStore(storeName) {
+            if (!db) {
+                await initDB();
+            }
+            return new Promise((resolve, reject) => {
+                try {
+                    const transaction = db.transaction([storeName], 'readwrite');
+                    const store = transaction.objectStore(storeName);
+                    const request = store.clear();
+                    request.onsuccess = () => resolve();
+                    request.onerror = () => reject(request.error);
+                } catch (error) {
+                    reject(error);
+                }
+            });
+        }
+
         // ==================== SM-2 Algorithm ====================
         function calculateNextReview(card, rating) {
             // rating: 0 = again, 1 = hard, 2 = good, 3 = easy
             let { interval = 0, easeFactor = 2.5, reviewCount = 0 } = card;
+            const isEarlyReview = isCramSession && card.nextReviewAt && card.nextReviewAt > Date.now();
+
+            if (isEarlyReview && rating >= 2) {
+                const currentInterval = Math.max(1, interval || 1);
+                const bonusDays = Math.max(1, Math.round(currentInterval * CRAM_BONUS_FACTOR));
+                const baseTime = card.nextReviewAt;
+                return {
+                    interval: currentInterval + bonusDays,
+                    easeFactor,
+                    reviewCount: reviewCount + 1,
+                    nextReviewAt: baseTime + bonusDays * DAY_IN_MS,
+                    lastReviewAt: Date.now()
+                };
+            }
 
             if (rating === 0) {
                 // Again - reset
@@ -1819,6 +1944,10 @@
         let currentCardIndex = 0;
         let sessionReviewed = 0;
         let reminderInterval = null;
+        let statsDataCache = null;
+        let statsResizeTimer = null;
+        let fullscreenCardElement = null;
+        let isCramSession = false;
 
         // ==================== View Management ====================
         function switchView(view) {
@@ -1843,6 +1972,7 @@
         async function loadReviewSession() {
             const cards = await getAllCards();
             const now = Date.now();
+            isCramSession = false;
 
             dueCards = cards.filter(card => {
                 if (!card.nextReviewAt) return true; // New cards
@@ -1852,6 +1982,26 @@
             currentCardIndex = 0;
             renderReviewCard();
             updateHeaderStats();
+        }
+
+        async function startCramSession() {
+            const cards = await getAllCards();
+            const now = Date.now();
+            const futureCards = cards
+                .filter(card => card.nextReviewAt && card.nextReviewAt > now)
+                .sort((a, b) => a.nextReviewAt - b.nextReviewAt)
+                .slice(0, CRAM_BATCH_LIMIT);
+
+            if (futureCards.length === 0) {
+                showToast('暂无可提前复习的卡片', 'info');
+                return;
+            }
+
+            dueCards = futureCards;
+            currentCardIndex = 0;
+            isCramSession = true;
+            renderReviewCard();
+            showToast('已进入碎片复习模式', 'success');
         }
 
         function renderReviewCard() {
@@ -1864,6 +2014,9 @@
                         <h2 class="empty-title">太棒了！</h2>
                         <p class="empty-desc">今天的复习任务已完成，或者还没有添加卡片</p>
                         <button class="btn btn-primary" onclick="showAddCardModal()">✨ 添加新卡片</button>
+                        <div style="margin-top: 16px;">
+                            <button class="btn btn-secondary" onclick="startCramSession()">⚡️ 碎片时间加练</button>
+                        </div>
                     </div>
                 `;
                 return;
@@ -1882,7 +2035,10 @@
                                 <div class="stat-label">复习卡片</div>
                             </div>
                         </div>
-                        <button class="btn btn-primary" style="margin-top: 32px;" onclick="loadReviewSession()">🔄 再来一轮</button>
+                        <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 32px;">
+                            <button class="btn btn-primary" onclick="loadReviewSession()">🔄 回到今日任务</button>
+                            <button class="btn btn-secondary" onclick="startCramSession()">⚡️ 碎片时间加练</button>
+                        </div>
                     </div>
                 `;
                 return;
@@ -1897,10 +2053,12 @@
                         <div class="progress-fill" style="width: ${progress}%"></div>
                     </div>
                     <span class="progress-text">${currentCardIndex + 1} / ${dueCards.length}</span>
+                    ${isCramSession ? '<span class="cram-badge">⚡ 碎片复习</span>' : ''}
                 </div>
                 
                 <div class="flashcard-wrapper">
                     <div class="flashcard" id="flashcard" onclick="flipCard()">
+                        <button class="flashcard-fullscreen-btn" id="flashcardFullscreenBtn" type="button" onclick="toggleFlashcardFullscreen(event)">⛶</button>
                         <div class="flashcard-face flashcard-front">
                             <span class="flashcard-label">问题</span>
                             <div class="flashcard-content">
@@ -1919,6 +2077,8 @@
                     </div>
                 </div>
                 
+                ${isCramSession ? '<div class="cram-note">提前练习仅会轻微延长间隔，放心利用碎片时间巩固记忆。</div>' : ''}
+
                 <div class="rating-buttons" id="ratingButtons" style="visibility: hidden;">
                     <button class="rating-btn again" onclick="rateCard(0)">
                         <span>😵 忘了</span>
@@ -1938,6 +2098,7 @@
                     </button>
                 </div>
             `;
+            updateFullscreenButtonState(false);
         }
 
         function flipCard() {
@@ -2186,7 +2347,7 @@
                 const backPreview = document.getElementById('backImagePreview');
 
                 if (backImg) backImg.src = result.dataUrl;
-                if (backSize) backSize.textContent = `压缩后: ${result.size}KB`;
+                // if (backSize) backSize.textContent = `压缩后: ${result.size}KB`;
                 if (backPreview) backPreview.style.display = 'inline-block';
 
                 showToast(`图片已添加到背面 (${result.size}KB)`, 'success');
@@ -2197,7 +2358,7 @@
                 const frontPreview = document.getElementById('frontImagePreview');
 
                 if (frontImg) frontImg.src = result.dataUrl;
-                if (frontSize) frontSize.textContent = `压缩后: ${result.size}KB`;
+                // if (frontSize) frontSize.textContent = `压缩后: ${result.size}KB`;
                 if (frontPreview) frontPreview.style.display = 'inline-block';
 
                 showToast(`图片已添加到正面 (${result.size}KB)`, 'success');
@@ -2418,8 +2579,10 @@
             document.getElementById('masteredCards').textContent = masteredCards;
             document.getElementById('totalReviews').textContent = totalReviews;
 
+            statsDataCache = { cards, reviews };
+
             // Render charts
-            renderMemoryChart(reviews);
+            renderMemoryChart(reviews, cards);
             renderHeatmap(reviews);
             renderStatusChart(cards);
 
@@ -2456,123 +2619,164 @@
             return streak;
         }
 
-        function renderMemoryChart(reviews) {
-            const chart = echarts.init(document.getElementById('memoryChart'));
+        function renderMemoryChart(reviews, cards) {
+            const context = createCanvasContext('memoryChart', 320);
+            if (!context) return;
 
-            // Theoretical Ebbinghaus curve
+            const { ctx, width, height } = context;
+            const padding = { top: 50, right: 24, bottom: 48, left: 56 };
+            const chartWidth = width - padding.left - padding.right;
+            const chartHeight = height - padding.top - padding.bottom;
+            const maxDay = 30;
+            const days = Array.from({ length: maxDay + 1 }, (_, i) => i);
             const theoreticalData = [];
             const actualData = [];
-            const days = [0, 1, 2, 3, 5, 7, 14, 21, 30];
+            const now = Date.now();
+            const cardMap = new Map((cards || []).map(card => [card.id, card]));
+            const buckets = new Map();
 
             days.forEach(day => {
-                // Theoretical: R = e^(-t/S) where S ≈ 1.84
-                const theoretical = Math.round(100 * Math.exp(-day / 1.84));
-                theoreticalData.push([day, Math.max(theoretical, 20)]); // Floor at 20%
+                const theoretical = Math.round(100 * Math.exp(-day / 2.5));
+                theoreticalData.push([day, Math.max(theoretical, 25)]);
             });
 
-            // Calculate actual retention per day
-            const dayGroups = {};
-            reviews.forEach(r => {
-                const daysSinceCreated = Math.floor((r.reviewedAt - r.reviewedAt) / (24 * 60 * 60 * 1000));
-                const day = Math.min(daysSinceCreated, 30);
-                if (!dayGroups[day]) {
-                    dayGroups[day] = { total: 0, correct: 0 };
+            reviews.forEach(review => {
+                const card = cardMap.get(review.cardId);
+                if (!card || card.interval <= 1) {
+                    return;
                 }
-                dayGroups[day].total++;
-                if (r.rating >= 2) dayGroups[day].correct++;
-            });
-
-            // Use real data or simulated improvement
-            days.forEach(day => {
-                if (dayGroups[day] && dayGroups[day].total >= 3) {
-                    const rate = Math.round((dayGroups[day].correct / dayGroups[day].total) * 100);
-                    actualData.push([day, rate]);
-                } else {
-                    // Simulated data showing spaced repetition improvement
-                    const theoretical = Math.round(100 * Math.exp(-day / 1.84));
-                    const improved = Math.min(100, theoretical + 30 + Math.random() * 15);
-                    actualData.push([day, Math.round(improved)]);
+                const daysAgo = Math.floor((now - review.reviewedAt) / DAY_IN_MS);
+                if (Number.isNaN(daysAgo) || daysAgo < 0 || daysAgo > maxDay) {
+                    return;
+                }
+                if (!buckets.has(daysAgo)) {
+                    buckets.set(daysAgo, { total: 0, correct: 0 });
+                }
+                const bucket = buckets.get(daysAgo);
+                bucket.total++;
+                if (review.rating >= 2) {
+                    bucket.correct++;
                 }
             });
 
-            const option = {
-                backgroundColor: 'transparent',
-                tooltip: {
-                    trigger: 'axis',
-                    backgroundColor: 'rgba(26, 34, 52, 0.95)',
-                    borderColor: 'rgba(148, 163, 184, 0.2)',
-                    textStyle: { color: '#f1f5f9' },
-                    formatter: params => {
-                        return `第 ${params[0].value[0]} 天<br/>
-                            ${params[0].seriesName}: ${params[0].value[1]}%<br/>
-                            ${params[1]?.seriesName || ''}: ${params[1]?.value[1] || 0}%`;
-                    }
-                },
-                legend: {
-                    data: ['艾宾浩斯理论曲线', '实际记忆率（间隔复习）'],
-                    textStyle: { color: '#94a3b8' },
-                    top: 0
-                },
-                grid: {
-                    left: '3%',
-                    right: '4%',
-                    bottom: '3%',
-                    containLabel: true
-                },
-                xAxis: {
-                    type: 'value',
-                    name: '天数',
-                    nameTextStyle: { color: '#64748b' },
-                    axisLine: { lineStyle: { color: '#334155' } },
-                    axisLabel: { color: '#94a3b8' },
-                    splitLine: { lineStyle: { color: '#1e293b' } }
-                },
-                yAxis: {
-                    type: 'value',
-                    name: '记忆保持率 %',
-                    nameTextStyle: { color: '#64748b' },
-                    axisLine: { lineStyle: { color: '#334155' } },
-                    axisLabel: { color: '#94a3b8' },
-                    splitLine: { lineStyle: { color: '#1e293b' } },
-                    min: 0,
-                    max: 100
-                },
-                series: [
-                    {
-                        name: '艾宾浩斯理论曲线',
-                        type: 'line',
-                        smooth: true,
-                        data: theoreticalData,
-                        lineStyle: { color: '#f43f5e', width: 2 },
-                        areaStyle: {
-                            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                                { offset: 0, color: 'rgba(244, 63, 94, 0.3)' },
-                                { offset: 1, color: 'rgba(244, 63, 94, 0)' }
-                            ])
-                        },
-                        symbol: 'circle',
-                        symbolSize: 6
-                    },
-                    {
-                        name: '实际记忆率（间隔复习）',
-                        type: 'line',
-                        smooth: true,
-                        data: actualData,
-                        lineStyle: { color: '#06b6d4', width: 3 },
-                        areaStyle: {
-                            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                                { offset: 0, color: 'rgba(6, 182, 212, 0.3)' },
-                                { offset: 1, color: 'rgba(6, 182, 212, 0)' }
-                            ])
-                        },
-                        symbol: 'circle',
-                        symbolSize: 8
-                    }
-                ]
-            };
+            buckets.forEach((bucket, day) => {
+                if (!bucket || bucket.total === 0) return;
+                const rate = Math.round((bucket.correct / bucket.total) * 100);
+                actualData.push([day, rate]);
+            });
+            actualData.sort((a, b) => a[0] - b[0]);
 
-            chart.setOption(option);
-            window.addEventListener('resize', () => chart.resize());
+            const scaleX = (day) => padding.left + (day / maxDay) * chartWidth;
+            const scaleY = (value) => padding.top + (1 - value / 100) * chartHeight;
+
+            ctx.strokeStyle = 'rgba(148, 163, 184, 0.2)';
+            ctx.lineWidth = 1;
+            for (let i = 0; i <= 4; i++) {
+                const y = padding.top + (chartHeight / 4) * i;
+                ctx.beginPath();
+                ctx.moveTo(padding.left, y);
+                ctx.lineTo(width - padding.right, y);
+                ctx.stroke();
+                const labelValue = Math.round(100 - (100 / 4) * i);
+                ctx.fillStyle = '#94a3b8';
+                ctx.font = '12px "Segoe UI", sans-serif';
+                ctx.textAlign = 'right';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(`${labelValue}%`, padding.left - 8, y);
+            }
+
+            ctx.strokeStyle = '#475569';
+            days.forEach(day => {
+                const x = scaleX(day);
+                ctx.beginPath();
+                ctx.moveTo(x, height - padding.bottom);
+                ctx.lineTo(x, height - padding.bottom + 6);
+                ctx.stroke();
+                ctx.fillStyle = '#94a3b8';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'top';
+                ctx.fillText(day.toString(), x, height - padding.bottom + 8);
+            });
+
+            ctx.fillStyle = '#94a3b8';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'top';
+            ctx.fillText('天数', padding.left + chartWidth / 2, height - 10);
+            ctx.save();
+            ctx.translate(18, padding.top + chartHeight / 2);
+            ctx.rotate(-Math.PI / 2);
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'top';
+            ctx.fillText('记忆保持率 %', 0, 0);
+            ctx.restore();
+
+            function fillArea(data, color) {
+                if (!data.length) return;
+                ctx.beginPath();
+                data.forEach((point, index) => {
+                    const x = scaleX(point[0]);
+                    const y = scaleY(point[1]);
+                    if (index === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                });
+                const lastX = scaleX(data[data.length - 1][0]);
+                ctx.lineTo(lastX, height - padding.bottom);
+                ctx.lineTo(scaleX(data[0][0]), height - padding.bottom);
+                ctx.closePath();
+                ctx.fillStyle = color;
+                ctx.fill();
+            }
+
+            fillArea(theoreticalData, 'rgba(244, 63, 94, 0.15)');
+            if (actualData.length > 0) {
+                fillArea(actualData, 'rgba(6, 182, 212, 0.18)');
+            }
+
+            function drawSeries(data, color, width) {
+                if (!data.length) return;
+                ctx.beginPath();
+                data.forEach((point, index) => {
+                    const x = scaleX(point[0]);
+                    const y = scaleY(point[1]);
+                    if (index === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                });
+                ctx.strokeStyle = color;
+                ctx.lineWidth = width;
+                ctx.lineJoin = 'round';
+                ctx.lineCap = 'round';
+                ctx.stroke();
+            }
+
+            drawSeries(theoreticalData, '#f43f5e', 2);
+            if (actualData.length > 0) {
+                drawSeries(actualData, '#06b6d4', 3);
+            }
+
+            const legendItems = [
+                { label: '艾宾浩斯理论曲线', color: '#f43f5e' },
+                { label: '实际记忆率（间隔复习）', color: '#06b6d4' }
+            ];
+            let legendX = padding.left;
+            const legendY = padding.top - 20;
+            ctx.font = '12px "Segoe UI", sans-serif';
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'middle';
+            legendItems.forEach(item => {
+                ctx.fillStyle = item.color;
+                ctx.fillRect(legendX, legendY - 4, 18, 6);
+                ctx.fillStyle = '#e2e8f0';
+                ctx.fillText(item.label, legendX + 24, legendY);
+                legendX += ctx.measureText(item.label).width + 70;
+            });
+
+            if (actualData.length === 0) {
+                ctx.fillStyle = '#94a3b8';
+                ctx.font = '14px "Segoe UI", sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('最近暂无足够的复习数据', padding.left + chartWidth / 2, padding.top + chartHeight / 2);
+            }
         }
 
         function renderHeatmap(reviews) {
@@ -2631,62 +2835,77 @@
         }
 
         function renderStatusChart(cards) {
-            const chart = echarts.init(document.getElementById('statusChart'));
+            const context = createCanvasContext('statusChart', 280);
+            if (!context) return;
 
+            const { ctx, width, height } = context;
             const newCards = cards.filter(c => !c.nextReviewAt).length;
             const learning = cards.filter(c => c.nextReviewAt && c.interval < 7).length;
             const reviewing = cards.filter(c => c.interval >= 7 && c.interval < 21).length;
             const mastered = cards.filter(c => c.interval >= 21).length;
 
-            const option = {
-                backgroundColor: 'transparent',
-                tooltip: {
-                    trigger: 'item',
-                    backgroundColor: 'rgba(26, 34, 52, 0.95)',
-                    borderColor: 'rgba(148, 163, 184, 0.2)',
-                    textStyle: { color: '#f1f5f9' }
-                },
-                legend: {
-                    orient: 'vertical',
-                    right: '5%',
-                    top: 'center',
-                    textStyle: { color: '#94a3b8' }
-                },
-                series: [
-                    {
-                        name: '卡片状态',
-                        type: 'pie',
-                        radius: ['45%', '70%'],
-                        center: ['35%', '50%'],
-                        avoidLabelOverlap: false,
-                        itemStyle: {
-                            borderRadius: 8,
-                            borderColor: '#1a2234',
-                            borderWidth: 2
-                        },
-                        label: {
-                            show: false
-                        },
-                        emphasis: {
-                            label: {
-                                show: true,
-                                fontSize: 16,
-                                fontWeight: 'bold',
-                                color: '#f1f5f9'
-                            }
-                        },
-                        data: [
-                            { value: newCards, name: '新卡片', itemStyle: { color: '#06b6d4' } },
-                            { value: learning, name: '学习中', itemStyle: { color: '#f59e0b' } },
-                            { value: reviewing, name: '复习中', itemStyle: { color: '#8b5cf6' } },
-                            { value: mastered, name: '已掌握', itemStyle: { color: '#10b981' } }
-                        ]
-                    }
-                ]
-            };
+            const segments = [
+                { label: '新卡片', value: newCards, color: '#06b6d4' },
+                { label: '学习中', value: learning, color: '#f59e0b' },
+                { label: '复习中', value: reviewing, color: '#8b5cf6' },
+                { label: '已掌握', value: mastered, color: '#10b981' }
+            ];
+            const total = segments.reduce((sum, seg) => sum + seg.value, 0);
 
-            chart.setOption(option);
-            window.addEventListener('resize', () => chart.resize());
+            if (total === 0) {
+                ctx.fillStyle = '#94a3b8';
+                ctx.font = '14px "Segoe UI", sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('暂无卡片数据', width / 2, height / 2);
+                return;
+            }
+
+            const centerX = width / 2;
+            const centerY = height / 2 - 10;
+            const radius = Math.min(width, height) * 0.28;
+            const thickness = radius * 0.5;
+            let startAngle = -Math.PI / 2;
+
+            ctx.lineWidth = thickness;
+            ctx.lineCap = 'butt';
+            segments.forEach(segment => {
+                if (segment.value <= 0) return;
+                const angle = (segment.value / total) * Math.PI * 2;
+                ctx.beginPath();
+                ctx.strokeStyle = segment.color;
+                ctx.arc(centerX, centerY, radius, startAngle, startAngle + angle);
+                ctx.stroke();
+                startAngle += angle;
+            });
+
+            ctx.fillStyle = '#f1f5f9';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.font = '600 24px "Segoe UI", sans-serif';
+            ctx.fillText(total.toString(), centerX, centerY - 6);
+            ctx.font = '12px "Segoe UI", sans-serif';
+            ctx.fillStyle = '#94a3b8';
+            ctx.fillText('总卡片', centerX, centerY + 16);
+
+            ctx.textAlign = 'left';
+            ctx.font = '13px "Segoe UI", sans-serif';
+            let legendY = height - 30 - segments.length * 20;
+            const legendX = Math.max(30, centerX - radius - 80);
+            segments.forEach(segment => {
+                ctx.fillStyle = segment.color;
+                ctx.fillRect(legendX, legendY, 14, 14);
+                ctx.fillStyle = '#e2e8f0';
+                const percent = Math.round((segment.value / total) * 100);
+                ctx.fillText(`${segment.label}: ${segment.value} (${percent}%)`, legendX + 22, legendY + 11);
+                legendY += 20;
+            });
+        }
+
+        function rerenderStatsCharts() {
+            if (!statsDataCache) return;
+            renderMemoryChart(statsDataCache.reviews, statsDataCache.cards);
+            renderStatusChart(statsDataCache.cards);
         }
 
         // ==================== Settings ====================
@@ -2698,26 +2917,76 @@
             document.getElementById('settingsModal').classList.remove('active');
         }
 
+        function triggerDataImport() {
+            const input = document.getElementById('dataImportInput');
+            if (input) {
+                input.click();
+            }
+        }
+
         async function exportData() {
-            const cards = await getAllCards();
-            const reviews = await getAllReviews();
+            try {
+                const cards = await getAllCards();
+                const reviews = await getAllReviews();
+                const zip = new SimpleZipWriter();
+                const exportedCards = [];
 
-            const data = {
-                version: '1.0',
-                exportedAt: new Date().toISOString(),
-                cards,
-                reviews
-            };
+                for (const card of cards) {
+                    const exportedCard = { ...card };
+                    const cardIdentifier = card.id || `card-${Date.now()}-${exportedCards.length}`;
 
-            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `memory-palace-backup-${new Date().toISOString().split('T')[0]}.json`;
-            a.click();
-            URL.revokeObjectURL(url);
+                    if (card.frontImage) {
+                        try {
+                            const frontInfo = await getImageBlob(card.frontImage);
+                            if (frontInfo) {
+                                const frontName = `${cardIdentifier}-front.${frontInfo.extension || 'bin'}`;
+                                await zip.addFile(`imgs/${frontName}`, frontInfo.blob);
+                                exportedCard.frontImage = `imgs/${frontName}`;
+                            }
+                        } catch (error) {
+                            console.warn('导出正面图片失败:', error);
+                            exportedCard.frontImage = null;
+                        }
+                    }
 
-            showToast('数据已导出', 'success');
+                    if (card.backImage) {
+                        try {
+                            const backInfo = await getImageBlob(card.backImage);
+                            if (backInfo) {
+                                const backName = `${cardIdentifier}-back.${backInfo.extension || 'bin'}`;
+                                await zip.addFile(`imgs/${backName}`, backInfo.blob);
+                                exportedCard.backImage = `imgs/${backName}`;
+                            }
+                        } catch (error) {
+                            console.warn('导出背面图片失败:', error);
+                            exportedCard.backImage = null;
+                        }
+                    }
+
+                    exportedCards.push(exportedCard);
+                }
+
+                const data = {
+                    version: '1.1',
+                    exportedAt: new Date().toISOString(),
+                    cards: exportedCards,
+                    reviews
+                };
+
+                await zip.addFile('memory-palace.json', JSON.stringify(data, null, 2));
+                const content = await zip.generateBlob();
+                const url = URL.createObjectURL(content);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `memory-palace-backup-${new Date().toISOString().split('T')[0]}.zip`;
+                a.click();
+                URL.revokeObjectURL(url);
+
+                showToast('数据已导出为ZIP', 'success');
+            } catch (error) {
+                console.error('导出失败:', error);
+                showToast('导出失败，请稍后重试', 'error');
+            }
         }
 
         async function importData(event) {
@@ -2725,26 +2994,89 @@
             if (!file) return;
 
             try {
-                const text = await file.text();
-                const data = JSON.parse(text);
+                let data = null;
+                let imageResolver = null;
+                const fileName = file.name.toLowerCase();
+                const fileType = file.type;
+                const isZip = fileName.endsWith('.zip') || fileType === 'application/zip' || fileType === 'application/x-zip-compressed';
+
+                if (isZip) {
+                    const zipReader = await SimpleZipReader.fromBlob(file);
+                    const fileList = zipReader.listFiles();
+                    const jsonFile = fileList.find(name => name.toLowerCase().endsWith('.json'));
+                    if (!jsonFile) {
+                        throw new Error('ZIP 中未找到 JSON 数据');
+                    }
+
+                    const textBytes = zipReader.getFile(jsonFile);
+                    const text = uint8ArrayToString(textBytes);
+                    data = JSON.parse(text);
+
+                    imageResolver = async (imagePath) => {
+                        if (!imagePath) return null;
+                        const normalizedPath = normalizeImagePath(imagePath);
+                        const imageBytes = zipReader.getFile(normalizedPath);
+                        if (!imageBytes) return null;
+
+                        const base64 = uint8ArrayToBase64(imageBytes);
+                        const ext = getExtensionFromPath(normalizedPath);
+                        const mime = getMimeFromExtension(ext);
+                        return `data:${mime};base64,${base64}`;
+                    };
+                } else {
+                    const text = await file.text();
+                    data = JSON.parse(text);
+                }
 
                 if (!data.cards || !Array.isArray(data.cards)) {
                     throw new Error('Invalid data format');
                 }
 
-                // Import cards
-                for (const card of data.cards) {
+                const cardsToImport = data.cards.map(card => ({ ...card }));
+                const importCardIds = new Set();
+                cardsToImport.forEach(card => {
+                    if (!card.id) {
+                        card.id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+                    }
+                    importCardIds.add(card.id);
+                });
+
+                const existingCards = await getAllCards();
+                let replaceMode = false;
+                if (existingCards.length > 0) {
+                    replaceMode = confirm('是否清空现有数据后再导入？\n选择“确定”将全量覆盖，选择“取消”将增量合并。');
+                }
+
+                if (replaceMode) {
+                    await clearStore('cards');
+                    await clearStore('reviews');
+                }
+
+                for (const card of cardsToImport) {
+                    if (isExportedImagePath(card.frontImage)) {
+                        card.frontImage = imageResolver ? await imageResolver(card.frontImage) : null;
+                    }
+                    if (isExportedImagePath(card.backImage)) {
+                        card.backImage = imageResolver ? await imageResolver(card.backImage) : null;
+                    }
+
                     await saveCardToDB(card);
                 }
 
-                // Import reviews if present
                 if (data.reviews && Array.isArray(data.reviews)) {
                     for (const review of data.reviews) {
+                        if (!replaceMode && review.cardId && !importCardIds.has(review.cardId)) {
+                            continue;
+                        }
+                        if (!review.reviewedAt) {
+                            review.reviewedAt = Date.now();
+                        }
+                        delete review.id;
                         await addReviewRecord(review);
                     }
                 }
 
-                showToast(`成功导入 ${data.cards.length} 张卡片`, 'success');
+                showToast(`成功导入 ${cardsToImport.length} 张卡片`, 'success');
                 closeSettingsModal();
 
                 if (currentView === 'review') {
@@ -2754,7 +3086,8 @@
                 }
                 updateHeaderStats();
             } catch (error) {
-                showToast('导入失败：文件格式错误', 'error');
+                console.error('导入失败:', error);
+                showToast(`导入失败：${error.message}`, 'error');
             }
 
             event.target.value = '';
@@ -2844,6 +3177,357 @@
         }
 
         // ==================== Utilities ====================
+        function getExtensionFromMime(mimeType = '') {
+            const map = {
+                'image/png': 'png',
+                'image/jpeg': 'jpg',
+                'image/jpg': 'jpg',
+                'image/webp': 'webp',
+                'image/gif': 'gif',
+                'image/svg+xml': 'svg'
+            };
+            return map[mimeType.toLowerCase()] || '';
+        }
+
+        function getMimeFromExtension(extension = '') {
+            const map = {
+                png: 'image/png',
+                jpg: 'image/jpeg',
+                jpeg: 'image/jpeg',
+                webp: 'image/webp',
+                gif: 'image/gif',
+                svg: 'image/svg+xml'
+            };
+            return map[extension.toLowerCase()] || 'application/octet-stream';
+        }
+
+        function getExtensionFromPath(path = '') {
+            const parts = path.split('.');
+            return parts.length > 1 ? parts.pop().toLowerCase() : '';
+        }
+
+        function dataUrlToBlob(dataUrl) {
+            const [header, data] = dataUrl.split(',');
+            const mimeMatch = header.match(/data:(.*?)(;base64)?$/);
+            const mimeType = mimeMatch ? mimeMatch[1] : 'application/octet-stream';
+            const binaryString = atob(data);
+            const len = binaryString.length;
+            const bytes = new Uint8Array(len);
+            for (let i = 0; i < len; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+            }
+            return {
+                blob: new Blob([bytes], { type: mimeType }),
+                mimeType,
+                extension: getExtensionFromMime(mimeType) || 'bin'
+            };
+        }
+
+        async function getImageBlob(imageSource) {
+            if (!imageSource) return null;
+            if (imageSource.startsWith('data:')) {
+                return dataUrlToBlob(imageSource);
+            }
+
+            const response = await fetch(imageSource);
+            const blob = await response.blob();
+            const extension = getExtensionFromMime(blob.type) || getExtensionFromPath(imageSource) || 'bin';
+            return {
+                blob,
+                mimeType: blob.type || getMimeFromExtension(extension),
+                extension
+            };
+        }
+
+        function normalizeImagePath(path = '') {
+            return path.replace(/^\.?\//, '');
+        }
+
+        function isExportedImagePath(value) {
+            if (typeof value !== 'string') return false;
+            return normalizeImagePath(value).startsWith('imgs/');
+        }
+
+        const textEncoder = typeof TextEncoder !== 'undefined' ? new TextEncoder() : null;
+        const textDecoder = typeof TextDecoder !== 'undefined' ? new TextDecoder() : null;
+
+        function stringToUint8Array(str) {
+            if (textEncoder) {
+                return textEncoder.encode(str);
+            }
+            const result = new Uint8Array(str.length);
+            for (let i = 0; i < str.length; i++) {
+                result[i] = str.charCodeAt(i);
+            }
+            return result;
+        }
+
+        function uint8ArrayToString(bytes) {
+            if (textDecoder) {
+                return textDecoder.decode(bytes);
+            }
+            let result = '';
+            const chunkSize = 0x8000;
+            for (let i = 0; i < bytes.length; i += chunkSize) {
+                const chunk = bytes.subarray(i, i + chunkSize);
+                result += String.fromCharCode(...chunk);
+            }
+            return result;
+        }
+
+        async function normalizeToUint8Array(input) {
+            if (input instanceof Uint8Array) {
+                return input;
+            }
+            if (input instanceof ArrayBuffer) {
+                return new Uint8Array(input);
+            }
+            if (input instanceof Blob) {
+                const buffer = await input.arrayBuffer();
+                return new Uint8Array(buffer);
+            }
+            if (typeof input === 'string') {
+                return stringToUint8Array(input);
+            }
+            throw new Error('Unsupported data type');
+        }
+
+        function createCrc32Table() {
+            const table = new Uint32Array(256);
+            for (let i = 0; i < 256; i++) {
+                let c = i;
+                for (let j = 0; j < 8; j++) {
+                    c = (c & 1) ? (0xedb88320 ^ (c >>> 1)) : (c >>> 1);
+                }
+                table[i] = c >>> 0;
+            }
+            return table;
+        }
+
+        const CRC32_TABLE = createCrc32Table();
+
+        function crc32(bytes) {
+            let crc = 0 ^ -1;
+            for (let i = 0; i < bytes.length; i++) {
+                crc = (crc >>> 8) ^ CRC32_TABLE[(crc ^ bytes[i]) & 0xff];
+            }
+            return (crc ^ -1) >>> 0;
+        }
+
+        function dateToDos(date = new Date()) {
+            const year = Math.max(date.getFullYear(), 1980);
+            const dosTime =
+                (date.getHours() << 11) |
+                (date.getMinutes() << 5) |
+                Math.floor(date.getSeconds() / 2);
+            const dosDate =
+                ((year - 1980) << 9) |
+                ((date.getMonth() + 1) << 5) |
+                date.getDate();
+            return { time: dosTime, date: dosDate };
+        }
+
+        class SimpleZipWriter {
+            constructor() {
+                this.files = [];
+            }
+
+            async addFile(name, input) {
+                const data = await normalizeToUint8Array(input);
+                const cleanName = normalizeImagePath(name);
+                const { time, date } = dateToDos(new Date());
+                this.files.push({
+                    name: cleanName,
+                    data,
+                    size: data.length,
+                    crc32: crc32(data),
+                    time,
+                    date
+                });
+            }
+
+            async generateBlob() {
+                const fileChunks = [];
+                const centralChunks = [];
+                let offset = 0;
+
+                for (const file of this.files) {
+                    const nameBytes = stringToUint8Array(file.name);
+                    const localHeader = new Uint8Array(30);
+                    const view = new DataView(localHeader.buffer);
+                    view.setUint32(0, 0x04034b50, true);
+                    view.setUint16(4, 20, true);
+                    view.setUint16(6, 0, true);
+                    view.setUint16(8, 0, true);
+                    view.setUint16(10, file.time, true);
+                    view.setUint16(12, file.date, true);
+                    view.setUint32(14, file.crc32, true);
+                    view.setUint32(18, file.size, true);
+                    view.setUint32(22, file.size, true);
+                    view.setUint16(26, nameBytes.length, true);
+                    view.setUint16(28, 0, true);
+
+                    fileChunks.push(localHeader, nameBytes, file.data);
+
+                    const centralHeader = new Uint8Array(46);
+                    const centralView = new DataView(centralHeader.buffer);
+                    centralView.setUint32(0, 0x02014b50, true);
+                    centralView.setUint16(4, 20, true);
+                    centralView.setUint16(6, 20, true);
+                    centralView.setUint16(8, 0, true);
+                    centralView.setUint16(10, 0, true);
+                    centralView.setUint16(12, file.time, true);
+                    centralView.setUint16(14, file.date, true);
+                    centralView.setUint32(16, file.crc32, true);
+                    centralView.setUint32(20, file.size, true);
+                    centralView.setUint32(24, file.size, true);
+                    centralView.setUint16(28, nameBytes.length, true);
+                    centralView.setUint16(30, 0, true);
+                    centralView.setUint16(32, 0, true);
+                    centralView.setUint16(34, 0, true);
+                    centralView.setUint16(36, 0, true);
+                    centralView.setUint32(38, 0, true);
+                    centralView.setUint32(42, offset, true);
+
+                    centralChunks.push(centralHeader, nameBytes);
+                    offset += localHeader.length + nameBytes.length + file.size;
+                }
+
+                const centralSize = centralChunks.reduce((sum, chunk) => sum + chunk.length, 0);
+                const centralOffset = offset;
+
+                const endRecord = new Uint8Array(22);
+                const endView = new DataView(endRecord.buffer);
+                endView.setUint32(0, 0x06054b50, true);
+                endView.setUint16(4, 0, true);
+                endView.setUint16(6, 0, true);
+                endView.setUint16(8, this.files.length, true);
+                endView.setUint16(10, this.files.length, true);
+                endView.setUint32(12, centralSize, true);
+                endView.setUint32(16, centralOffset, true);
+                endView.setUint16(20, 0, true);
+
+                return new Blob([...fileChunks, ...centralChunks, endRecord], { type: 'application/zip' });
+            }
+        }
+
+        class SimpleZipReader {
+            constructor(bytes) {
+                this.bytes = bytes;
+                this.view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+                this.fileMap = null;
+            }
+
+            static async fromBlob(blob) {
+                const buffer = await blob.arrayBuffer();
+                return new SimpleZipReader(new Uint8Array(buffer));
+            }
+
+            listFiles() {
+                if (!this.fileMap) {
+                    this.parseCentralDirectory();
+                }
+                return Object.keys(this.fileMap);
+            }
+
+            getFile(name) {
+                if (!this.fileMap) {
+                    this.parseCentralDirectory();
+                }
+                const normalizedName = normalizeImagePath(name);
+                const entry = this.fileMap[normalizedName];
+                if (!entry) return null;
+                return this.extractEntry(entry);
+            }
+
+            parseCentralDirectory() {
+                const endOffset = this.findEndOfCentralDirectory();
+                const totalEntries = this.view.getUint16(endOffset + 10, true);
+                const centralOffset = this.view.getUint32(endOffset + 16, true);
+                let pointer = centralOffset;
+                const map = {};
+
+                for (let i = 0; i < totalEntries; i++) {
+                    const signature = this.view.getUint32(pointer, true);
+                    if (signature !== 0x02014b50) {
+                        throw new Error('无效的 ZIP 文件');
+                    }
+                    const compression = this.view.getUint16(pointer + 10, true);
+                    const compressedSize = this.view.getUint32(pointer + 20, true);
+                    const uncompressedSize = this.view.getUint32(pointer + 24, true);
+                    const nameLength = this.view.getUint16(pointer + 28, true);
+                    const extraLength = this.view.getUint16(pointer + 30, true);
+                    const commentLength = this.view.getUint16(pointer + 32, true);
+                    const localHeaderOffset = this.view.getUint32(pointer + 42, true);
+                    const nameBytes = this.bytes.slice(pointer + 46, pointer + 46 + nameLength);
+                    const name = normalizeImagePath(uint8ArrayToString(nameBytes));
+                    map[name] = {
+                        compression,
+                        compressedSize,
+                        uncompressedSize,
+                        localHeaderOffset
+                    };
+                    pointer += 46 + nameLength + extraLength + commentLength;
+                }
+
+                this.fileMap = map;
+            }
+
+            findEndOfCentralDirectory() {
+                for (let i = this.bytes.length - 22; i >= 0; i--) {
+                    if (this.bytes[i] === 0x50 && this.bytes[i + 1] === 0x4b && this.bytes[i + 2] === 0x05 && this.bytes[i + 3] === 0x06) {
+                        return i;
+                    }
+                }
+                throw new Error('未找到 ZIP 结束标记');
+            }
+
+            extractEntry(entry) {
+                if (entry.compression !== 0) {
+                    throw new Error('暂不支持压缩的 ZIP 文件');
+                }
+                const offset = entry.localHeaderOffset;
+                const signature = this.view.getUint32(offset, true);
+                if (signature !== 0x04034b50) {
+                    throw new Error('无效的 ZIP 文件');
+                }
+                const nameLength = this.view.getUint16(offset + 26, true);
+                const extraLength = this.view.getUint16(offset + 28, true);
+                const dataStart = offset + 30 + nameLength + extraLength;
+                const dataEnd = dataStart + entry.uncompressedSize;
+                return this.bytes.slice(dataStart, dataEnd);
+            }
+        }
+
+        function uint8ArrayToBase64(bytes) {
+            let binary = '';
+            const chunkSize = 0x8000;
+            for (let i = 0; i < bytes.length; i += chunkSize) {
+                const chunk = bytes.subarray(i, i + chunkSize);
+                binary += String.fromCharCode(...chunk);
+            }
+            return btoa(binary);
+        }
+
+        function createCanvasContext(target, desiredHeight = 320) {
+            const canvas = typeof target === 'string' ? document.getElementById(target) : target;
+            if (!canvas) return null;
+            const parentWidth = canvas.parentElement?.clientWidth || canvas.clientWidth || 600;
+            const width = Math.max(parentWidth, 200);
+            const height = desiredHeight;
+            const dpr = window.devicePixelRatio || 1;
+            canvas.style.width = '100%';
+            canvas.style.height = `${height}px`;
+            canvas.width = width * dpr;
+            canvas.height = height * dpr;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) return null;
+            ctx.setTransform(1, 0, 0, 1, 0, 0);
+            ctx.scale(dpr, dpr);
+            ctx.clearRect(0, 0, width, height);
+            return { ctx, canvas, width, height };
+        }
+
         async function updateHeaderStats() {
             const cards = await getAllCards();
             const now = Date.now();
@@ -2909,6 +3593,84 @@
             }
         });
 
+        window.addEventListener('resize', () => {
+            if (currentView !== 'stats') return;
+            clearTimeout(statsResizeTimer);
+            statsResizeTimer = setTimeout(() => {
+                rerenderStatsCharts();
+            }, 150);
+        });
+
+        function getFullscreenElement() {
+            return document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement || null;
+        }
+
+        function exitFullscreen() {
+            const exit = document.exitFullscreen || document.webkitExitFullscreen || document.mozCancelFullScreen || document.msExitFullscreen;
+            if (exit) {
+                exit.call(document);
+            }
+        }
+
+        function updateFullscreenButtonState(active) {
+            const btn = document.getElementById('flashcardFullscreenBtn');
+            if (!btn) return;
+            btn.textContent = active ? '🗗' : '⛶';
+            btn.title = active ? '退出全屏' : '全屏显示';
+        }
+
+        function toggleFlashcardFullscreen(event) {
+            if (event) event.stopPropagation();
+            const flashcard = document.getElementById('flashcard');
+            if (!flashcard) return;
+
+            const activeElement = getFullscreenElement();
+            if (activeElement === flashcard) {
+                exitFullscreen();
+                return;
+            }
+
+            const request = flashcard.requestFullscreen || flashcard.webkitRequestFullscreen || flashcard.mozRequestFullScreen || flashcard.msRequestFullscreen;
+            if (!request) {
+                showToast('当前浏览器不支持全屏模式', 'error');
+                return;
+            }
+
+            const result = request.call(flashcard);
+            if (result && typeof result.catch === 'function') {
+                result.catch(error => {
+                    console.error('进入全屏失败:', error);
+                    showToast('进入全屏失败', 'error');
+                });
+            } else {
+                fullscreenCardElement = flashcard;
+                flashcard.classList.add('fullscreen-active');
+                updateFullscreenButtonState(true);
+            }
+        }
+
+        function handleFullscreenChange() {
+            const flashcard = document.getElementById('flashcard');
+            const activeElement = getFullscreenElement();
+
+            if (flashcard && activeElement === flashcard) {
+                fullscreenCardElement = flashcard;
+                flashcard.classList.add('fullscreen-active');
+                updateFullscreenButtonState(true);
+            } else {
+                if (fullscreenCardElement) {
+                    fullscreenCardElement.classList.remove('fullscreen-active');
+                    fullscreenCardElement = null;
+                }
+                updateFullscreenButtonState(false);
+            }
+        }
+
+        document.addEventListener('fullscreenchange', handleFullscreenChange);
+        document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+        document.addEventListener('mozfullscreenchange', handleFullscreenChange);
+        document.addEventListener('MSFullscreenChange', handleFullscreenChange);
+
         // ==================== Initialize ====================
         async function init() {
             await initDB();
@@ -2927,6 +3689,3 @@
 
         init();
     </script>
-</body>
-
-</html>
