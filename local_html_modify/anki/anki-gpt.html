@@ -1,0 +1,2281 @@
+<!doctype html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+    <title>Anki Lite + Ebbinghaus (Single HTML)</title>
+    <meta name="theme-color" content="#0b0f14" />
+    <style>
+        :root {
+            --bg: #0b0f14;
+            --panel: #111826;
+            --panel2: #0f1520;
+            --text: #e8eef8;
+            --muted: #a9b6cc;
+            --brand: #6ee7ff;
+            --brand2: #8b5cf6;
+            --ok: #22c55e;
+            --warn: #f59e0b;
+            --bad: #ef4444;
+            --line: rgba(255, 255, 255, .10);
+            --shadow: 0 14px 34px rgba(0, 0, 0, .35);
+            --r: 18px;
+        }
+
+        * {
+            box-sizing: border-box
+        }
+
+        html,
+        body {
+            height: 100%
+        }
+
+        body {
+            margin: 0;
+            background: radial-gradient(1200px 800px at 20% 0%, rgba(110, 231, 255, .12), transparent 60%),
+                radial-gradient(1000px 700px at 90% 10%, rgba(139, 92, 246, .12), transparent 60%),
+                linear-gradient(180deg, #070a10, var(--bg));
+            color: var(--text);
+            font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "PingFang SC", "Noto Sans CJK SC", "Microsoft YaHei", sans-serif;
+            overflow-x: hidden;
+        }
+
+        a {
+            color: inherit
+        }
+
+        .app {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 16px 14px 18px;
+            padding-bottom: calc(18px + env(safe-area-inset-bottom));
+        }
+
+        header {
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            background: linear-gradient(180deg, rgba(11, 15, 20, .88), rgba(11, 15, 20, .55));
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--line);
+            margin: -16px -14px 16px;
+            padding: 14px 14px 12px;
+        }
+
+        .topbar {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-width: 0;
+        }
+
+        .logo {
+            width: 36px;
+            height: 36px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, rgba(110, 231, 255, .95), rgba(139, 92, 246, .85));
+            box-shadow: 0 10px 26px rgba(110, 231, 255, .12), 0 10px 26px rgba(139, 92, 246, .14);
+        }
+
+        .titlewrap {
+            min-width: 0
+        }
+
+        .title {
+            font-weight: 800;
+            letter-spacing: .2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis
+        }
+
+        .subtitle {
+            font-size: 12px;
+            color: var(--muted);
+            margin-top: 2px
+        }
+
+        .nav {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+        }
+
+        .btn {
+            border: 1px solid var(--line);
+            background: rgba(17, 24, 38, .65);
+            color: var(--text);
+            padding: 10px 12px;
+            border-radius: 14px;
+            cursor: pointer;
+            transition: .15s transform, .15s background, .15s border-color;
+            box-shadow: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            user-select: none;
+        }
+
+        .btn:hover {
+            transform: translateY(-1px);
+            border-color: rgba(110, 231, 255, .32)
+        }
+
+        .btn:active {
+            transform: translateY(0px)
+        }
+
+        .btn.primary {
+            background: linear-gradient(135deg, rgba(110, 231, 255, .22), rgba(139, 92, 246, .22));
+            border-color: rgba(110, 231, 255, .35)
+        }
+
+        .btn.ghost {
+            background: transparent
+        }
+
+        .btn.danger {
+            border-color: rgba(239, 68, 68, .35);
+            background: rgba(239, 68, 68, .08)
+        }
+
+        .btn.small {
+            padding: 8px 10px;
+            border-radius: 12px;
+            font-size: 13px
+        }
+
+        .pill {
+            padding: 6px 10px;
+            border-radius: 999px;
+            border: 1px solid var(--line);
+            color: var(--muted);
+            background: rgba(255, 255, 255, .03);
+            font-size: 12px;
+        }
+
+        main {
+            display: block
+        }
+
+        .grid {
+            display: grid;
+            gap: 14px;
+            grid-template-columns: 1.15fr .85fr;
+        }
+
+        @media (max-width: 900px) {
+            .grid {
+                grid-template-columns: 1fr
+            }
+
+            .nav {
+                gap: 6px
+            }
+
+            .btn {
+                padding: 9px 10px
+            }
+        }
+
+        .card {
+            background: rgba(17, 24, 38, .60);
+            border: 1px solid var(--line);
+            border-radius: var(--r);
+            box-shadow: var(--shadow);
+            overflow: hidden;
+        }
+
+        .card .hd {
+            padding: 14px 14px 10px;
+            border-bottom: 1px solid var(--line);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+        }
+
+        .card .hd h2 {
+            margin: 0;
+            font-size: 15px;
+            letter-spacing: .2px
+        }
+
+        .card .hd .right {
+            display: flex;
+            gap: 8px;
+            align-items: center
+        }
+
+        .card .bd {
+            padding: 14px
+        }
+
+        .muted {
+            color: var(--muted)
+        }
+
+        .row {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap
+        }
+
+        .col {
+            display: flex;
+            flex-direction: column;
+            gap: 10px
+        }
+
+        .kpi {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .kpi .box {
+            border: 1px solid var(--line);
+            background: rgba(255, 255, 255, .03);
+            border-radius: 16px;
+            padding: 12px 12px;
+        }
+
+        .kpi .num {
+            font-size: 22px;
+            font-weight: 800
+        }
+
+        .kpi .lab {
+            font-size: 12px;
+            color: var(--muted);
+            margin-top: 2px
+        }
+
+        .seg {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .seg .tab {
+            padding: 8px 10px;
+            border-radius: 999px;
+            border: 1px solid var(--line);
+            background: rgba(255, 255, 255, .03);
+            color: var(--muted);
+            cursor: pointer;
+            font-size: 13px;
+        }
+
+        .seg .tab.active {
+            color: var(--text);
+            border-color: rgba(110, 231, 255, .35);
+            background: rgba(110, 231, 255, .10)
+        }
+
+        textarea,
+        input,
+        select {
+            width: 100%;
+            padding: 11px 12px;
+            border-radius: 14px;
+            border: 1px solid var(--line);
+            background: rgba(15, 21, 32, .65);
+            color: var(--text);
+            outline: none;
+        }
+
+        textarea {
+            min-height: 110px;
+            resize: vertical
+        }
+
+        label {
+            font-size: 12px;
+            color: var(--muted)
+        }
+
+        .field {
+            display: flex;
+            flex-direction: column;
+            gap: 8px
+        }
+
+        .drop {
+            border: 1px dashed rgba(110, 231, 255, .30);
+            background: rgba(110, 231, 255, .06);
+            border-radius: 16px;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .drop .hint {
+            font-size: 12px;
+            color: var(--muted);
+            line-height: 1.35
+        }
+
+        .thumbs {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap
+        }
+
+        .thumb {
+            width: 92px;
+            height: 92px;
+            border-radius: 14px;
+            border: 1px solid var(--line);
+            overflow: hidden;
+            background: rgba(255, 255, 255, .03);
+            position: relative;
+        }
+
+        .thumb img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover
+        }
+
+        .thumb .x {
+            position: absolute;
+            top: 6px;
+            right: 6px;
+            width: 22px;
+            height: 22px;
+            border-radius: 10px;
+            background: rgba(0, 0, 0, .55);
+            border: 1px solid rgba(255, 255, 255, .14);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px
+        }
+
+        .item {
+            border: 1px solid var(--line);
+            background: rgba(255, 255, 255, .03);
+            border-radius: 16px;
+            padding: 12px;
+            display: grid;
+            grid-template-columns: 72px 1fr auto;
+            gap: 12px;
+            align-items: center;
+        }
+
+        @media (max-width: 520px) {
+            .item {
+                grid-template-columns: 64px 1fr;
+                grid-template-rows: auto auto;
+            }
+
+            .item .actions {
+                grid-column: 1 / -1;
+                display: flex;
+                justify-content: flex-end;
+                gap: 8px
+            }
+        }
+
+        .item .img {
+            width: 72px;
+            height: 72px;
+            border-radius: 14px;
+            overflow: hidden;
+            border: 1px solid var(--line);
+            background: rgba(255, 255, 255, .03);
+        }
+
+        .item .img img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover
+        }
+
+        .item .t {
+            font-weight: 750
+        }
+
+        .item .s {
+            font-size: 12px;
+            color: var(--muted);
+            margin-top: 4px;
+            line-height: 1.35
+        }
+
+        .chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 5px 9px;
+            border-radius: 999px;
+            border: 1px solid var(--line);
+            background: rgba(255, 255, 255, .03);
+            color: var(--muted);
+            font-size: 12px;
+        }
+
+        .hr {
+            height: 1px;
+            background: var(--line);
+            margin: 12px 0
+        }
+
+        .reviewFace {
+            border: 1px solid var(--line);
+            background: rgba(255, 255, 255, .03);
+            border-radius: 18px;
+            padding: 14px;
+        }
+
+        .reviewText {
+            white-space: pre-wrap;
+            line-height: 1.55;
+            font-size: 15px;
+        }
+
+        .reviewImgs {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 12px;
+        }
+
+        .reviewImgs img {
+            max-width: 100%;
+            width: auto;
+            height: auto;
+            border-radius: 16px;
+            border: 1px solid var(--line);
+            background: rgba(255, 255, 255, .03);
+        }
+
+        .ratings {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin-top: 12px
+        }
+
+        @media (max-width:520px) {
+            .ratings {
+                grid-template-columns: repeat(2, 1fr)
+            }
+        }
+
+        .rate {
+            padding: 12px 10px;
+            border-radius: 16px;
+            border: 1px solid var(--line);
+            background: rgba(255, 255, 255, .03);
+            cursor: pointer;
+            font-weight: 750;
+        }
+
+        .rate.bad {
+            border-color: rgba(239, 68, 68, .35);
+            background: rgba(239, 68, 68, .07)
+        }
+
+        .rate.warn {
+            border-color: rgba(245, 158, 11, .35);
+            background: rgba(245, 158, 11, .07)
+        }
+
+        .rate.ok {
+            border-color: rgba(34, 197, 94, .35);
+            background: rgba(34, 197, 94, .07)
+        }
+
+        .rate.easy {
+            border-color: rgba(110, 231, 255, .35);
+            background: rgba(110, 231, 255, .07)
+        }
+
+        .toast {
+            position: fixed;
+            left: 50%;
+            bottom: 18px;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, .72);
+            border: 1px solid rgba(255, 255, 255, .14);
+            border-radius: 999px;
+            padding: 10px 14px;
+            color: var(--text);
+            display: none;
+            max-width: min(720px, calc(100vw - 28px));
+            box-shadow: 0 18px 40px rgba(0, 0, 0, .4);
+            z-index: 1000;
+        }
+
+        .modal {
+            position: fixed;
+            inset: 0;
+            display: none;
+            z-index: 900;
+            background: rgba(0, 0, 0, .58);
+            backdrop-filter: blur(8px);
+            padding: 14px;
+        }
+
+        .modal .box {
+            max-width: 860px;
+            margin: 0 auto;
+            margin-top: 18px;
+            background: rgba(17, 24, 38, .90);
+            border: 1px solid var(--line);
+            border-radius: 20px;
+            box-shadow: var(--shadow);
+            overflow: hidden;
+        }
+
+        .modal .box .hd {
+            padding: 14px;
+            border-bottom: 1px solid var(--line);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px
+        }
+
+        .modal .box .bd {
+            padding: 14px
+        }
+
+        .mono {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace
+        }
+    </style>
+</head>
+
+<body>
+    <div class="app">
+        <header>
+            <div class="topbar">
+                <div class="brand">
+                    <div class="logo"></div>
+                    <div class="titlewrap">
+                        <div class="title">Anki Lite · Ebbinghaus</div>
+                        <div class="subtitle">单文件 · 本地存储 · 粘贴图片 · 导入导出 · 统计图表</div>
+                    </div>
+                </div>
+                <div class="nav">
+                    <button class="btn small primary" data-nav="review">🧠 复习</button>
+                    <button class="btn small" data-nav="add">➕ 新建</button>
+                    <button class="btn small" data-nav="library">🗂️ 卡库</button>
+                    <button class="btn small" data-nav="stats">📊 统计</button>
+                    <button class="btn small ghost" data-nav="settings">⚙️ 设置</button>
+                </div>
+            </div>
+        </header>
+
+        <main>
+            <!-- REVIEW -->
+            <section id="view-review" class="grid" style="display:none;">
+                <div class="card">
+                    <div class="hd">
+                        <h2>复习队列</h2>
+                        <div class="right">
+                            <span class="pill" id="duePill">Due: 0</span>
+                            <button class="btn small" id="btnReloadDue">刷新队列</button>
+                        </div>
+                    </div>
+                    <div class="bd">
+                        <div class="kpi" style="margin-bottom:12px">
+                            <div class="box">
+                                <div class="num" id="kpiDueNow">0</div>
+                                <div class="lab">当前到期卡</div>
+                            </div>
+                            <div class="box">
+                                <div class="num" id="kpiTodayDone">0</div>
+                                <div class="lab">今日已复习</div>
+                            </div>
+                        </div>
+
+                        <div id="reviewEmpty" class="muted" style="display:none; line-height:1.6">
+                            当前没有到期卡。你可以去「新建」加卡，或到「卡库」筛选临时突击。
+                        </div>
+
+                        <div id="reviewWrap" style="display:none">
+                            <div class="row"
+                                style="justify-content:space-between; align-items:center; margin-bottom:10px">
+                                <div class="muted" id="reviewMeta">—</div>
+                                <div class="seg">
+                                    <button class="tab active" id="btnShowFront">正面</button>
+                                    <button class="tab" id="btnShowBack" disabled>背面</button>
+                                </div>
+                            </div>
+
+                            <div class="reviewFace">
+                                <div class="reviewText" id="reviewText"></div>
+                                <div class="reviewImgs" id="reviewImgs"></div>
+                            </div>
+
+                            <div class="row" style="margin-top:12px; align-items:center; justify-content:space-between">
+                                <button class="btn primary" id="btnReveal">显示答案（Space）</button>
+                                <span class="muted" id="reviewHint">快捷键：Space 显示答案；1/2/3/4 评分</span>
+                            </div>
+
+                            <div class="ratings" id="rateButtons" style="display:none">
+                                <button class="rate bad" data-rate="again">1 · 忘了 (Again)</button>
+                                <button class="rate warn" data-rate="hard">2 · 困难 (Hard)</button>
+                                <button class="rate ok" data-rate="good">3 · 一般 (Good)</button>
+                                <button class="rate easy" data-rate="easy">4 · 轻松 (Easy)</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="hd">
+                        <h2>今日补缺建议</h2>
+                        <div class="right">
+                            <button class="btn small" id="btnQuickReport">生成今日报告</button>
+                        </div>
+                    </div>
+                    <div class="bd">
+                        <div class="muted" style="line-height:1.65">
+                            说明：该应用以遗忘曲线 <span class="mono">R(t)=exp(-t/stability)</span> 估算“应该何时复习”。<br />
+                            今天的复习记录会被用来对比“预测 vs 实际”。<br /><br />
+                            <span class="pill">建议</span>
+                        </div>
+                        <div class="hr"></div>
+                        <div id="suggestions" class="col"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ADD -->
+            <section id="view-add" class="grid" style="display:none;">
+                <div class="card">
+                    <div class="hd">
+                        <h2>新建卡片</h2>
+                        <div class="right">
+                            <span class="pill" id="pastePill">支持粘贴图片</span>
+                            <button class="btn small primary" id="btnSaveCard">保存卡片</button>
+                        </div>
+                    </div>
+                    <div class="bd">
+                        <div class="field">
+                            <label>标签（逗号分隔）</label>
+                            <input id="inpTags" placeholder="例如：Java,面试,算法" />
+                        </div>
+                        <div class="hr"></div>
+
+                        <div class="grid" style="grid-template-columns:1fr 1fr">
+                            <div class="col">
+                                <div class="field">
+                                    <label>正面（题目/提示）</label>
+                                    <textarea id="inpFront" placeholder="写题干/概念/问题…"></textarea>
+                                </div>
+                                <div class="drop" id="dropFront">
+                                    <div class="hint">
+                                        ✅ 桌面端：截图后直接 Ctrl/⌘+V 粘贴图片到这里<br />
+                                        ✅ 也可拖拽图片；移动端可“选择图片/拍照”
+                                    </div>
+                                    <div class="row">
+                                        <input type="file" accept="image/*" id="fileFront" multiple />
+                                    </div>
+                                    <div class="thumbs" id="frontThumbs"></div>
+                                </div>
+                            </div>
+
+                            <div class="col">
+                                <div class="field">
+                                    <label>背面（答案/解释）</label>
+                                    <textarea id="inpBack" placeholder="写答案/解释/要点…"></textarea>
+                                </div>
+                                <div class="drop" id="dropBack">
+                                    <div class="hint">
+                                        支持与正面相同的图片导入方式。<br />
+                                        图片会自动压缩到 ≤200KB，并生成缩略图用于卡库列表。
+                                    </div>
+                                    <div class="row">
+                                        <input type="file" accept="image/*" id="fileBack" multiple />
+                                    </div>
+                                    <div class="thumbs" id="backThumbs"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="hr"></div>
+                        <div class="row" style="justify-content:space-between; align-items:center">
+                            <span class="muted">提示：点击任意导入区后再粘贴图片，可自动归类到正面/背面。</span>
+                            <button class="btn danger" id="btnClearDraft">清空草稿</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="hd">
+                        <h2>压缩与存储</h2>
+                        <div class="right">
+                            <button class="btn small" id="btnTestPaste">测试粘贴提示</button>
+                        </div>
+                    </div>
+                    <div class="bd">
+                        <div class="kpi" style="margin-bottom:12px">
+                            <div class="box">
+                                <div class="num" id="kpiMaxKB">200</div>
+                                <div class="lab">图片最大 KB</div>
+                            </div>
+                            <div class="box">
+                                <div class="num" id="kpiMaxDim">1600</div>
+                                <div class="lab">最长边像素</div>
+                            </div>
+                        </div>
+                        <div class="muted" style="line-height:1.7">
+                            - 图片会优先转为 WebP（不支持时回退 JPEG）。<br />
+                            - 采用“缩放 + 质量递减”迭代压缩，直到 ≤ 200KB。<br />
+                            - 同时生成约 320px 的缩略图，用于卡库瀑布/列表预览。<br /><br />
+                            数据保存在浏览器本地 IndexedDB。你可以在「设置」里导出 ZIP 备份或导入恢复。
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- LIBRARY -->
+            <section id="view-library" class="grid" style="display:none;">
+                <div class="card">
+                    <div class="hd">
+                        <h2>卡库</h2>
+                        <div class="right">
+                            <button class="btn small" id="btnRefreshLib">刷新</button>
+                        </div>
+                    </div>
+                    <div class="bd">
+                        <div class="row" style="gap:10px; align-items:center">
+                            <input id="inpSearch" placeholder="搜索：题干/答案/标签…" />
+                            <select id="selFilter" style="max-width:200px">
+                                <option value="all">全部</option>
+                                <option value="due">仅到期</option>
+                                <option value="new">新卡（未复习）</option>
+                            </select>
+                        </div>
+                        <div class="hr"></div>
+                        <div class="list" id="libList"></div>
+                        <div id="libEmpty" class="muted" style="display:none; line-height:1.6">
+                            暂无卡片。去「新建」添加，或导入备份 ZIP。
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="hd">
+                        <h2>快速操作</h2>
+                        <div class="right">
+                            <button class="btn small primary" id="btnStartDue">开始复习到期卡</button>
+                        </div>
+                    </div>
+                    <div class="bd">
+                        <div class="muted" style="line-height:1.7">
+                            - 到期卡优先复习。<br />
+                            - 若你需要“临时突击”，可以先用搜索筛出某标签，然后点卡片进入编辑，把它的 <span class="mono">nextDueAt</span>
+                            提前到今天（在编辑窗口里）。<br /><br />
+                            后续如果你想要更像 Anki 的“自定义牌组 / 临时学习 / 学习上限”，我也可以继续把这些功能补全到同一份 HTML 里。
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- STATS -->
+            <section id="view-stats" class="grid" style="display:none;">
+                <div class="card">
+                    <div class="hd">
+                        <h2>关键指标</h2>
+                        <div class="right">
+                            <button class="btn small" id="btnRefreshStats">刷新</button>
+                        </div>
+                    </div>
+                    <div class="bd">
+                        <div class="kpi" style="grid-template-columns:repeat(2,1fr);">
+                            <div class="box">
+                                <div class="num" id="statTotalCards">0</div>
+                                <div class="lab">总卡片数</div>
+                            </div>
+                            <div class="box">
+                                <div class="num" id="statDueToday">0</div>
+                                <div class="lab">今日到期</div>
+                            </div>
+                            <div class="box">
+                                <div class="num" id="statSuccessToday">0%</div>
+                                <div class="lab">今日回忆成功率（非 Again）</div>
+                            </div>
+                            <div class="box">
+                                <div class="num" id="statPredictedToday">—</div>
+                                <div class="lab">今日预测成功率（曲线估算）</div>
+                            </div>
+                        </div>
+
+                        <div class="hr"></div>
+                        <div class="muted" style="line-height:1.65">
+                            “预测成功率”基于每次复习前的遗忘曲线 <span class="mono">R(t)=exp(-t/stability)</span>；<br />
+                            “实际成功率”把 <span class="mono">Again</span> 视为失败，其他视为成功。<br />
+                            这样你可以看到“你真实状态 vs 理论曲线”的差别。
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="hd">
+                        <h2>图表</h2>
+                        <div class="right">
+                            <span class="pill">Chart.js</span>
+                        </div>
+                    </div>
+                    <div class="bd">
+                        <div class="col" style="gap:14px">
+                            <div class="card" style="box-shadow:none; background:rgba(255,255,255,.02)">
+                                <div class="hd">
+                                    <h2>近 14 天复习量</h2>
+                                    <div class="right"><span class="pill">折线</span></div>
+                                </div>
+                                <div class="bd"><canvas id="chartReviews14"></canvas></div>
+                            </div>
+                            <div class="card" style="box-shadow:none; background:rgba(255,255,255,.02)">
+                                <div class="hd">
+                                    <h2>未来 7 天到期预测</h2>
+                                    <div class="right"><span class="pill">柱状</span></div>
+                                </div>
+                                <div class="bd"><canvas id="chartDue7"></canvas></div>
+                            </div>
+                            <div class="card" style="box-shadow:none; background:rgba(255,255,255,.02)">
+                                <div class="hd">
+                                    <h2>今日评分分布</h2>
+                                    <div class="right"><span class="pill">环形</span></div>
+                                </div>
+                                <div class="bd"><canvas id="chartRatesToday"></canvas></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SETTINGS -->
+            <section id="view-settings" class="grid" style="display:none;">
+                <div class="card">
+                    <div class="hd">
+                        <h2>备份与恢复</h2>
+                        <div class="right">
+                            <button class="btn small primary" id="btnExportZip">导出 ZIP</button>
+                            <label class="btn small">
+                                导入 ZIP（覆盖）
+                                <input type="file" id="fileImportZip" accept=".zip" style="display:none" />
+                            </label>
+                        </div>
+                    </div>
+                    <div class="bd">
+                        <div class="muted" style="line-height:1.7">
+                            导出 ZIP 包含：<br />
+                            - <span class="mono">cards.json</span>（卡片元数据）<br />
+                            - <span class="mono">assets/</span>（图片与缩略图）<br />
+                            - <span class="mono">reviews.json</span>（复习记录）<br /><br />
+                            导入会清空当前数据后恢复备份（避免重复与冲突）。
+                        </div>
+                        <div class="hr"></div>
+                        <div class="row" style="justify-content:space-between; align-items:center">
+                            <div class="muted">危险操作：清空所有本地数据</div>
+                            <button class="btn danger" id="btnResetAll">清空数据库</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="hd">
+                        <h2>参数</h2>
+                        <div class="right">
+                            <button class="btn small" id="btnSaveSettings">保存</button>
+                        </div>
+                    </div>
+                    <div class="bd">
+                        <div class="grid" style="grid-template-columns:1fr 1fr">
+                            <div class="field">
+                                <label>图片最大大小（KB）</label>
+                                <input id="setMaxKB" type="number" min="50" max="800" step="10" />
+                            </div>
+                            <div class="field">
+                                <label>图片最长边（px）</label>
+                                <input id="setMaxDim" type="number" min="640" max="4096" step="64" />
+                            </div>
+                        </div>
+                        <div class="hr"></div>
+                        <div class="grid" style="grid-template-columns:1fr 1fr">
+                            <div class="field">
+                                <label>复习阈值（Good 的目标保留率 R）</label>
+                                <input id="setTargetR" type="number" min="0.70" max="0.95" step="0.01" />
+                            </div>
+                            <div class="field">
+                                <label>最小稳定度（天）</label>
+                                <input id="setMinStab" type="number" min="0.05" max="5" step="0.05" />
+                            </div>
+                        </div>
+                        <div class="hr"></div>
+                        <div class="muted" style="line-height:1.7">
+                            调度核心：<span class="mono">R(t)=exp(-t/stability)</span>，复习后会更新 stability，并计算下一次到期时间：<br />
+                            <span class="mono">nextIntervalDays = -stability * ln(targetRForRating)</span>。<br />
+                            Again/Hard/Good/Easy 会对应不同的 targetR（Again 更接近 1，间隔更短）。
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <!-- EDIT MODAL -->
+    <div class="modal" id="editModal">
+        <div class="box">
+            <div class="hd">
+                <div style="display:flex; flex-direction:column; gap:2px; min-width:0">
+                    <div style="font-weight:800">编辑卡片</div>
+                    <div class="muted" id="editId" style="font-size:12px"></div>
+                </div>
+                <div style="display:flex; gap:8px">
+                    <button class="btn small danger" id="btnDeleteCard">删除</button>
+                    <button class="btn small" id="btnCloseEdit">关闭</button>
+                    <button class="btn small primary" id="btnSaveEdit">保存</button>
+                </div>
+            </div>
+            <div class="bd">
+                <div class="grid" style="grid-template-columns:1fr 1fr">
+                    <div class="field">
+                        <label>正面</label>
+                        <textarea id="editFront"></textarea>
+                    </div>
+                    <div class="field">
+                        <label>背面</label>
+                        <textarea id="editBack"></textarea>
+                    </div>
+                </div>
+                <div class="hr"></div>
+                <div class="grid" style="grid-template-columns:1fr 1fr">
+                    <div class="field">
+                        <label>标签（逗号分隔）</label>
+                        <input id="editTags" />
+                    </div>
+                    <div class="field">
+                        <label>手动设置 nextDueAt（ISO 或留空）</label>
+                        <input id="editNextDue" placeholder="例如：2025-12-10T20:30:00" />
+                    </div>
+                </div>
+                <div class="hr"></div>
+                <div class="muted" style="line-height:1.7">
+                    你可以用“手动设置 nextDueAt”实现临时突击：把 nextDue 提前到今天，复习队列就会优先出现。
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- CDNs -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+
+    <script>
+        /** =========================
+         *  Utilities
+         *  ========================= */
+        const $ = (sel, el = document) => el.querySelector(sel);
+        const $$ = (sel, el = document) => Array.from(el.querySelectorAll(sel));
+        const msDay = 24 * 60 * 60 * 1000;
+        const now = () => Date.now();
+
+        function toast(msg, ms = 2200) {
+            const t = $("#toast");
+            t.textContent = msg;
+            t.style.display = "block";
+            clearTimeout(toast._to);
+            toast._to = setTimeout(() => t.style.display = "none", ms);
+        }
+
+        function uuid() {
+            // crypto.randomUUID if available
+            if (crypto && crypto.randomUUID) return crypto.randomUUID();
+            return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, c => {
+                const r = Math.random() * 16 | 0, v = c === "x" ? r : (r & 0x3 | 0x8);
+                return v.toString(16);
+            });
+        }
+
+        function clamp(n, min, max) { return Math.max(min, Math.min(max, n)); }
+
+        function dateKey(ts) {
+            const d = new Date(ts);
+            const y = d.getFullYear();
+            const m = String(d.getMonth() + 1).padStart(2, "0");
+            const dd = String(d.getDate()).padStart(2, "0");
+            return `${y}-${m}-${dd}`;
+        }
+        function fmt(ts) {
+            if (!ts) return "—";
+            const d = new Date(ts);
+            return d.toLocaleString();
+        }
+        function shortText(s, n = 54) {
+            s = (s || "").trim().replace(/\s+/g, " ");
+            if (!s) return "（无文本）";
+            return s.length > n ? s.slice(0, n) + "…" : s;
+        }
+
+        /** =========================
+         *  IndexedDB Layer
+         *  ========================= */
+        const DB_NAME = "anki_ebbinghaus_single_html";
+        const DB_VER = 2;
+        let db = null;
+
+        function idbReq(req) {
+            return new Promise((resolve, reject) => {
+                req.onsuccess = () => resolve(req.result);
+                req.onerror = () => reject(req.error);
+            });
+        }
+        function tx(storeNames, mode = "readonly") {
+            const t = db.transaction(storeNames, mode);
+            return t;
+        }
+        async function openDB() {
+            const req = indexedDB.open(DB_NAME, DB_VER);
+            req.onupgradeneeded = (e) => {
+                const d = req.result;
+                if (!d.objectStoreNames.contains("cards")) {
+                    const s = d.createObjectStore("cards", { keyPath: "id" });
+                    s.createIndex("byNextDue", "nextDueAt", { unique: false });
+                    s.createIndex("byUpdated", "updatedAt", { unique: false });
+                }
+                if (!d.objectStoreNames.contains("assets")) {
+                    const s = d.createObjectStore("assets", { keyPath: "id" });
+                    s.createIndex("byCreated", "createdAt", { unique: false });
+                }
+                if (!d.objectStoreNames.contains("reviews")) {
+                    const s = d.createObjectStore("reviews", { keyPath: "id", autoIncrement: true });
+                    s.createIndex("byDate", "date", { unique: false });
+                    s.createIndex("byCard", "cardId", { unique: false });
+                }
+                if (!d.objectStoreNames.contains("settings")) {
+                    d.createObjectStore("settings", { keyPath: "key" });
+                }
+            };
+            db = await idbReq(req);
+        }
+
+        async function getSetting(key, fallback) {
+            const t = tx(["settings"]);
+            const s = t.objectStore("settings");
+            const v = await idbReq(s.get(key)).catch(() => null);
+            return v ? v.value : fallback;
+        }
+        async function setSetting(key, value) {
+            const t = tx(["settings"], "readwrite");
+            t.objectStore("settings").put({ key, value });
+            return new Promise((res, rej) => { t.oncomplete = res; t.onerror = () => rej(t.error); });
+        }
+
+        async function putCard(card) {
+            const t = tx(["cards"], "readwrite");
+            t.objectStore("cards").put(card);
+            return new Promise((res, rej) => { t.oncomplete = res; t.onerror = () => rej(t.error); });
+        }
+        async function getCard(id) {
+            const t = tx(["cards"]);
+            return idbReq(t.objectStore("cards").get(id));
+        }
+        async function deleteCard(id) {
+            const card = await getCard(id);
+            if (!card) return;
+            // delete assets
+            const assetIds = [...(card.frontAssets || []), ...(card.backAssets || [])];
+            const t = tx(["cards", "assets"], "readwrite");
+            t.objectStore("cards").delete(id);
+            const as = t.objectStore("assets");
+            for (const aid of assetIds) as.delete(aid);
+            return new Promise((res, rej) => { t.oncomplete = res; t.onerror = () => rej(t.error); });
+        }
+        async function listCards() {
+            const t = tx(["cards"]);
+            return idbReq(t.objectStore("cards").getAll());
+        }
+        async function listDueCards() {
+            const t = tx(["cards"]);
+            const idx = t.objectStore("cards").index("byNextDue");
+            const upper = IDBKeyRange.upperBound(Date.now());
+            return idbReq(idx.getAll(upper));
+        }
+
+        async function putAsset(asset) {
+            const t = tx(["assets"], "readwrite");
+            t.objectStore("assets").put(asset);
+            return new Promise((res, rej) => { t.oncomplete = res; t.onerror = () => rej(t.error); });
+        }
+        async function getAsset(id) {
+            const t = tx(["assets"]);
+            return idbReq(t.objectStore("assets").get(id));
+        }
+        async function addReviewEvent(ev) {
+            const t = tx(["reviews"], "readwrite");
+            t.objectStore("reviews").add(ev);
+            return new Promise((res, rej) => { t.oncomplete = res; t.onerror = () => rej(t.error); });
+        }
+        async function listReviewsByDate(dkey) {
+            const t = tx(["reviews"]);
+            const idx = t.objectStore("reviews").index("byDate");
+            return idbReq(idx.getAll(IDBKeyRange.only(dkey)));
+        }
+        async function listReviewsAll() {
+            const t = tx(["reviews"]);
+            return idbReq(t.objectStore("reviews").getAll());
+        }
+        async function clearAll() {
+            const t = tx(["cards", "assets", "reviews"], "readwrite");
+            t.objectStore("cards").clear();
+            t.objectStore("assets").clear();
+            t.objectStore("reviews").clear();
+            return new Promise((res, rej) => { t.oncomplete = res; t.onerror = () => rej(t.error); });
+        }
+
+        /** =========================
+         *  Settings Defaults
+         *  ========================= */
+        let SETTINGS = {
+            maxKB: 200,
+            maxDim: 1600,
+            targetR: 0.85,  // Good target retention
+            minStab: 0.30   // days
+        };
+
+        async function loadSettings() {
+            SETTINGS.maxKB = await getSetting("maxKB", SETTINGS.maxKB);
+            SETTINGS.maxDim = await getSetting("maxDim", SETTINGS.maxDim);
+            SETTINGS.targetR = await getSetting("targetR", SETTINGS.targetR);
+            SETTINGS.minStab = await getSetting("minStab", SETTINGS.minStab);
+
+            $("#kpiMaxKB").textContent = SETTINGS.maxKB;
+            $("#kpiMaxDim").textContent = SETTINGS.maxDim;
+
+            $("#setMaxKB").value = SETTINGS.maxKB;
+            $("#setMaxDim").value = SETTINGS.maxDim;
+            $("#setTargetR").value = SETTINGS.targetR;
+            $("#setMinStab").value = SETTINGS.minStab;
+        }
+
+        /** =========================
+         *  Image Compression
+         *  ========================= */
+        function supportsWebP() {
+            // quick test: if toDataURL webp works
+            try {
+                const c = document.createElement("canvas");
+                c.width = c.height = 1;
+                return c.toDataURL("image/webp").startsWith("data:image/webp");
+            } catch (e) {
+                return false;
+            }
+        }
+
+        async function decodeToBitmap(fileOrBlob) {
+            // Prefer createImageBitmap
+            try {
+                return await createImageBitmap(fileOrBlob);
+            } catch (e) {
+                // Fallback: HTMLImageElement
+                const url = URL.createObjectURL(fileOrBlob);
+                const img = new Image();
+                img.decoding = "async";
+                img.src = url;
+                await new Promise((res, rej) => { img.onload = res; img.onerror = rej; });
+                const canvas = document.createElement("canvas");
+                canvas.width = img.naturalWidth;
+                canvas.height = img.naturalHeight;
+                const ctx = canvas.getContext("2d");
+                ctx.drawImage(img, 0, 0);
+                URL.revokeObjectURL(url);
+                // createImageBitmap from canvas
+                try {
+                    return await createImageBitmap(canvas);
+                } catch (_) {
+                    // return a pseudo-bitmap object by passing canvas
+                    return canvas;
+                }
+            }
+        }
+
+        function drawToCanvas(bitmap, targetW, targetH) {
+            const c = document.createElement("canvas");
+            c.width = targetW; c.height = targetH;
+            const ctx = c.getContext("2d");
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = "high";
+            ctx.drawImage(bitmap, 0, 0, targetW, targetH);
+            return c;
+        }
+
+        async function canvasToBlob(canvas, type, quality) {
+            return new Promise((res) => {
+                canvas.toBlob((b) => res(b), type, quality);
+            });
+        }
+
+        async function compressImageToLimit(file, maxBytes, maxDim) {
+            const bitmap = await decodeToBitmap(file);
+            const w0 = bitmap.width || bitmap.naturalWidth || bitmap.videoWidth || bitmap.width;
+            const h0 = bitmap.height || bitmap.naturalHeight || bitmap.videoHeight || bitmap.height;
+
+            const maxSide = Math.max(w0, h0);
+            const scale0 = maxSide > maxDim ? (maxDim / maxSide) : 1;
+            let w = Math.max(1, Math.round(w0 * scale0));
+            let h = Math.max(1, Math.round(h0 * scale0));
+
+            const webp = supportsWebP();
+            const mime = webp ? "image/webp" : "image/jpeg";
+
+            // iterative: first reduce quality; then if still too large, reduce dimension.
+            let q = 0.82;
+            let attempts = 0;
+            let blob = null;
+
+            while (attempts < 14) {
+                attempts++;
+                const canvas = drawToCanvas(bitmap, w, h);
+                blob = await canvasToBlob(canvas, mime, q);
+                if (blob && blob.size <= maxBytes) break;
+
+                // adjust
+                if (q > 0.45) q -= 0.08;
+                else {
+                    // shrink dimensions
+                    w = Math.max(1, Math.round(w * 0.85));
+                    h = Math.max(1, Math.round(h * 0.85));
+                    q = 0.78;
+                }
+            }
+
+            if (!blob) throw new Error("压缩失败：无法生成图片 blob");
+            return { blob, mime };
+        }
+
+        async function makeThumbnail(fileOrBlob, maxThumb = 320, maxBytes = 14 * 1024) {
+            const bitmap = await decodeToBitmap(fileOrBlob);
+            const w0 = bitmap.width || bitmap.naturalWidth || bitmap.width;
+            const h0 = bitmap.height || bitmap.naturalHeight || bitmap.height;
+            const maxSide = Math.max(w0, h0);
+            const scale = maxSide > maxThumb ? (maxThumb / maxSide) : 1;
+            const w = Math.max(1, Math.round(w0 * scale));
+            const h = Math.max(1, Math.round(h0 * scale));
+            const webp = supportsWebP();
+            const mime = webp ? "image/webp" : "image/jpeg";
+
+            let q = 0.75;
+            let attempts = 0;
+            let blob = null;
+
+            while (attempts < 10) {
+                attempts++;
+                const canvas = drawToCanvas(bitmap, w, h);
+                blob = await canvasToBlob(canvas, mime, q);
+                if (blob && blob.size <= maxBytes) break;
+                q -= 0.08;
+                if (q < 0.35) break;
+            }
+            return { blob: blob || await canvasToBlob(drawToCanvas(bitmap, w, h), mime, 0.55), mime };
+        }
+
+        /** =========================
+         *  Scheduling (Ebbinghaus)
+         *  ========================= */
+        function retentionR(tDays, stabilityDays) {
+            stabilityDays = Math.max(SETTINGS.minStab, stabilityDays || SETTINGS.minStab);
+            return Math.exp(-tDays / stabilityDays);
+        }
+        function targetRForRate(rate) {
+            // Again: very high target retention => short interval
+            // Hard: slightly higher than Good
+            // Good: SETTINGS.targetR
+            // Easy: lower target => longer interval
+            if (rate === "again") return 0.98;
+            if (rate === "hard") return clamp(SETTINGS.targetR + 0.05, 0.75, 0.93);
+            if (rate === "good") return clamp(SETTINGS.targetR, 0.72, 0.92);
+            if (rate === "easy") return clamp(SETTINGS.targetR - 0.07, 0.70, 0.90);
+            return SETTINGS.targetR;
+        }
+        function stabilityUpdate(prevStab, prevDiff, rate) {
+            // simple, stable, predictable (not a full FSRS)
+            let s = Math.max(SETTINGS.minStab, prevStab || SETTINGS.minStab);
+            let d = clamp(prevDiff ?? 0.35, 0.05, 0.95);
+
+            if (rate === "again") { s *= 0.72; d = clamp(d + 0.08, 0.05, 0.95); }
+            if (rate === "hard") { s *= 1.08; d = clamp(d + 0.02, 0.05, 0.95); }
+            if (rate === "good") { s *= 1.22; d = clamp(d - 0.01, 0.05, 0.95); }
+            if (rate === "easy") { s *= 1.45; d = clamp(d - 0.05, 0.05, 0.95); }
+
+            // difficulty dampen
+            s *= (1.0 - d * 0.10); // hard cards grow slower
+            s = clamp(s, SETTINGS.minStab, 3650); // up to ~10 years
+            return { stability: s, difficulty: d };
+        }
+        function nextIntervalDays(stabilityDays, rate) {
+            const tR = targetRForRate(rate);
+            // t = -s * ln(R)
+            const days = -stabilityDays * Math.log(tR);
+            // cap min interval so you don't get weird 0
+            return clamp(days, (rate === "again" ? 0.006 : 0.02), 3650);
+        }
+
+        /** =========================
+         *  App State
+         *  ========================= */
+        let ACTIVE_VIEW = "review";
+        let draft = { frontAssets: [], backAssets: [] }; // store asset IDs
+        let activePasteSide = "front"; // which dropzone is active
+        let dueQueue = [];
+        let currentCard = null;
+        let showingBack = false;
+
+        // charts
+        let chartReviews14 = null;
+        let chartDue7 = null;
+        let chartRatesToday = null;
+
+        /** =========================
+         *  Navigation
+         *  ========================= */
+        function showView(name) {
+            ACTIVE_VIEW = name;
+            const ids = ["review", "add", "library", "stats", "settings"];
+            for (const id of ids) {
+                const v = $("#view-" + id);
+                v.style.display = (id === name) ? "" : "none";
+            }
+            $$(".nav .btn").forEach(b => {
+                const on = b.dataset.nav === name;
+                b.classList.toggle("primary", on);
+            });
+            if (name === "library") refreshLibrary();
+            if (name === "review") refreshDue();
+            if (name === "stats") refreshStats();
+            if (name === "settings") reflectSettings();
+        }
+        $$("[data-nav]").forEach(b => b.addEventListener("click", () => showView(b.dataset.nav)));
+
+        /** =========================
+         *  Draft (Add)
+         *  ========================= */
+        function clearDraftUI() {
+            $("#inpFront").value = "";
+            $("#inpBack").value = "";
+            $("#inpTags").value = "";
+            draft.frontAssets = [];
+            draft.backAssets = [];
+            $("#frontThumbs").innerHTML = "";
+            $("#backThumbs").innerHTML = "";
+            toast("已清空草稿");
+        }
+
+        async function addFilesToSide(files, side) {
+            const maxBytes = SETTINGS.maxKB * 1024;
+            const maxDim = SETTINGS.maxDim;
+
+            for (const f of files) {
+                if (!f || !f.type || !f.type.startsWith("image/")) continue;
+
+                toast("图片压缩中…");
+                const { blob, mime } = await compressImageToLimit(f, maxBytes, maxDim);
+                const thumb = await makeThumbnail(blob, 320, 14 * 1024);
+
+                const assetId = uuid();
+                await putAsset({
+                    id: assetId,
+                    mime,
+                    size: blob.size,
+                    createdAt: now(),
+                    blob,
+                    thumbMime: thumb.mime,
+                    thumbSize: thumb.blob.size,
+                    thumbBlob: thumb.blob
+                });
+
+                if (side === "front") draft.frontAssets.push(assetId);
+                else draft.backAssets.push(assetId);
+
+                await renderDraftThumbs();
+                toast(`已加入 ${side === "front" ? "正面" : "背面"}：${Math.round(blob.size / 1024)}KB`);
+            }
+        }
+
+        async function renderDraftThumbs() {
+            const frontEl = $("#frontThumbs");
+            const backEl = $("#backThumbs");
+            frontEl.innerHTML = "";
+            backEl.innerHTML = "";
+
+            async function addThumb(el, assetId, side) {
+                const a = await getAsset(assetId);
+                if (!a) return;
+                const url = URL.createObjectURL(a.thumbBlob || a.blob);
+                const box = document.createElement("div");
+                box.className = "thumb";
+                box.innerHTML = `<img alt="thumb"/><div class="x">×</div>`;
+                box.querySelector("img").src = url;
+                box.querySelector(".x").addEventListener("click", async () => {
+                    // remove from draft + delete asset (since not yet referenced)
+                    if (side === "front") draft.frontAssets = draft.frontAssets.filter(x => x !== assetId);
+                    else draft.backAssets = draft.backAssets.filter(x => x !== assetId);
+                    // delete asset record
+                    const t = tx(["assets"], "readwrite");
+                    t.objectStore("assets").delete(assetId);
+                    await new Promise((res, rej) => { t.oncomplete = res; t.onerror = () => rej(t.error); });
+                    URL.revokeObjectURL(url);
+                    renderDraftThumbs();
+                });
+                el.appendChild(box);
+            }
+
+            for (const id of draft.frontAssets) await addThumb(frontEl, id, "front");
+            for (const id of draft.backAssets) await addThumb(backEl, id, "back");
+        }
+
+        // Dropzone focus
+        $("#dropFront").addEventListener("click", () => { activePasteSide = "front"; toast("粘贴将进入：正面"); });
+        $("#dropBack").addEventListener("click", () => { activePasteSide = "back"; toast("粘贴将进入：背面"); });
+
+        // Drag & drop
+        function bindDrop(el, side) {
+            el.addEventListener("dragover", (e) => { e.preventDefault(); el.style.borderColor = "rgba(110,231,255,.55)"; });
+            el.addEventListener("dragleave", () => { el.style.borderColor = "rgba(110,231,255,.30)"; });
+            el.addEventListener("drop", async (e) => {
+                e.preventDefault();
+                el.style.borderColor = "rgba(110,231,255,.30)";
+                const files = Array.from(e.dataTransfer.files || []);
+                await addFilesToSide(files, side);
+            });
+        }
+        bindDrop($("#dropFront"), "front");
+        bindDrop($("#dropBack"), "back");
+
+        // File inputs
+        $("#fileFront").addEventListener("change", async (e) => {
+            await addFilesToSide(Array.from(e.target.files || []), "front");
+            e.target.value = "";
+        });
+        $("#fileBack").addEventListener("change", async (e) => {
+            await addFilesToSide(Array.from(e.target.files || []), "back");
+            e.target.value = "";
+        });
+
+        $("#btnClearDraft").addEventListener("click", clearDraftUI);
+
+        $("#btnTestPaste").addEventListener("click", () => {
+            toast("先点一下正面或背面的导入区，再 Ctrl/⌘+V 粘贴截图即可");
+        });
+
+        // Paste handler (global)
+        window.addEventListener("paste", async (e) => {
+            if (ACTIVE_VIEW !== "add") return;
+            const items = e.clipboardData?.items;
+            if (!items) return;
+
+            const files = [];
+            for (const it of items) {
+                if (it.kind === "file") {
+                    const f = it.getAsFile();
+                    if (f && f.type && f.type.startsWith("image/")) files.push(f);
+                }
+            }
+            if (files.length) {
+                e.preventDefault();
+                await addFilesToSide(files, activePasteSide);
+            }
+        });
+
+        /** =========================
+         *  Create Card
+         *  ========================= */
+        $("#btnSaveCard").addEventListener("click", async () => {
+            const frontText = $("#inpFront").value.trim();
+            const backText = $("#inpBack").value.trim();
+            const tags = $("#inpTags").value.split(",").map(s => s.trim()).filter(Boolean);
+
+            if (!frontText && draft.frontAssets.length === 0) {
+                toast("至少写点正面文本，或粘贴/上传一张正面图片");
+                return;
+            }
+            const id = uuid();
+            const createdAt = now();
+
+            const card = {
+                id,
+                frontText,
+                backText,
+                tags,
+                createdAt,
+                updatedAt: createdAt,
+                frontAssets: [...draft.frontAssets],
+                backAssets: [...draft.backAssets],
+                stability: SETTINGS.minStab,
+                difficulty: 0.35,
+                reps: 0,
+                lapses: 0,
+                lastReviewedAt: null,
+                nextDueAt: createdAt, // new cards due now
+            };
+
+            await putCard(card);
+            clearDraftUI();
+            toast("已保存卡片 ✅");
+            showView("review");
+        });
+
+        /** =========================
+         *  Review Queue
+         *  ========================= */
+        async function refreshDue() {
+            dueQueue = await listDueCards();
+            dueQueue.sort((a, b) => (a.nextDueAt || 0) - (b.nextDueAt || 0));
+            $("#duePill").textContent = `Due: ${dueQueue.length}`;
+            $("#kpiDueNow").textContent = dueQueue.length;
+
+            // today done
+            const today = dateKey(now());
+            const rs = await listReviewsByDate(today);
+            $("#kpiTodayDone").textContent = rs.length;
+
+            if (!dueQueue.length) {
+                $("#reviewEmpty").style.display = "";
+                $("#reviewWrap").style.display = "none";
+                currentCard = null;
+                return;
+            }
+            $("#reviewEmpty").style.display = "none";
+            $("#reviewWrap").style.display = "";
+
+            await showNextCard();
+            await renderSuggestions();
+        }
+
+        $("#btnReloadDue").addEventListener("click", refreshDue);
+        $("#btnStartDue").addEventListener("click", () => showView("review"));
+
+        async function showNextCard() {
+            currentCard = dueQueue[0] || null;
+            showingBack = false;
+
+            $("#btnShowFront").classList.add("active");
+            $("#btnShowBack").classList.remove("active");
+            $("#btnShowBack").disabled = true;
+
+            $("#rateButtons").style.display = "none";
+            $("#btnReveal").style.display = "";
+
+            if (!currentCard) return;
+
+            const dueIn = currentCard.nextDueAt ? (currentCard.nextDueAt - now()) : 0;
+            const meta = [
+                `ID: ${currentCard.id.slice(0, 8)}`,
+                `reps: ${currentCard.reps || 0}`,
+                `stability: ${(currentCard.stability || SETTINGS.minStab).toFixed(2)}d`,
+                `due: ${fmt(currentCard.nextDueAt)}`,
+                dueIn > 0 ? `（还有 ${Math.round(dueIn / 60000)} 分钟到期）` : "（已到期）"
+            ].join(" · ");
+            $("#reviewMeta").textContent = meta;
+
+            await renderReviewFace();
+        }
+
+        async function renderReviewFace() {
+            const c = currentCard;
+            if (!c) return;
+
+            const isBack = showingBack;
+            const text = isBack ? (c.backText || "") : (c.frontText || "");
+            const assetIds = isBack ? (c.backAssets || []) : (c.frontAssets || []);
+
+            $("#reviewText").textContent = text || (assetIds.length ? "" : "（无内容）");
+            const imgs = $("#reviewImgs");
+            imgs.innerHTML = "";
+
+            for (const aid of assetIds) {
+                const a = await getAsset(aid);
+                if (!a) continue;
+                const url = URL.createObjectURL(a.blob);
+                const img = document.createElement("img");
+                img.src = url;
+                img.alt = "asset";
+                img.loading = "lazy";
+                img.addEventListener("load", () => {/* keep */ });
+                imgs.appendChild(img);
+            }
+        }
+
+        $("#btnReveal").addEventListener("click", () => {
+            if (!currentCard) return;
+            showingBack = true;
+            $("#btnShowBack").disabled = false;
+            $("#btnShowBack").classList.add("active");
+            $("#btnShowFront").classList.remove("active");
+            renderReviewFace();
+            $("#rateButtons").style.display = "grid";
+            $("#btnReveal").style.display = "none";
+        });
+
+        $("#btnShowFront").addEventListener("click", () => {
+            if (!currentCard) return;
+            showingBack = false;
+            $("#btnShowFront").classList.add("active");
+            $("#btnShowBack").classList.remove("active");
+            renderReviewFace();
+        });
+        $("#btnShowBack").addEventListener("click", () => {
+            if (!currentCard) return;
+            showingBack = true;
+            $("#btnShowBack").classList.add("active");
+            $("#btnShowFront").classList.remove("active");
+            renderReviewFace();
+        });
+
+        async function rateCurrent(rate) {
+            const c = currentCard;
+            if (!c) return;
+
+            const ts = now();
+            const prevStab = c.stability || SETTINGS.minStab;
+            const prevDiff = c.difficulty ?? 0.35;
+            const prevLast = c.lastReviewedAt;
+
+            const tDays = prevLast ? ((ts - prevLast) / msDay) : 999;
+            const predicted = prevLast ? retentionR(tDays, prevStab) : null;
+
+            // update stability/difficulty
+            const upd = stabilityUpdate(prevStab, prevDiff, rate);
+            c.stability = upd.stability;
+            c.difficulty = upd.difficulty;
+
+            // reps/lapses
+            c.reps = (c.reps || 0) + 1;
+            if (rate === "again") c.lapses = (c.lapses || 0) + 1;
+
+            // next due
+            const intervalDays = nextIntervalDays(c.stability, rate);
+            c.lastReviewedAt = ts;
+            c.nextDueAt = ts + intervalDays * msDay;
+            c.updatedAt = ts;
+
+            await putCard(c);
+
+            // add review event
+            await addReviewEvent({
+                date: dateKey(ts),
+                ts,
+                cardId: c.id,
+                rate,
+                predictedR: predicted,
+                prevStability: prevStab,
+                prevLastReviewedAt: prevLast
+            });
+
+            // pop from queue
+            dueQueue.shift();
+            toast(`已评分：${rate.toUpperCase()} · 下次到期：${new Date(c.nextDueAt).toLocaleString()}`);
+            await refreshDue();
+        }
+
+        $("#rateButtons").addEventListener("click", async (e) => {
+            const btn = e.target.closest("button[data-rate]");
+            if (!btn) return;
+            await rateCurrent(btn.dataset.rate);
+        });
+
+        // Keyboard shortcuts
+        window.addEventListener("keydown", (e) => {
+            if (ACTIVE_VIEW !== "review") return;
+            if (!currentCard) return;
+
+            if (e.code === "Space") {
+                e.preventDefault();
+                if (!showingBack) $("#btnReveal").click();
+            }
+            if (showingBack) {
+                if (e.key === "1") rateCurrent("again");
+                if (e.key === "2") rateCurrent("hard");
+                if (e.key === "3") rateCurrent("good");
+                if (e.key === "4") rateCurrent("easy");
+            }
+        });
+
+        /** =========================
+         *  Suggestions / Quick Report
+         *  ========================= */
+        async function renderSuggestions() {
+            const wrap = $("#suggestions");
+            wrap.innerHTML = "";
+
+            const cards = await listCards();
+            if (!cards.length) {
+                wrap.innerHTML = `<div class="muted">暂无数据。</div>`;
+                return;
+            }
+            const ts = now();
+
+            // 1) High risk soon: predicted R tomorrow below target
+            const soon = [];
+            for (const c of cards) {
+                if (!c.lastReviewedAt) continue;
+                const tDays = (ts - c.lastReviewedAt) / msDay;
+                const rNow = retentionR(tDays, c.stability || SETTINGS.minStab);
+                // estimate at 1 day later
+                const rTomorrow = retentionR(tDays + 1, c.stability || SETTINGS.minStab);
+                if (rTomorrow < SETTINGS.targetR) soon.push({ c, rNow, rTomorrow });
+            }
+            soon.sort((a, b) => a.rTomorrow - b.rTomorrow);
+
+            const top = soon.slice(0, 6);
+            if (top.length) {
+                const box = document.createElement("div");
+                box.className = "box";
+                box.style.border = "1px solid var(--line)";
+                box.style.borderRadius = "16px";
+                box.style.background = "rgba(255,255,255,.03)";
+                box.style.padding = "12px";
+                box.innerHTML = `<div style="font-weight:800; margin-bottom:8px">⚠️ 明天容易掉线的卡（优先补）</div>`;
+                const ul = document.createElement("div");
+                ul.className = "col";
+                ul.style.gap = "8px";
+                for (const it of top) {
+                    const c = it.c;
+                    const tags = (c.tags || []).slice(0, 3).map(t => `<span class="chip">${t}</span>`).join(" ");
+                    const line = document.createElement("div");
+                    line.innerHTML = `
+        <div style="display:flex; justify-content:space-between; gap:10px; align-items:flex-start">
+          <div>
+            <div style="font-weight:750">${shortText(c.frontText || c.backText, 44)}</div>
+            <div class="muted" style="font-size:12px; margin-top:3px">
+              R(明天)≈${(it.rTomorrow * 100).toFixed(0)}% · stability=${(c.stability || SETTINGS.minStab).toFixed(2)}d
+            </div>
+            <div style="margin-top:6px">${tags}</div>
+          </div>
+          <button class="btn small" data-bump="${c.id}">设为今日到期</button>
+        </div>
+      `;
+                    ul.appendChild(line);
+                }
+                box.appendChild(ul);
+                wrap.appendChild(box);
+
+                box.addEventListener("click", async (e) => {
+                    const b = e.target.closest("button[data-bump]");
+                    if (!b) return;
+                    const id = b.dataset.bump;
+                    const c = await getCard(id);
+                    if (!c) return;
+                    c.nextDueAt = now(); c.updatedAt = now();
+                    await putCard(c);
+                    toast("已提前到期：该卡会出现在复习队列");
+                    refreshDue();
+                });
+            } else {
+                wrap.innerHTML = `<div class="muted">✅ 暂未发现“明天显著掉线”的卡。继续保持节奏。</div>`;
+            }
+        }
+
+        $("#btnQuickReport").addEventListener("click", async () => {
+            // “20:30 报告”简化：随时点击生成（你可自行在 20:30 打开它）
+            await refreshStats();
+            toast("已刷新：今日报告（可在统计页查看图表）");
+        });
+
+        /** =========================
+         *  Library
+         *  ========================= */
+        async function refreshLibrary() {
+            const listEl = $("#libList");
+            const emptyEl = $("#libEmpty");
+            listEl.innerHTML = "";
+            emptyEl.style.display = "none";
+
+            const q = ($("#inpSearch").value || "").trim().toLowerCase();
+            const filter = $("#selFilter").value;
+            let cards = await listCards();
+
+            const ts = now();
+            cards.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+
+            // filter
+            cards = cards.filter(c => {
+                if (filter === "due" && (c.nextDueAt || 0) > ts) return false;
+                if (filter === "new" && (c.reps || 0) > 0) return false;
+
+                if (!q) return true;
+                const hay = [
+                    c.frontText || "", c.backText || "", (c.tags || []).join(",")
+                ].join(" ").toLowerCase();
+                return hay.includes(q);
+            });
+
+            if (!cards.length) {
+                emptyEl.style.display = "";
+                return;
+            }
+
+            for (const c of cards) {
+                const firstAsset = (c.frontAssets && c.frontAssets[0]) || (c.backAssets && c.backAssets[0]) || null;
+                let imgUrl = null;
+                if (firstAsset) {
+                    const a = await getAsset(firstAsset);
+                    if (a) {
+                        imgUrl = URL.createObjectURL(a.thumbBlob || a.blob);
+                    }
+                }
+                const due = (c.nextDueAt || 0) <= ts ? "到期" : "未到期";
+                const tags = (c.tags || []).slice(0, 4).map(t => `<span class="chip">${t}</span>`).join(" ");
+
+                const div = document.createElement("div");
+                div.className = "item";
+                div.innerHTML = `
+      <div class="img">${imgUrl ? `<img alt="thumb" src="${imgUrl}">` : ""}</div>
+      <div>
+        <div class="t">${shortText(c.frontText || c.backText, 60)}</div>
+        <div class="s">
+          ${due} · reps=${c.reps || 0} · stability=${(c.stability || SETTINGS.minStab).toFixed(2)}d · next=${fmt(c.nextDueAt)}
+        </div>
+        <div style="margin-top:8px">${tags}</div>
+      </div>
+      <div class="actions" style="display:flex; gap:8px; justify-content:flex-end">
+        <button class="btn small" data-edit="${c.id}">编辑</button>
+        <button class="btn small" data-due="${c.id}">设为到期</button>
+      </div>
+    `;
+                listEl.appendChild(div);
+            }
+
+            // actions
+            listEl.addEventListener("click", async (e) => {
+                const ed = e.target.closest("button[data-edit]");
+                const du = e.target.closest("button[data-due]");
+                if (ed) {
+                    await openEdit(ed.dataset.edit);
+                }
+                if (du) {
+                    const id = du.dataset.due;
+                    const c = await getCard(id);
+                    if (!c) return;
+                    c.nextDueAt = now(); c.updatedAt = now();
+                    await putCard(c);
+                    toast("已设为到期");
+                    refreshLibrary();
+                }
+            }, { once: true }); // avoid duplicate binding
+        }
+
+        $("#btnRefreshLib").addEventListener("click", refreshLibrary);
+        $("#inpSearch").addEventListener("input", () => refreshLibrary());
+        $("#selFilter").addEventListener("change", () => refreshLibrary());
+
+        /** =========================
+         *  Edit Modal
+         *  ========================= */
+        let editCardId = null;
+
+        async function openEdit(id) {
+            editCardId = id;
+            const c = await getCard(id);
+            if (!c) return;
+            $("#editId").textContent = "ID: " + c.id;
+            $("#editFront").value = c.frontText || "";
+            $("#editBack").value = c.backText || "";
+            $("#editTags").value = (c.tags || []).join(", ");
+            $("#editNextDue").value = c.nextDueAt ? new Date(c.nextDueAt).toISOString().slice(0, 19) : "";
+            $("#editModal").style.display = "block";
+        }
+        function closeEdit() {
+            $("#editModal").style.display = "none";
+            editCardId = null;
+        }
+        $("#btnCloseEdit").addEventListener("click", closeEdit);
+        $("#editModal").addEventListener("click", (e) => {
+            if (e.target === $("#editModal")) closeEdit();
+        });
+
+        $("#btnSaveEdit").addEventListener("click", async () => {
+            if (!editCardId) return;
+            const c = await getCard(editCardId);
+            if (!c) return;
+
+            c.frontText = $("#editFront").value.trim();
+            c.backText = $("#editBack").value.trim();
+            c.tags = $("#editTags").value.split(",").map(s => s.trim()).filter(Boolean);
+
+            const nd = $("#editNextDue").value.trim();
+            if (nd) {
+                const t = Date.parse(nd);
+                if (!Number.isNaN(t)) c.nextDueAt = t;
+                else toast("nextDueAt 格式不正确，将忽略");
+            }
+            c.updatedAt = now();
+            await putCard(c);
+            toast("已保存修改");
+            closeEdit();
+            refreshLibrary();
+            refreshDue();
+        });
+
+        $("#btnDeleteCard").addEventListener("click", async () => {
+            if (!editCardId) return;
+            if (!confirm("确认删除该卡片？（会同时删除它的图片资源）")) return;
+            await deleteCard(editCardId);
+            toast("已删除卡片");
+            closeEdit();
+            refreshLibrary();
+            refreshDue();
+        });
+
+        /** =========================
+         *  Stats + Charts
+         *  ========================= */
+        async function refreshStats() {
+            const cards = await listCards();
+            const ts = now();
+            const today = dateKey(ts);
+
+            $("#statTotalCards").textContent = cards.length;
+
+            // due today
+            const start = new Date(); start.setHours(0, 0, 0, 0);
+            const end = new Date(); end.setHours(23, 59, 59, 999);
+            const dueToday = cards.filter(c => (c.nextDueAt || 0) <= end.getTime()).length;
+            $("#statDueToday").textContent = dueToday;
+
+            // reviews today
+            const reviewsToday = await listReviewsByDate(today);
+            const success = reviewsToday.filter(r => r.rate !== "again").length;
+            const successRate = reviewsToday.length ? (success / reviewsToday.length) : 0;
+            $("#statSuccessToday").textContent = (successRate * 100).toFixed(0) + "%";
+
+            // predicted today (average predictedR from events where available)
+            const preds = reviewsToday.map(r => r.predictedR).filter(v => typeof v === "number");
+            const predAvg = preds.length ? preds.reduce((a, b) => a + b, 0) / preds.length : null;
+            $("#statPredictedToday").textContent = (predAvg == null) ? "—" : (predAvg * 100).toFixed(0) + "%";
+
+            await drawCharts(cards, reviewsToday);
+        }
+
+        function destroyChart(ch) {
+            if (ch) { try { ch.destroy(); } catch (e) { } }
+        }
+
+        async function drawCharts(cards, reviewsToday) {
+            // 1) Reviews per day last 14 days
+            const allReviews = await listReviewsAll();
+            const days = [];
+            for (let i = 13; i >= 0; i--) {
+                const d = new Date(); d.setDate(d.getDate() - i);
+                days.push(dateKey(d.getTime()));
+            }
+            const cnt = new Map();
+            for (const r of allReviews) {
+                cnt.set(r.date, (cnt.get(r.date) || 0) + 1);
+            }
+            const series = days.map(d => cnt.get(d) || 0);
+
+            destroyChart(chartReviews14);
+            chartReviews14 = new Chart($("#chartReviews14"), {
+                type: "line",
+                data: {
+                    labels: days.map(d => d.slice(5)),
+                    datasets: [{
+                        label: "复习次数",
+                        data: series,
+                        tension: 0.28,
+                        fill: false
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { grid: { color: "rgba(255,255,255,.06)" } },
+                        y: { grid: { color: "rgba(255,255,255,.06)" }, beginAtZero: true }
+                    }
+                }
+            });
+
+            // 2) Due forecast next 7 days
+            const buckets = new Array(7).fill(0);
+            const labels7 = [];
+            for (let i = 0; i < 7; i++) {
+                const d = new Date();
+                d.setHours(0, 0, 0, 0);
+                d.setDate(d.getDate() + i);
+                labels7.push(dateKey(d.getTime()).slice(5));
+            }
+
+            const base = new Date(); base.setHours(0, 0, 0, 0);
+            for (const c of cards) {
+                const due = c.nextDueAt || 0;
+                if (!due) continue;
+                const idx = Math.floor((due - base.getTime()) / msDay);
+                if (idx >= 0 && idx < 7) buckets[idx]++;
+            }
+
+            destroyChart(chartDue7);
+            chartDue7 = new Chart($("#chartDue7"), {
+                type: "bar",
+                data: {
+                    labels: labels7,
+                    datasets: [{ label: "到期卡数量", data: buckets }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { grid: { color: "rgba(255,255,255,.06)" } },
+                        y: { grid: { color: "rgba(255,255,255,.06)" }, beginAtZero: true }
+                    }
+                }
+            });
+
+            // 3) Rating distribution today
+            const dist = { again: 0, hard: 0, good: 0, easy: 0 };
+            for (const r of reviewsToday) {
+                if (dist[r.rate] != null) dist[r.rate]++;
+            }
+            destroyChart(chartRatesToday);
+            chartRatesToday = new Chart($("#chartRatesToday"), {
+                type: "doughnut",
+                data: {
+                    labels: ["Again", "Hard", "Good", "Easy"],
+                    datasets: [{ data: [dist.again, dist.hard, dist.good, dist.easy] }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { position: "bottom" } }
+                }
+            });
+        }
+
+        $("#btnRefreshStats").addEventListener("click", refreshStats);
+
+        /** =========================
+         *  Export / Import
+         *  ========================= */
+        async function exportZip() {
+            const zip = new JSZip();
+            const cards = await listCards();
+            const reviews = await listReviewsAll();
+
+            zip.file("cards.json", JSON.stringify({
+                version: 1,
+                exportedAt: new Date().toISOString(),
+                cards
+            }, null, 2));
+
+            zip.file("reviews.json", JSON.stringify({
+                version: 1,
+                exportedAt: new Date().toISOString(),
+                reviews
+            }, null, 2));
+
+            // assets: gather all referenced asset IDs
+            const assetIds = new Set();
+            for (const c of cards) {
+                for (const id of (c.frontAssets || [])) assetIds.add(id);
+                for (const id of (c.backAssets || [])) assetIds.add(id);
+            }
+
+            const assetsFolder = zip.folder("assets");
+            let i = 0;
+            for (const id of assetIds) {
+                i++;
+                const a = await getAsset(id);
+                if (!a) continue;
+                const ext = (a.mime === "image/webp") ? "webp" : "jpg";
+                const tExt = (a.thumbMime === "image/webp") ? "webp" : "jpg";
+                assetsFolder.file(`${id}.${ext}`, a.blob);
+                assetsFolder.file(`${id}_thumb.${tExt}`, a.thumbBlob || a.blob);
+            }
+
+            const blob = await zip.generateAsync({ type: "blob", compression: "DEFLATE", compressionOptions: { level: 6 } });
+            const a = document.createElement("a");
+            const name = `anki-ebbinghaus-backup-${dateKey(now())}.zip`;
+            a.href = URL.createObjectURL(blob);
+            a.download = name;
+            a.click();
+            setTimeout(() => URL.revokeObjectURL(a.href), 1500);
+            toast("已导出 ZIP ✅");
+        }
+
+        $("#btnExportZip").addEventListener("click", exportZip);
+
+        async function importZip(file) {
+            const buf = await file.arrayBuffer();
+            const zip = await JSZip.loadAsync(buf);
+
+            const cardsTxt = await zip.file("cards.json")?.async("string");
+            const reviewsTxt = await zip.file("reviews.json")?.async("string");
+
+            if (!cardsTxt) throw new Error("ZIP 中缺少 cards.json");
+
+            const cardsObj = JSON.parse(cardsTxt);
+            const cards = cardsObj.cards || [];
+            const reviewsObj = reviewsTxt ? JSON.parse(reviewsTxt) : { reviews: [] };
+            const reviews = reviewsObj.reviews || [];
+
+            // Replace: clear first
+            await clearAll();
+
+            // restore cards
+            for (const c of cards) {
+                // ensure required fields
+                c.updatedAt = c.updatedAt || c.createdAt || now();
+                c.stability = c.stability || SETTINGS.minStab;
+                c.difficulty = (c.difficulty == null) ? 0.35 : c.difficulty;
+                c.frontAssets = c.frontAssets || [];
+                c.backAssets = c.backAssets || [];
+                await putCard(c);
+            }
+
+            // restore assets
+            const assetsFolder = zip.folder("assets");
+            if (assetsFolder) {
+                const files = [];
+                assetsFolder.forEach((path, file) => files.push({ path, file }));
+                // group by id
+                const byId = new Map();
+                for (const f of files) {
+                    const name = f.path.split("/").pop();
+                    if (!name) continue;
+                    // id_thumb.ext or id.ext
+                    const isThumb = name.includes("_thumb.");
+                    const id = name.replace("_thumb", "").split(".")[0];
+                    const ext = name.split(".").pop().toLowerCase();
+                    const mime = ext === "webp" ? "image/webp" : "image/jpeg";
+
+                    if (!byId.has(id)) byId.set(id, {});
+                    const obj = byId.get(id);
+                    if (isThumb) obj.thumb = { file: f.file, mime };
+                    else obj.main = { file: f.file, mime };
+                }
+
+                for (const [id, obj] of byId.entries()) {
+                    const mainBlob = obj.main ? await obj.main.file.async("blob") : null;
+                    const thumbBlob = obj.thumb ? await obj.thumb.file.async("blob") : null;
+                    if (!mainBlob) continue;
+                    await putAsset({
+                        id,
+                        mime: obj.main.mime,
+                        size: mainBlob.size,
+                        createdAt: now(),
+                        blob: mainBlob,
+                        thumbMime: obj.thumb?.mime || obj.main.mime,
+                        thumbSize: thumbBlob ? thumbBlob.size : mainBlob.size,
+                        thumbBlob: thumbBlob || mainBlob
+                    });
+                }
+            }
+
+            // restore reviews
+            if (reviews.length) {
+                const t = tx(["reviews"], "readwrite");
+                const os = t.objectStore("reviews");
+                for (const r of reviews) {
+                    // keep original id? reviews store is autoIncrement; just add without id
+                    const copy = { ...r };
+                    delete copy.id;
+                    os.add(copy);
+                }
+                await new Promise((res, rej) => { t.oncomplete = res; t.onerror = () => rej(t.error); });
+            }
+
+            toast("已导入并恢复 ✅");
+            await refreshDue();
+            await refreshLibrary();
+            await refreshStats();
+        }
+
+        $("#fileImportZip").addEventListener("change", async (e) => {
+            const f = e.target.files?.[0];
+            e.target.value = "";
+            if (!f) return;
+            if (!confirm("导入会覆盖当前全部数据，确认继续？")) return;
+            try {
+                toast("导入中…");
+                await importZip(f);
+            } catch (err) {
+                console.error(err);
+                toast("导入失败：" + (err?.message || String(err)), 4000);
+            }
+        });
+
+        /** =========================
+         *  Settings UI
+         *  ========================= */
+        function reflectSettings() {
+            $("#setMaxKB").value = SETTINGS.maxKB;
+            $("#setMaxDim").value = SETTINGS.maxDim;
+            $("#setTargetR").value = SETTINGS.targetR;
+            $("#setMinStab").value = SETTINGS.minStab;
+        }
+        $("#btnSaveSettings").addEventListener("click", async () => {
+            const maxKB = clamp(parseInt($("#setMaxKB").value, 10) || 200, 50, 800);
+            const maxDim = clamp(parseInt($("#setMaxDim").value, 10) || 1600, 640, 4096);
+            const targetR = clamp(parseFloat($("#setTargetR").value) || 0.85, 0.70, 0.95);
+            const minStab = clamp(parseFloat($("#setMinStab").value) || 0.30, 0.05, 5);
+
+            SETTINGS.maxKB = maxKB;
+            SETTINGS.maxDim = maxDim;
+            SETTINGS.targetR = targetR;
+            SETTINGS.minStab = minStab;
+
+            await setSetting("maxKB", maxKB);
+            await setSetting("maxDim", maxDim);
+            await setSetting("targetR", targetR);
+            await setSetting("minStab", minStab);
+
+            $("#kpiMaxKB").textContent = SETTINGS.maxKB;
+            $("#kpiMaxDim").textContent = SETTINGS.maxDim;
+
+            toast("设置已保存 ✅");
+        });
+
+        $("#btnResetAll").addEventListener("click", async () => {
+            if (!confirm("确认清空数据库？此操作不可恢复（除非你有 ZIP 备份）。")) return;
+            await clearAll();
+            toast("已清空本地数据");
+            await refreshDue();
+            await refreshLibrary();
+            await refreshStats();
+        });
+
+        /** =========================
+         *  Boot
+         *  ========================= */
+        async function boot() {
+            await openDB();
+            await loadSettings();
+            await renderDraftThumbs();
+            showView("review");
+        }
+        boot().catch(err => {
+            console.error(err);
+            toast("初始化失败：" + (err?.message || String(err)), 5000);
+        });
+    </script>
+</body>
+
+</html>

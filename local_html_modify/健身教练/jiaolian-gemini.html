@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>健身视频成片工作台 (MVP)</title>
+
+    <!-- 1. 样式库 CDN (TailwindCSS) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- 2. 图标库 -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+
+    <!-- 3. MediaPipe Pose 依赖 -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"
+        crossorigin="anonymous"></script>
+
+    <style>
+        /* 自定义滚动条 */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #1f2937;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #4b5563;
+            border-radius: 3px;
+        }
+
+        .canvas-container {
+            background-image:
+                linear-gradient(45deg, #1f2937 25%, transparent 25%),
+                linear-gradient(-45deg, #1f2937 25%, transparent 25%),
+                linear-gradient(45deg, transparent 75%, #1f2937 75%),
+                linear-gradient(-45deg, transparent 75%, #1f2937 75%);
+            background-size: 20px 20px;
+            background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+            background-color: #111827;
+        }
+
+        /* 隐藏原始视频元素 */
+        #sourceVideo {
+            display: none;
+        }
+
+        /* 加载遮罩 */
+        #loader {
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(4px);
+        }
+    </style>
+</head>
+
+<body class="bg-gray-900 text-gray-100 h-screen flex flex-col overflow-hidden font-sans">
+
+    <!-- 顶栏 -->
+    <header class="h-14 border-b border-gray-700 bg-gray-800 flex items-center justify-between px-4 z-10 shadow-md">
+        <div class="flex items-center gap-2">
+            <i class="fa-solid fa-dumbbell text-blue-500 text-xl"></i>
+            <h1 class="font-bold text-lg tracking-wide">FIT-CUT <span class="text-xs font-normal text-gray-400">Pro
+                    Workbench</span></h1>
+        </div>
+
+        <div class="flex gap-3">
+            <button id="btnExport"
+                class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-1.5 rounded text-sm font-medium transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                <i class="fa-solid fa-file-export"></i> 导出成片
+            </button>
+        </div>
+    </header>
+
+    <!-- 主体区域 -->
+    <main class="flex-1 flex overflow-hidden">
+
+        <!-- 左侧：素材与配置 -->
+        <aside class="w-80 bg-gray-800 border-r border-gray-700 flex flex-col overflow-y-auto z-10">
+
+            <!-- 1. 素材导入 -->
+            <div class="p-4 border-b border-gray-700">
+                <h3 class="text-xs font-bold text-gray-400 uppercase mb-3">1. 素材导入</h3>
+
+                <div class="space-y-3">
+                    <div>
+                        <label class="block text-xs text-gray-500 mb-1">视频文件 (MP4/MOV)</label>
+                        <input type="file" id="videoInput" accept="video/*"
+                            class="w-full text-xs bg-gray-900 border border-gray-600 rounded p-1 focus:border-blue-500 transition">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-gray-500 mb-1">字幕文件 (SRT/VTT)</label>
+                        <input type="file" id="subtitleInput" accept=".srt,.vtt,.json"
+                            class="w-full text-xs bg-gray-900 border border-gray-600 rounded p-1 focus:border-blue-500 transition">
+                        <div class="mt-1 text-[10px] text-gray-500">无字幕文件可自动生成测试字幕</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. 画幅与模板 -->
+            <div class="p-4 border-b border-gray-700">
+                <h3 class="text-xs font-bold text-gray-400 uppercase mb-3">2. 画幅与风格</h3>
+
+                <div class="mb-4">
+                    <label class="block text-xs text-gray-500 mb-1">输出画幅</label>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button
+                            class="aspect-btn active bg-blue-600 text-white border border-transparent rounded py-1 text-xs"
+                            data-aspect="9:16">9:16 竖屏</button>
+                        <button
+                            class="aspect-btn bg-gray-700 text-gray-300 border border-gray-600 rounded py-1 text-xs hover:bg-gray-600"
+                            data-aspect="16:9">16:9 横屏</button>
+                    </div>
+                </div>
+
+                <div class="space-y-3">
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm">启用 AI 姿态骨架</span>
+                        <input type="checkbox" id="togglePose" checked
+                            class="w-4 h-4 text-blue-600 rounded focus:ring-blue-500 bg-gray-700 border-gray-600">
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm">显示 HUD 数据 (角度)</span>
+                        <input type="checkbox" id="toggleHUD" checked
+                            class="w-4 h-4 text-blue-600 rounded focus:ring-blue-500 bg-gray-700 border-gray-600">
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. 字幕样式 -->
+            <div class="p-4 flex-1">
+                <h3 class="text-xs font-bold text-gray-400 uppercase mb-3">3. 字幕排版</h3>
+
+                <div class="space-y-3">
+                    <div>
+                        <label class="text-xs text-gray-500">字号大小</label>
+                        <input type="range" id="fontSizeRange" min="20" max="100" value="48"
+                            class="w-full h-1 bg-gray-600 rounded-lg appearance-none cursor-pointer">
+                    </div>
+                    <div>
+                        <label class="text-xs text-gray-500">底部边距 (安全区)</label>
+                        <input type="range" id="marginBottomRange" min="0" max="500" value="150"
+                            class="w-full h-1 bg-gray-600 rounded-lg appearance-none cursor-pointer">
+                    </div>
+                    <div>
+                        <label class="text-xs text-gray-500">文字颜色</label>
+                        <div class="flex gap-2 mt-1">
+                            <button
+                                class="w-6 h-6 rounded-full bg-white border border-gray-500 ring-2 ring-blue-500 color-btn"
+                                data-color="#FFFFFF"></button>
+                            <button class="w-6 h-6 rounded-full bg-yellow-400 border border-gray-500 color-btn"
+                                data-color="#FACC15"></button>
+                            <button class="w-6 h-6 rounded-full bg-red-500 border border-gray-500 color-btn"
+                                data-color="#EF4444"></button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-4 text-[10px] text-gray-600 text-center">
+                v1.0.0 | 本地离线处理
+            </div>
+        </aside>
+
+        <!-- 中间：画布预览区 -->
+        <section class="flex-1 flex flex-col min-w-0 bg-gray-900 relative">
+
+            <!-- 画布容器 -->
+            <div class="flex-1 flex items-center justify-center p-4 overflow-hidden canvas-container"
+                id="canvasWrapper">
+                <canvas id="mainCanvas" class="shadow-2xl bg-black max-w-full max-h-full"></canvas>
+            </div>
+
+            <!-- 底部播放控制 -->
+            <div class="h-16 bg-gray-800 border-t border-gray-700 flex items-center px-4 gap-4 z-10">
+                <button id="btnPlayPause" class="text-white hover:text-blue-400 w-8 transition">
+                    <i class="fa-solid fa-play text-xl"></i>
+                </button>
+
+                <span id="timeDisplay" class="text-xs font-mono text-gray-400 w-24">00:00 / 00:00</span>
+
+                <div class="flex-1 relative group">
+                    <input type="range" id="seekBar" min="0" max="100" value="0" step="0.1"
+                        class="w-full h-1 bg-gray-600 rounded-lg appearance-none cursor-pointer group-hover:h-2 transition-all">
+                </div>
+
+                <button id="btnMute" class="text-gray-400 hover:text-white transition">
+                    <i class="fa-solid fa-volume-high"></i>
+                </button>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- 原始视频 DOM (隐藏) -->
+    <video id="sourceVideo" playsinline crossorigin="anonymous"></video>
+
+    <!-- 加载遮罩 -->
+    <div id="loader" class="fixed inset-0 z-50 flex flex-col items-center justify-center hidden">
+        <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mb-4"></div>
+        <p id="loaderText" class="text-white font-medium">正在初始化 AI 模型...</p>
+    </div>
+
+    <!-- 逻辑脚本 -->
+    <script>
+        /**
+         * 0. 全局状态管理
+         */
+        const state = {
+            videoLoaded: false,
+            duration: 0,
+            isPlaying: false,
+            width: 720,      // 逻辑画布宽度
+            height: 1280,    // 逻辑画布高度
+            aspect: '9:16',  // '9:16' | '16:9'
+
+            // 字幕
+            subtitles: [],   // { start, end, text }
+
+            // 样式配置
+            fontSize: 48,
+            marginBottom: 150,
+            textColor: '#FFFFFF',
+
+            // AI 配置
+            enablePose: true,
+            enableHUD: true,
+            poseResults: null, // 存储最新的 pose 结果
+
+            // 导出状态
+            isExporting: false
+        };
+
+        const DOM = {
+            video: document.getElementById('sourceVideo'),
+            canvas: document.getElementById('mainCanvas'),
+            ctx: document.getElementById('mainCanvas').getContext('2d'),
+            videoInput: document.getElementById('videoInput'),
+            subtitleInput: document.getElementById('subtitleInput'),
+            btnPlayPause: document.getElementById('btnPlayPause'),
+            seekBar: document.getElementById('seekBar'),
+            timeDisplay: document.getElementById('timeDisplay'),
+            loader: document.getElementById('loader'),
+            loaderText: document.getElementById('loaderText'),
+            aspectBtns: document.querySelectorAll('.aspect-btn'),
+            fontSizeRange: document.getElementById('fontSizeRange'),
+            marginBottomRange: document.getElementById('marginBottomRange'),
+            colorBtns: document.querySelectorAll('.color-btn'),
+            togglePose: document.getElementById('togglePose'),
+            toggleHUD: document.getElementById('toggleHUD'),
+            btnExport: document.getElementById('btnExport'),
+        };
+
+        let poseDetector = null;
+        let animationFrameId = null;
+        let mediaRecorder = null;
+        let recordedChunks = [];
+
+        /**
+         * 1. 初始化与 AI 模型加载
+         */
+        async function init() {
+            showLoader('加载 MediaPipe Pose 模型...');
+
+            try {
+                poseDetector = new Pose({
+                    locateFile: (file) => {
+                        return `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`;
+                    }
+                });
+
+                poseDetector.setOptions({
+                    modelComplexity: 1, // 0=Lite, 1=Full, 2=Heavy (1 适合平衡性能)
+                    smoothLandmarks: true,
+                    enableSegmentation: false,
+                    minDetectionConfidence: 0.5,
+                    minTrackingConfidence: 0.5
+                });
+
+                poseDetector.onResults(onPoseResults);
+
+                await poseDetector.initialize();
+                hideLoader();
+                console.log("Pose Model Loaded");
+
+                // 设置默认画布尺寸
+                resizeCanvas();
+                renderFrame(); // 启动渲染循环
+            } catch (e) {
+                console.error(e);
+                alert("AI 模型加载失败，请检查网络或刷新重试。");
+                hideLoader();
+            }
+        }
+
+        function onPoseResults(results) {
+            state.poseResults = results;
+        }
+
+        /**
+         * 2. 核心逻辑：渲染循环
+         */
+        function renderFrame() {
+            // 清空画布
+            DOM.ctx.fillStyle = '#000';
+            DOM.ctx.fillRect(0, 0, state.width, state.height);
+
+            if (state.videoLoaded) {
+                // A. 绘制视频 (Cover 模式或 Fit 模式)
+                drawVideo();
+
+                // B. 发送给 AI (如果开启且视频在播放中或刚seek)
+                // 注意：实时播放时每帧推理可能卡顿，这里简单实现：
+                // 只有视频在播放，且开启了 Pose，才发送。为了流畅，可做节流。
+                if (state.enablePose && !DOM.video.paused && !state.video.ended) {
+                    // 这里直接 await 会阻塞渲染，MediaPipe 是异步的。
+                    // 正确做法：send() -> await results (但会掉帧) 或者 send and forget
+                    // 在本单文件 MVP 中，我们使用 send 并期待 onResults 回调更新 state.poseResults
+                    poseDetector.send({ image: DOM.video });
+                } else if (state.enablePose && DOM.video.paused && state.poseResults === null) {
+                    // 暂停状态下，如果还没有结果，尝试推一次（用于seek后更新）
+                    poseDetector.send({ image: DOM.video });
+                }
+            }
+
+            // C. 绘制骨架
+            if (state.enablePose && state.poseResults && state.poseResults.poseLandmarks) {
+                drawSkeleton(state.poseResults.poseLandmarks);
+                if (state.enableHUD) {
+                    drawHUD(state.poseResults.poseLandmarks);
+                }
+            }
+
+            // D. 绘制字幕
+            if (state.videoLoaded) {
+                drawSubtitles();
+            }
+
+            // 循环
+            animationFrameId = requestAnimationFrame(renderFrame);
+
+            // 更新进度条 UI (如果不拖动)
+            if (!state.isExporting && state.videoLoaded && !DOM.video.paused) {
+                updateProgressUI();
+            }
+        }
+
+        function drawVideo() {
+            const vw = DOM.video.videoWidth;
+            const vh = DOM.video.videoHeight;
+            const cw = state.width;
+            const ch = state.height;
+
+            if (!vw || !vh) return;
+
+            // 计算 cover 裁剪
+            const videoRatio = vw / vh;
+            const canvasRatio = cw / ch;
+
+            let dx, dy, dWidth, dHeight;
+
+            if (state.aspect === '9:16') {
+                // 竖屏模式：通常采用 Cover (填满，裁掉多余)
+                if (videoRatio > canvasRatio) {
+                    // 视频更宽，裁两边
+                    dHeight = ch;
+                    dWidth = dHeight * videoRatio;
+                    dy = 0;
+                    dx = (cw - dWidth) / 2;
+                } else {
+                    // 视频更瘦，裁上下 (或填满)
+                    dWidth = cw;
+                    dHeight = dWidth / videoRatio;
+                    dx = 0;
+                    dy = (ch - dHeight) / 2;
+                }
+            } else {
+                // 16:9 模式：通常采用 Fit (黑边) 或 Cover
+                // 这里为了简单，用 Cover
+                if (videoRatio > canvasRatio) {
+                    dHeight = ch;
+                    dWidth = dHeight * videoRatio;
+                    dy = 0;
+                    dx = (cw - dWidth) / 2;
+                } else {
+                    dWidth = cw;
+                    dHeight = dWidth / videoRatio;
+                    dx = 0;
+                    dy = (ch - dHeight) / 2;
+                }
+            }
+
+            DOM.ctx.drawImage(DOM.video, dx, dy, dWidth, dHeight);
+        }
+
+        function drawSkeleton(landmarks) {
+            // MediaPipe 提供的 drawing_utils
+            // 需要映射到 Canvas 尺寸
+            DOM.ctx.save();
+            // MediaPipe drawConnectors 需要 context
+            // 这里手动画，为了控制力更强，且 MP 的 drawingUtils 有时在不同环境有兼容问题
+
+            const connect = (i, j, color) => {
+                const p1 = landmarks[i];
+                const p2 = landmarks[j];
+                if (p1.visibility > 0.5 && p2.visibility > 0.5) {
+                    DOM.ctx.beginPath();
+                    DOM.ctx.moveTo(p1.x * state.width, p1.y * state.height);
+                    DOM.ctx.lineTo(p2.x * state.width, p2.y * state.height);
+                    DOM.ctx.strokeStyle = color;
+                    DOM.ctx.lineWidth = 4;
+                    DOM.ctx.stroke();
+                }
+            };
+
+            // 简单骨架连线
+            const c = '#00F0FF'; // 青色
+            const m = '#FF00AA'; // 玫红
+
+            // 躯干
+            connect(11, 12, 'white'); // 肩
+            connect(23, 24, 'white'); // 髋
+            connect(11, 23, c); // 左躯干
+            connect(12, 24, m); // 右躯干
+
+            // 手臂
+            connect(11, 13, c); connect(13, 15, c); // 左臂
+            connect(12, 14, m); connect(14, 16, m); // 右臂
+
+            // 腿
+            connect(23, 25, c); connect(25, 27, c); // 左腿
+            connect(24, 26, m); connect(26, 28, m); // 右腿
+
+            // 关键点
+            for (let i = 0; i < 33; i++) {
+                if (landmarks[i].visibility > 0.5) {
+                    DOM.ctx.beginPath();
+                    DOM.ctx.arc(landmarks[i].x * state.width, landmarks[i].y * state.height, 3, 0, 2 * Math.PI);
+                    DOM.ctx.fillStyle = 'white';
+                    DOM.ctx.fill();
+                }
+            }
+
+            DOM.ctx.restore();
+        }
+
+        function drawHUD(landmarks) {
+            // 计算简单的角度：例如右膝盖角度 (Hip 24, Knee 26, Ankle 28)
+            const calcAngle = (a, b, c) => {
+                if (a.visibility < 0.5 || b.visibility < 0.5 || c.visibility < 0.5) return null;
+                const radians = Math.atan2(c.y - b.y, c.x - b.x) - Math.atan2(a.y - b.y, a.x - b.x);
+                let angle = Math.abs(radians * 180.0 / Math.PI);
+                if (angle > 180.0) angle = 360 - angle;
+                return Math.round(angle);
+            };
+
+            const rightKneeAngle = calcAngle(landmarks[24], landmarks[26], landmarks[28]);
+            const leftKneeAngle = calcAngle(landmarks[23], landmarks[25], landmarks[27]);
+
+            // 绘制 HUD 面板
+            DOM.ctx.save();
+            DOM.ctx.font = 'bold 24px Arial';
+            DOM.ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+            DOM.ctx.fillRect(20, 20, 180, 80);
+
+            DOM.ctx.fillStyle = '#FFF';
+            DOM.ctx.fillText(`L-Knee: ${leftKneeAngle || '--'}°`, 30, 50);
+            DOM.ctx.fillText(`R-Knee: ${rightKneeAngle || '--'}°`, 30, 80);
+            DOM.ctx.restore();
+        }
+
+        function drawSubtitles() {
+            const curTime = DOM.video.currentTime;
+            const segment = state.subtitles.find(s => curTime >= s.start && curTime <= s.end);
+
+            if (segment) {
+                DOM.ctx.save();
+                DOM.ctx.fillStyle = state.textColor;
+                DOM.ctx.font = `bold ${state.fontSize}px sans-serif`;
+                DOM.ctx.textAlign = 'center';
+                DOM.ctx.textBaseline = 'bottom';
+
+                // 描边
+                DOM.ctx.strokeStyle = 'black';
+                DOM.ctx.lineWidth = state.fontSize / 10;
+                DOM.ctx.lineJoin = 'round';
+
+                // 处理换行 (简单的一行过长折行逻辑)
+                const words = segment.text;
+                // 这里简化：假设字幕已经做好了分行，或者直接渲染单行
+                // 如果需要自动换行，需要 measureText 计算
+
+                const x = state.width / 2;
+                const y = state.height - state.marginBottom;
+
+                DOM.ctx.strokeText(words, x, y);
+                DOM.ctx.fillText(words, x, y);
+
+                DOM.ctx.restore();
+            }
+        }
+
+        /**
+         * 3. 文件处理与解析
+         */
+        DOM.videoInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const url = URL.createObjectURL(file);
+            DOM.video.src = url;
+            DOM.video.load();
+
+            DOM.video.onloadeddata = () => {
+                state.videoLoaded = true;
+                state.duration = DOM.video.duration;
+                DOM.timeDisplay.textContent = `00:00 / ${formatTime(state.duration)}`;
+                DOM.seekBar.max = state.duration;
+
+                // 如果没有字幕，生成一个演示字幕
+                if (state.subtitles.length === 0) {
+                    state.subtitles = [
+                        { start: 0, end: 3, text: "开始动作准备" },
+                        { start: 3.5, end: 6, text: "保持核心收紧" },
+                        { start: 6.5, end: state.duration, text: "做得很好！" }
+                    ];
+                }
+            };
+        });
+
+        DOM.subtitleInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (evt) => {
+                const content = evt.target.result;
+                if (file.name.endsWith('.json')) {
+                    try {
+                        state.subtitles = JSON.parse(content);
+                    } catch (err) { console.error("JSON Error", err); }
+                } else {
+                    state.subtitles = parseSRT(content);
+                }
+            };
+            reader.readAsText(file);
+        });
+
+        // 简单的 SRT 解析器
+        function parseSRT(data) {
+            const regex = /(\d+)\n(\d{2}:\d{2}:\d{2},\d{3}) -->(\d{ 2}: \d{ 2}: \d{ 2}, \d{ 3}) \n([\s\S] *?)(?=\n\n |\n * $) / g;
+            const result = [];
+            let match;
+
+            const timeToSec = (t) => {
+                const [h, m, s] = t.split(':');
+                const [sec, ms] = s.split(',');
+                return parseInt(h) * 3600 + parseInt(m) * 60 + parseInt(sec) + parseInt(ms) / 1000;
+            };
+
+            while ((match = regex.exec(data)) !== null) {
+                result.push({
+                    id: match[1],
+                    start: timeToSec(match[2]),
+                    end: timeToSec(match[3]),
+                    text: match[4].replace(/\n/g, ' ').trim() // 合并换行
+                });
+            }
+            return result;
+        }
+
+        /**
+         * 4. UI 交互控制
+         */
+        function resizeCanvas() {
+            if (state.aspect === '9:16') {
+                state.width = 720;
+                state.height = 1280;
+            } else {
+                state.width = 1280;
+                state.height = 720;
+            }
+
+            DOM.canvas.width = state.width;
+            DOM.canvas.height = state.height;
+
+            // CSS 宽高自适应
+            const containerRatio = DOM.canvas.parentElement.clientWidth / DOM.canvas.parentElement.clientHeight;
+            const canvasRatio = state.width / state.height;
+
+            if (canvasRatio > containerRatio) {
+                DOM.canvas.style.width = '100%';
+                DOM.canvas.style.height = 'auto';
+            } else {
+                DOM.canvas.style.width = 'auto';
+                DOM.canvas.style.height = '100%';
+            }
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+
+        DOM.aspectBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                DOM.aspectBtns.forEach(b => {
+                    b.classList.remove('bg-blue-600', 'text-white', 'active');
+                    b.classList.add('bg-gray-700', 'text-gray-300');
+                });
+                btn.classList.remove('bg-gray-700', 'text-gray-300');
+                btn.classList.add('bg-blue-600', 'text-white', 'active');
+
+                state.aspect = btn.dataset.aspect;
+                resizeCanvas();
+            });
+        });
+
+        DOM.btnPlayPause.addEventListener('click', () => {
+            if (!state.videoLoaded) return;
+            if (DOM.video.paused) {
+                DOM.video.play();
+                DOM.btnPlayPause.innerHTML = '<i class="fa-solid fa-pause text-xl"></i>';
+            } else {
+                DOM.video.pause();
+                DOM.btnPlayPause.innerHTML = '<i class="fa-solid fa-play text-xl"></i>';
+            }
+        });
+
+        DOM.seekBar.addEventListener('input', (e) => {
+            if (!state.videoLoaded) return;
+            const time = parseFloat(e.target.value);
+            DOM.video.currentTime = time;
+            updateProgressUI();
+
+            // Seek 时手动触发一次 Pose (如果暂停)
+            if (state.enablePose) {
+                setTimeout(() => poseDetector.send({ image: DOM.video }), 100);
+            }
+        });
+
+        function updateProgressUI() {
+            const cur = DOM.video.currentTime;
+            DOM.seekBar.value = cur;
+            DOM.timeDisplay.textContent = `${formatTime(cur)} / ${formatTime(state.duration)}`;
+        }
+
+        DOM.fontSizeRange.addEventListener('input', (e) => state.fontSize = parseInt(e.target.value));
+        DOM.marginBottomRange.addEventListener('input', (e) => state.marginBottom = parseInt(e.target.value));
+
+        DOM.colorBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                DOM.colorBtns.forEach(b => b.classList.remove('ring-2', 'ring-blue-500'));
+                btn.classList.add('ring-2', 'ring-blue-500');
+                state.textColor = btn.dataset.color;
+            });
+        });
+
+        DOM.togglePose.addEventListener('change', (e) => state.enablePose = e.target.checked);
+        DOM.toggleHUD.addEventListener('change', (e) => state.enableHUD = e.target.checked);
+
+        /**
+         * 5. 导出逻辑 (MediaRecorder)
+         */
+        DOM.btnExport.addEventListener('click', async () => {
+            if (!state.videoLoaded) {
+                alert("请先导入视频");
+                return;
+            }
+            if (state.isExporting) return;
+
+            const confirmExport = confirm("即将开始导出。\n导出过程将从头播放视频，请勿切换窗口以保证渲染稳定性。");
+            if (!confirmExport) return;
+
+            state.isExporting = true;
+            DOM.btnExport.disabled = true;
+            DOM.btnExport.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 导出中...';
+
+            // 准备录制
+            const stream = DOM.canvas.captureStream(30); // 30 FPS
+            const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
+                ? 'video/webm;codecs=vp9'
+                : 'video/webm';
+
+            mediaRecorder = new MediaRecorder(stream, {
+                mimeType: mimeType,
+                videoBitsPerSecond: 5000000 // 5Mbps
+            });
+
+            recordedChunks = [];
+            mediaRecorder.ondataavailable = (e) => {
+                if (e.data.size > 0) recordedChunks.push(e.data);
+            };
+
+            mediaRecorder.onstop = () => {
+                const blob = new Blob(recordedChunks, { type: mimeType });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                a.download = `fit_cut_export_${Date.now()}.webm`;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+
+                // 恢复 UI
+                state.isExporting = false;
+                DOM.btnExport.disabled = false;
+                DOM.btnExport.innerHTML = '<i class="fa-solid fa-file-export"></i> 导出成片';
+                alert("导出完成！");
+            };
+
+            // 开始流程
+            DOM.video.pause();
+            DOM.video.currentTime = 0;
+
+            // 等待 seek 完成
+            await new Promise(r => setTimeout(r, 500));
+
+            mediaRecorder.start();
+            DOM.video.play();
+
+            // 监听播放结束
+            DOM.video.onended = () => {
+                mediaRecorder.stop();
+                DOM.video.onended = null; // 清理事件
+            };
+        });
+
+        // 辅助函数
+        function formatTime(seconds) {
+            const m = Math.floor(seconds / 60);
+            const s = Math.floor(seconds % 60);
+            return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+        }
+
+        function showLoader(text) {
+            DOM.loaderText.textContent = text;
+            DOM.loader.classList.remove('hidden');
+        }
+
+        function hideLoader() {
+            DOM.loader.classList.add('hidden');
+        }
+
+        // 启动
+        window.onload = init;
+
+    </script>
+</body>
+
+</html>

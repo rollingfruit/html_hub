@@ -1,0 +1,3456 @@
+<!doctype html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#0b0f19" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <title>营养识别记录器</title>
+
+    <!-- Optional: if you also place manifest.json next to index.html -->
+    <link rel="manifest" href="manifest.json" />
+
+    <style>
+        :root {
+            --bg: #070a12;
+            --panel: rgba(255, 255, 255, .08);
+            --panel2: rgba(255, 255, 255, .06);
+            --stroke: rgba(255, 255, 255, .10);
+            --stroke2: rgba(255, 255, 255, .16);
+            --txt: rgba(255, 255, 255, .92);
+            --muted: rgba(255, 255, 255, .64);
+            --muted2: rgba(255, 255, 255, .44);
+            --brand: #7c3aed;
+            --brand2: #22c55e;
+            --danger: #ef4444;
+            --warn: #f59e0b;
+            --ok: #22c55e;
+            --shadow: 0 10px 30px rgba(0, 0, 0, .35);
+            --r: 18px;
+            --r2: 24px;
+            --safeB: env(safe-area-inset-bottom);
+            --safeT: env(safe-area-inset-top);
+            --safeL: env(safe-area-inset-left);
+            --safeR: env(safe-area-inset-right);
+            color-scheme: dark;
+            font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        html,
+        body {
+            height: 100%;
+            margin: 0;
+            background: radial-gradient(1200px 800px at 20% 0%, rgba(124, 58, 237, .20), transparent 55%),
+                radial-gradient(900px 600px at 90% 30%, rgba(34, 197, 94, .18), transparent 55%),
+                linear-gradient(180deg, #050714, #070a12);
+            color: var(--txt);
+        }
+
+        a {
+            color: inherit;
+        }
+
+        button,
+        input,
+        textarea,
+        select {
+            font: inherit;
+        }
+
+        .app {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            padding: calc(12px + var(--safeT)) calc(12px + var(--safeR)) calc(10px + var(--safeB)) calc(12px + var(--safeL));
+            gap: 12px;
+            max-width: 520px;
+            margin: 0 auto;
+        }
+
+        .topbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 8px 6px;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .logo {
+            width: 38px;
+            height: 38px;
+            border-radius: 14px;
+            background:
+                radial-gradient(16px 16px at 25% 25%, rgba(255, 255, 255, .45), transparent 70%),
+                radial-gradient(24px 24px at 70% 70%, rgba(255, 255, 255, .18), transparent 72%),
+                linear-gradient(135deg, rgba(124, 58, 237, .95), rgba(34, 197, 94, .85));
+            box-shadow: var(--shadow);
+            border: 1px solid rgba(255, 255, 255, .18);
+        }
+
+        .title {
+            font-weight: 800;
+            letter-spacing: .2px;
+            font-size: 16px;
+            line-height: 1.1;
+        }
+
+        .subtitle {
+            font-size: 12px;
+            color: var(--muted);
+            margin-top: 2px;
+        }
+
+        .pill {
+            padding: 8px 10px;
+            border-radius: 999px;
+            border: 1px solid var(--stroke);
+            background: rgba(255, 255, 255, .06);
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--muted);
+            font-size: 12px;
+        }
+
+        .pill strong {
+            color: var(--txt);
+            font-weight: 700;
+        }
+
+        .btn {
+            border: 1px solid var(--stroke);
+            background: rgba(255, 255, 255, .06);
+            color: var(--txt);
+            border-radius: 14px;
+            padding: 10px 12px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            cursor: pointer;
+            user-select: none;
+            transition: transform .08s ease, border-color .12s ease, background .12s ease, opacity .12s ease;
+        }
+
+        .btn:active {
+            transform: scale(.98);
+        }
+
+        .btn.primary {
+            background: linear-gradient(135deg, rgba(124, 58, 237, .95), rgba(99, 102, 241, .85));
+            border-color: rgba(255, 255, 255, .18);
+        }
+
+        .btn.good {
+            background: linear-gradient(135deg, rgba(34, 197, 94, .95), rgba(16, 185, 129, .85));
+            border-color: rgba(255, 255, 255, .18);
+        }
+
+        .btn.danger {
+            background: rgba(239, 68, 68, .14);
+            border-color: rgba(239, 68, 68, .35);
+            color: rgba(255, 255, 255, .92);
+        }
+
+        .btn.ghost {
+            background: transparent;
+        }
+
+        .btn.small {
+            padding: 8px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            gap: 8px;
+        }
+
+        .btn:disabled {
+            opacity: .45;
+            cursor: not-allowed;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .main {
+            flex: 1;
+            min-height: 0;
+            position: relative;
+        }
+
+        .page {
+            display: none;
+            height: 100%;
+        }
+
+        .page.active {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            min-height: 0;
+        }
+
+        .card {
+            border: 1px solid rgba(255, 255, 255, .10);
+            background: linear-gradient(180deg, rgba(255, 255, 255, .08), rgba(255, 255, 255, .05));
+            border-radius: var(--r2);
+            box-shadow: var(--shadow);
+            overflow: hidden;
+        }
+
+        .card .inner {
+            padding: 14px;
+        }
+
+        .row {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .row.nowrap {
+            flex-wrap: nowrap;
+        }
+
+        .row.space {
+            justify-content: space-between;
+        }
+
+        .hint {
+            font-size: 12px;
+            color: var(--muted);
+            line-height: 1.5;
+        }
+
+        .divider {
+            height: 1px;
+            background: rgba(255, 255, 255, .08);
+        }
+
+        .mosaic {
+            position: relative;
+            height: 120px;
+            border-radius: var(--r2);
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, .09);
+            background: rgba(255, 255, 255, .04);
+        }
+
+        .mosaic .grid {
+            position: absolute;
+            inset: 0;
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            grid-auto-rows: 1fr;
+            gap: 2px;
+            filter: blur(0px);
+            transform: scale(1.02);
+            opacity: .95;
+        }
+
+        .mosaic .tile {
+            background: rgba(255, 255, 255, .04);
+            background-size: cover;
+            background-position: center;
+            border-radius: 6px;
+        }
+
+        .mosaic .overlay {
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(600px 160px at 40% 20%, rgba(124, 58, 237, .25), transparent 55%),
+                linear-gradient(180deg, rgba(0, 0, 0, .55), rgba(0, 0, 0, .25));
+        }
+
+        .mosaic .front {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            padding: 12px;
+            gap: 10px;
+        }
+
+        .big-number {
+            font-weight: 900;
+            font-size: 24px;
+            letter-spacing: .2px;
+        }
+
+        .big-number span {
+            font-size: 12px;
+            color: var(--muted);
+            font-weight: 700;
+            margin-left: 6px;
+        }
+
+        .metric-mini {
+            font-size: 12px;
+            color: var(--muted);
+        }
+
+        .mosaic .cta {
+            display: flex;
+            gap: 8px;
+        }
+
+        .photoBox {
+            width: 100%;
+            aspect-ratio: 4 / 3;
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, .10);
+            background: rgba(255, 255, 255, .04);
+            overflow: hidden;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .photoBox img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: none;
+        }
+
+        .photoBox .empty {
+            text-align: center;
+            padding: 18px;
+            color: var(--muted);
+            font-size: 12px;
+            line-height: 1.5;
+        }
+
+        .photoBox .badge {
+            position: absolute;
+            left: 10px;
+            bottom: 10px;
+            padding: 6px 10px;
+            border-radius: 999px;
+            background: rgba(0, 0, 0, .45);
+            border: 1px solid rgba(255, 255, 255, .16);
+            font-size: 12px;
+            color: rgba(255, 255, 255, .9);
+            backdrop-filter: blur(10px);
+        }
+
+        .progress {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .bar {
+            height: 10px;
+            border-radius: 999px;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, .12);
+            background: rgba(255, 255, 255, .06);
+        }
+
+        .bar>div {
+            height: 100%;
+            width: 0%;
+            border-radius: 999px;
+            background: linear-gradient(90deg, rgba(124, 58, 237, .9), rgba(34, 197, 94, .85));
+            transition: width .18s ease;
+        }
+
+        .codebox {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+            background: rgba(0, 0, 0, .35);
+            border: 1px solid rgba(255, 255, 255, .10);
+            border-radius: 14px;
+            padding: 10px;
+            font-size: 11px;
+            color: rgba(255, 255, 255, .82);
+            max-height: 170px;
+            overflow: auto;
+            white-space: pre-wrap;
+            line-height: 1.45;
+        }
+
+        .foods {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .foodItem {
+            border: 1px solid rgba(255, 255, 255, .10);
+            background: rgba(255, 255, 255, .05);
+            border-radius: 18px;
+            padding: 12px;
+        }
+
+        .foodTop {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 10px;
+        }
+
+        .foodName {
+            font-weight: 800;
+            font-size: 14px;
+            line-height: 1.2;
+            word-break: break-word;
+        }
+
+        .chipRow {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            margin-top: 6px;
+        }
+
+        .chip {
+            font-size: 11px;
+            padding: 4px 8px;
+            border-radius: 999px;
+            border: 1px solid rgba(255, 255, 255, .12);
+            background: rgba(255, 255, 255, .06);
+            color: rgba(255, 255, 255, .84);
+        }
+
+        .chip.low {
+            opacity: .85;
+        }
+
+        .chip.warn {
+            border-color: rgba(245, 158, 11, .35);
+            background: rgba(245, 158, 11, .12);
+        }
+
+        .chip.ok {
+            border-color: rgba(34, 197, 94, .33);
+            background: rgba(34, 197, 94, .12);
+        }
+
+        .chip.bad {
+            border-color: rgba(239, 68, 68, .33);
+            background: rgba(239, 68, 68, .12);
+        }
+
+        .weightBox {
+            text-align: right;
+            min-width: 90px;
+        }
+
+        .weightBig {
+            font-weight: 900;
+            font-size: 22px;
+            letter-spacing: .2px;
+        }
+
+        .weightBig span {
+            font-size: 12px;
+            color: var(--muted);
+            font-weight: 700;
+            margin-left: 4px;
+        }
+
+        .weightMeta {
+            font-size: 12px;
+            color: var(--muted);
+            margin-top: 2px;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            appearance: none;
+            height: 30px;
+            background: transparent;
+            margin-top: 10px;
+        }
+
+        input[type="range"]::-webkit-slider-runnable-track {
+            height: 10px;
+            background: rgba(255, 255, 255, .10);
+            border: 1px solid rgba(255, 255, 255, .12);
+            border-radius: 999px;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            appearance: none;
+            width: 22px;
+            height: 22px;
+            border-radius: 999px;
+            margin-top: -6px;
+            background: linear-gradient(135deg, rgba(255, 255, 255, .88), rgba(255, 255, 255, .62));
+            border: 1px solid rgba(0, 0, 0, .25);
+            box-shadow: 0 8px 18px rgba(0, 0, 0, .35);
+        }
+
+        .foodActions {
+            display: flex;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .stickyBar {
+            position: sticky;
+            bottom: calc(70px + var(--safeB));
+            z-index: 2;
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 22px;
+            background: rgba(10, 12, 20, .62);
+            border: 1px solid rgba(255, 255, 255, .14);
+            backdrop-filter: blur(16px);
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .stickyBar .left {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            min-width: 0;
+        }
+
+        .stickyBar .left .kcal {
+            font-weight: 900;
+            font-size: 16px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .stickyBar .left .sub {
+            font-size: 12px;
+            color: var(--muted);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .stickyBar .right {
+            display: flex;
+            gap: 8px;
+        }
+
+        .tabbar {
+            position: sticky;
+            bottom: 0;
+            z-index: 5;
+            padding: 10px 8px calc(10px + var(--safeB));
+            background: rgba(7, 10, 18, .60);
+            border-top: 1px solid rgba(255, 255, 255, .10);
+            backdrop-filter: blur(16px);
+            display: flex;
+            gap: 8px;
+            border-radius: 20px;
+        }
+
+        .tabbar button {
+            flex: 1;
+            padding: 10px 8px;
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, .08);
+            background: rgba(255, 255, 255, .05);
+            color: rgba(255, 255, 255, .78);
+            cursor: pointer;
+        }
+
+        .tabbar button.active {
+            background: linear-gradient(135deg, rgba(124, 58, 237, .35), rgba(34, 197, 94, .22));
+            border-color: rgba(255, 255, 255, .14);
+            color: rgba(255, 255, 255, .95);
+            font-weight: 800;
+        }
+
+        .filters {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+            padding: 12px 14px;
+        }
+
+        .filters input,
+        .filters select {
+            width: 100%;
+            border-radius: 14px;
+            border: 1px solid rgba(255, 255, 255, .12);
+            background: rgba(255, 255, 255, .06);
+            color: rgba(255, 255, 255, .90);
+            padding: 10px 12px;
+            outline: none;
+        }
+
+        .filters .two {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            width: 100%;
+        }
+
+        .feedWrap {
+            flex: 1;
+            min-height: 0;
+            overflow: auto;
+            padding: 0 10px 10px;
+        }
+
+        .masonry {
+            column-count: 2;
+            column-gap: 10px;
+            padding-bottom: 110px;
+        }
+
+        .cardPost {
+            break-inside: avoid;
+            margin: 0 0 10px;
+            border-radius: 18px;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, .10);
+            background: rgba(255, 255, 255, .05);
+            box-shadow: 0 12px 22px rgba(0, 0, 0, .25);
+            cursor: pointer;
+            position: relative;
+        }
+
+        .cardPost img {
+            width: 100%;
+            aspect-ratio: 1 / 1;
+            object-fit: cover;
+            display: block;
+            background: rgba(255, 255, 255, .05);
+        }
+
+        .cardPost .meta {
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .cardPost .meta .t {
+            font-weight: 900;
+            font-size: 13px;
+            line-height: 1.2;
+            color: rgba(255, 255, 255, .92);
+        }
+
+        .cardPost .meta .d {
+            font-size: 12px;
+            color: var(--muted);
+        }
+
+        .corner {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .tag {
+            padding: 5px 8px;
+            border-radius: 999px;
+            background: rgba(0, 0, 0, .45);
+            border: 1px solid rgba(255, 255, 255, .16);
+            backdrop-filter: blur(10px);
+            font-size: 11px;
+            color: rgba(255, 255, 255, .90);
+        }
+
+        .tag.bad {
+            border-color: rgba(239, 68, 68, .35);
+            background: rgba(239, 68, 68, .12);
+        }
+
+        .tag.ok {
+            border-color: rgba(34, 197, 94, .35);
+            background: rgba(34, 197, 94, .12);
+        }
+
+        dialog {
+            width: min(520px, 100%);
+            max-width: 520px;
+            border: none;
+            padding: 0;
+            border-radius: 22px;
+            background: rgba(10, 12, 20, .94);
+            color: var(--txt);
+            box-shadow: 0 30px 80px rgba(0, 0, 0, .55);
+        }
+
+        dialog::backdrop {
+            background: rgba(0, 0, 0, .55);
+            backdrop-filter: blur(6px);
+        }
+
+        .modalHeader {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 12px 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, .10);
+        }
+
+        .modalHeader .h {
+            font-weight: 900;
+            font-size: 14px;
+        }
+
+        .modalBody {
+            padding: 12px;
+        }
+
+        .posterPreview {
+            width: 100%;
+            border-radius: 18px;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, .14);
+            background: rgba(255, 255, 255, .04);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 8px;
+        }
+
+        .posterPreview canvas {
+            width: 100%;
+            height: auto;
+            border-radius: 14px;
+            background: #0b0f19;
+        }
+
+        .modalActions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            padding: 12px;
+            border-top: 1px solid rgba(255, 255, 255, .10);
+        }
+
+        .toast {
+            position: fixed;
+            left: 50%;
+            bottom: calc(86px + var(--safeB));
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, .55);
+            border: 1px solid rgba(255, 255, 255, .18);
+            color: rgba(255, 255, 255, .94);
+            padding: 10px 12px;
+            border-radius: 999px;
+            backdrop-filter: blur(12px);
+            font-size: 12px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity .18s ease, transform .18s ease;
+            z-index: 99;
+            max-width: min(520px, calc(100vw - 24px));
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(-4px);
+        }
+
+        .form {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            padding: 12px 14px 14px;
+        }
+
+        .label {
+            font-size: 12px;
+            color: var(--muted);
+            margin-bottom: 6px;
+        }
+
+        .field {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .field input,
+        .field textarea,
+        .field select {
+            border-radius: 14px;
+            border: 1px solid rgba(255, 255, 255, .12);
+            background: rgba(255, 255, 255, .06);
+            color: rgba(255, 255, 255, .90);
+            padding: 10px 12px;
+            outline: none;
+        }
+
+        .field textarea {
+            min-height: 70px;
+            resize: vertical;
+        }
+
+        .grid2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .grid3 {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 10px;
+        }
+
+        .kbd {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+            font-size: 11px;
+            padding: 2px 6px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, .14);
+            background: rgba(255, 255, 255, .06);
+            color: rgba(255, 255, 255, .86);
+            display: inline-block;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="toast" id="toast"></div>
+
+    <div class="app" id="app">
+        <div class="topbar">
+            <div class="brand">
+                <div class="logo"></div>
+                <div>
+                    <div class="title">营养识别记录器</div>
+                    <div class="subtitle" id="subtitle">不存原图，仅存缩略图（约 10KB）+ 结构化数据</div>
+                </div>
+            </div>
+            <button class="btn small ghost hidden" id="installBtn">安装到主屏</button>
+        </div>
+
+        <div class="main">
+            <!-- 记录 -->
+            <div class="page active" id="page-record">
+                <div class="mosaic card">
+                    <div class="grid" id="mosaicGrid"></div>
+                    <div class="overlay"></div>
+                    <div class="front">
+                        <div>
+                            <div class="big-number" id="todayKcal">0<span>kcal 今日累计</span></div>
+                            <div class="metric-mini" id="weekAvg">近7天均值：0 kcal/餐</div>
+                        </div>
+                        <div class="cta">
+                            <button class="btn small good" id="btnQuickUpload">上传</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="inner">
+                        <div class="row space">
+                            <div class="pill"><strong>提示</strong>：AI 识别/营养为近似值，仅供参考</div>
+                            <button class="btn small ghost" id="btnGoSettings">设置</button>
+                        </div>
+                        <div style="height:10px"></div>
+
+                        <div class="photoBox" id="photoBox">
+                            <img id="photoPreview" alt="preview" />
+                            <div class="empty" id="photoEmpty">
+                                <div style="font-weight:900; font-size:14px; color:rgba(255,255,255,.90)">拍一张你的餐盘</div>
+                                <div style="margin-top:6px">将自动压缩 ≤200KB 后发送给模型识别<br />本地只保存缩略图 + 文本数据</div>
+                            </div>
+                            <div class="badge hidden" id="photoBadge"></div>
+                        </div>
+
+                        <div style="height:10px"></div>
+                        <div class="row">
+                            <input type="file" accept="image/*" capture="environment" id="fileCamera" class="hidden">
+                            <input type="file" accept="image/*" id="fileGallery" class="hidden">
+                            <button class="btn small" id="btnCamera">拍照</button>
+                            <button class="btn small" id="btnGallery">相册</button>
+                            <button class="btn small ghost" id="btnClearPhoto">清除</button>
+                        </div>
+
+                        <div style="height:10px"></div>
+                        <div class="row nowrap">
+                            <button class="btn primary" id="btnAnalyze" style="flex:1">识别并估算营养</button>
+                            <button class="btn ghost" id="btnManual" style="white-space:nowrap">手动输入</button>
+                        </div>
+
+                        <div class="progress hidden" id="progressArea">
+                            <div class="row space">
+                                <div class="hint" id="progressText">准备中…</div>
+                                <button class="btn small ghost" id="btnCancelAnalyze">取消</button>
+                            </div>
+                            <div class="bar">
+                                <div id="progressBar"></div>
+                            </div>
+                            <div class="codebox hidden" id="debugBox"></div>
+                        </div>
+
+                        <div class="hint hidden" id="errorArea" style="color: rgba(239,68,68,.92); margin-top:10px">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card hidden" id="adjustCard">
+                    <div class="inner">
+                        <div class="row space">
+                            <div>
+                                <div style="font-weight:900">重量微调</div>
+                                <div class="hint">滑块步进 5g；支持增删项；会自动更新汇总与红绿灯</div>
+                            </div>
+                            <div class="row" style="gap:8px">
+                                <select id="mealTypeSelect"
+                                    style="border-radius:14px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.06);color:rgba(255,255,255,.9);padding:10px 10px;">
+                                    <option value="breakfast">早餐</option>
+                                    <option value="lunch">午餐</option>
+                                    <option value="dinner">晚餐</option>
+                                    <option value="snack">加餐</option>
+                                </select>
+                                <button class="btn small ghost" id="btnAddFood">+ 食物</button>
+                            </div>
+                        </div>
+
+                        <div style="height:10px"></div>
+                        <div class="foods" id="foodsList"></div>
+
+                        <div class="stickyBar" id="stickyBar">
+                            <div class="left">
+                                <div class="kcal" id="sumKcal">总热量：0 kcal</div>
+                                <div class="sub" id="sumMacro">P 0g · C 0g · F 0g · 红灯 0</div>
+                            </div>
+                            <div class="right">
+                                <button class="btn small ghost" id="btnPoster">Poster</button>
+                                <button class="btn small good" id="btnSaveRecord">保存</button>
+                            </div>
+                        </div>
+
+                        <div style="height:6px"></div>
+                        <div class="row">
+                            <button class="btn small" id="btnReanalyze">重新识别</button>
+                            <button class="btn small ghost" id="btnCopyJson">复制 JSON 摘要</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 历史 -->
+            <div class="page" id="page-history">
+                <div class="card">
+                    <div class="filters">
+                        <div class="two">
+                            <input id="searchInput" placeholder="搜索：菜名 / 关键词（chips）" />
+                            <select id="daysSelect">
+                                <option value="9999">全部</option>
+                                <option value="7">近 7 天</option>
+                                <option value="30">近 30 天</option>
+                            </select>
+                        </div>
+                        <div class="two">
+                            <select id="mealFilter">
+                                <option value="all">所有餐别</option>
+                                <option value="breakfast">早餐</option>
+                                <option value="lunch">午餐</option>
+                                <option value="dinner">晚餐</option>
+                                <option value="snack">加餐</option>
+                            </select>
+                            <select id="redFilter">
+                                <option value="all">红灯不限</option>
+                                <option value="gt0">红灯 > 0</option>
+                                <option value="eq0">红灯 = 0</option>
+                            </select>
+                        </div>
+
+                        <div class="row" style="width:100%">
+                            <button class="btn small good" id="btnHistoryUpload">上传最新</button>
+                            <button class="btn small ghost" id="btnRefreshHistory">刷新</button>
+                        </div>
+
+                        <div class="hint" id="historyHint" style="width:100%">点击卡片可打开 Poster 预览（历史记录用缩略图重绘，清晰度会低于当次导出）
+                        </div>
+                    </div>
+                </div>
+
+                <div class="feedWrap card">
+                    <div class="inner" style="padding:10px 10px 0">
+                        <div class="masonry" id="masonry"></div>
+                        <div class="row" style="padding: 0 0 14px">
+                            <button class="btn small ghost" id="btnLoadMore" style="width:100%">加载更多</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 我的 -->
+            <div class="page" id="page-me">
+                <div class="card">
+                    <div class="inner">
+                        <div style="font-weight:900">安全提示</div>
+                        <div class="hint" style="margin-top:6px">
+                            API Key 将保存在浏览器本地存储中，仅建议个人自用。<br />
+                            AI 识别与营养估算为近似值，不构成医学建议。<br />
+                            <span class="kbd">CORS</span>：纯前端直连需要你的 BaseURL 允许跨域请求。
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="form">
+                        <div style="font-weight:900">Provider 设置（OpenAI 兼容）</div>
+
+                        <div class="field">
+                            <div class="label">BaseURL（示例：https://api.openai.com）</div>
+                            <input id="baseUrlInput" placeholder="https://api.openai.com" />
+                        </div>
+
+                        <div class="grid2">
+                            <div class="field">
+                                <div class="label">Path（默认 /v1/chat/completions）</div>
+                                <input id="pathInput" placeholder="/v1/chat/completions" />
+                            </div>
+                            <div class="field">
+                                <div class="label">Model（示例 gpt-4o-mini）</div>
+                                <input id="modelInput" placeholder="gpt-4o-mini" />
+                            </div>
+                        </div>
+
+                        <div class="field">
+                            <div class="label">API Key（会本地保存）</div>
+                            <input id="apiKeyInput" type="password" placeholder="sk-..." />
+                        </div>
+
+                        <div class="grid2">
+                            <div class="field">
+                                <div class="label">两段式（推荐更稳）</div>
+                                <select id="twoStageSelect">
+                                    <option value="yes">是：先识别菜品，再估算营养</option>
+                                    <option value="no">否：一次性输出全部 JSON</option>
+                                </select>
+                            </div>
+                            <div class="field">
+                                <div class="label">尝试 response_format（JSON）</div>
+                                <select id="respFmtSelect">
+                                    <option value="yes">是：优先强约束 JSON</option>
+                                    <option value="no">否：仅靠提示词</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="grid2">
+                            <button class="btn small" id="btnTest">测试连接（最小请求）</button>
+                            <button class="btn small ghost" id="btnSaveSettings">保存设置</button>
+                        </div>
+
+                        <div class="hint hidden" id="testResult"></div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="form">
+                        <div style="font-weight:900">餐别时间段</div>
+                        <div class="hint">用于自动推断餐别（可在记录页下拉切换）。格式：HH:MM</div>
+
+                        <div class="grid2">
+                            <div class="field">
+                                <div class="label">早餐 05:00–10:00</div>
+                                <input id="ruleBreakfast" placeholder="05:00-10:00">
+                            </div>
+                            <div class="field">
+                                <div class="label">午餐 10:00–15:00</div>
+                                <input id="ruleLunch" placeholder="10:00-15:00">
+                            </div>
+                        </div>
+                        <div class="grid2">
+                            <div class="field">
+                                <div class="label">晚餐 15:00–21:00</div>
+                                <input id="ruleDinner" placeholder="15:00-21:00">
+                            </div>
+                            <div class="field">
+                                <div class="label">加餐（其余）</div>
+                                <input disabled value="auto">
+                            </div>
+                        </div>
+
+                        <button class="btn small ghost" id="btnSaveRules">保存时间段</button>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="form">
+                        <div style="font-weight:900">10 指标阈值（生活级默认，可改）</div>
+                        <div class="hint">缺值会显示灰灯；阈值仅影响红/绿判断。</div>
+
+                        <div class="grid2">
+                            <div class="field">
+                                <div class="label">热量上限（kcal）</div><input id="thKcal" type="number" />
+                            </div>
+                            <div class="field">
+                                <div class="label">蛋白下限（g）</div><input id="thProtein" type="number" />
+                            </div>
+                        </div>
+                        <div class="grid2">
+                            <div class="field">
+                                <div class="label">纤维下限（g）</div><input id="thFiber" type="number" />
+                            </div>
+                            <div class="field">
+                                <div class="label">钠上限（mg）</div><input id="thSodium" type="number" />
+                            </div>
+                        </div>
+                        <div class="grid2">
+                            <div class="field">
+                                <div class="label">添加糖上限（g）</div><input id="thSugar" type="number" />
+                            </div>
+                            <div class="field">
+                                <div class="label">饱和脂肪上限（g）</div><input id="thSatFat" type="number" />
+                            </div>
+                        </div>
+                        <div class="grid2">
+                            <div class="field">
+                                <div class="label">蔬菜份数下限（份）</div><input id="thVeg" type="number" step="0.5" />
+                            </div>
+                            <div class="field">
+                                <div class="label">全谷物下限（份）</div><input id="thWhole" type="number" step="0.5" />
+                            </div>
+                        </div>
+                        <div class="grid2">
+                            <div class="field">
+                                <div class="label">钙下限（mg）</div><input id="thCalcium" type="number" />
+                            </div>
+                            <div class="field">
+                                <div class="label">钾下限（mg）</div><input id="thPotassium" type="number" />
+                            </div>
+                        </div>
+
+                        <button class="btn small ghost" id="btnSaveThresholds">保存阈值</button>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="form">
+                        <div style="font-weight:900">数据导入导出（JSON）</div>
+                        <div class="grid2">
+                            <select id="exportRange">
+                                <option value="all">导出：全部</option>
+                                <option value="7">导出：近 7 天</option>
+                                <option value="30">导出：近 30 天</option>
+                            </select>
+                            <select id="exportThumb">
+                                <option value="no">不包含缩略图（推荐）</option>
+                                <option value="yes">包含缩略图 base64（更大）</option>
+                            </select>
+                        </div>
+                        <div class="grid2">
+                            <button class="btn small good" id="btnExport">导出 JSON</button>
+                            <button class="btn small" id="btnImport">导入 JSON</button>
+                            <input type="file" accept="application/json" id="importFile" class="hidden">
+                        </div>
+
+                        <div class="divider"></div>
+                        <div style="font-weight:900">存储管理</div>
+                        <div class="hint" id="storageInfo">读取中…</div>
+                        <div class="grid2">
+                            <button class="btn small danger" id="btnClearAll">清空记录（含缩略图）</button>
+                            <button class="btn small danger" id="btnClearKey">清除 API Key</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="tabbar">
+            <button data-tab="record" class="active">记录</button>
+            <button data-tab="history">历史</button>
+            <button data-tab="me">我的</button>
+        </div>
+    </div>
+
+    <!-- Poster Modal -->
+    <dialog id="posterDialog">
+        <div class="modalHeader">
+            <div class="h" id="posterTitle">Poster 预览</div>
+            <button class="btn small ghost" id="btnClosePoster">关闭</button>
+        </div>
+        <div class="modalBody">
+            <div class="posterPreview">
+                <canvas id="posterCanvas" width="1080" height="1920"></canvas>
+            </div>
+            <div class="hint" id="posterHint" style="margin-top:10px"></div>
+        </div>
+        <div class="modalActions">
+            <button class="btn small good" id="btnSaveJpg">保存 JPG</button>
+            <button class="btn small" id="btnSavePng">保存 PNG</button>
+            <button class="btn small ghost" id="btnShare">分享</button>
+            <button class="btn small ghost" id="btnCopyPosterJson">复制 JSON 摘要</button>
+        </div>
+    </dialog>
+
+    <!-- Manual Foods Modal -->
+    <dialog id="manualDialog">
+        <div class="modalHeader">
+            <div class="h">手动录入（无需图片）</div>
+            <button class="btn small ghost" id="btnCloseManual">关闭</button>
+        </div>
+        <div class="modalBody">
+            <div class="hint">每行：菜名,重量g（可省略重量）例如：<span class="kbd">鸡胸肉,150</span> 或 <span class="kbd">米饭,200</span>
+            </div>
+            <div style="height:10px"></div>
+            <textarea id="manualText"
+                style="width:100%;border-radius:14px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.06);color:rgba(255,255,255,.9);padding:10px 12px;min-height:160px"
+                placeholder="例如：&#10;鸡胸肉,150&#10;西兰花,120&#10;米饭,180"></textarea>
+        </div>
+        <div class="modalActions">
+            <button class="btn small good" id="btnManualToAnalyze">估算营养</button>
+        </div>
+    </dialog>
+
+    <script>
+        (() => {
+            // =========================
+            // Utilities
+            // =========================
+            const $ = (sel, el = document) => el.querySelector(sel);
+            const $$ = (sel, el = document) => Array.from(el.querySelectorAll(sel));
+            const uid = () => (crypto.randomUUID ? crypto.randomUUID() : "id_" + Math.random().toString(16).slice(2) + Date.now());
+            const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
+            const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+            const nowISO = () => new Date().toISOString();
+            const fmtDate = (iso) => {
+                const d = new Date(iso);
+                const pad = n => String(n).padStart(2, "0");
+                return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+            };
+            const toast = (msg) => {
+                const t = $("#toast");
+                t.textContent = msg;
+                t.classList.add("show");
+                clearTimeout(toast._tm);
+                toast._tm = setTimeout(() => t.classList.remove("show"), 1600);
+            };
+            const safeJsonParse = (text) => {
+                if (!text) throw new Error("empty");
+                let s = text.trim();
+                // strip ```json ... ```
+                s = s.replace(/^```(?:json)?/i, "").replace(/```$/i, "").trim();
+                // try direct
+                try { return JSON.parse(s); } catch (e) { }
+                // try find first {...} block
+                const i = s.indexOf("{");
+                const j = s.lastIndexOf("}");
+                if (i >= 0 && j > i) {
+                    const sub = s.slice(i, j + 1);
+                    return JSON.parse(sub);
+                }
+                throw new Error("JSON parse failed");
+            };
+            const blobToDataUrl = (blob) => new Promise((resolve, reject) => {
+                const r = new FileReader();
+                r.onload = () => resolve(String(r.result));
+                r.onerror = () => reject(r.error);
+                r.readAsDataURL(blob);
+            });
+            const dataUrlToBlob = async (dataUrl) => {
+                const res = await fetch(dataUrl);
+                return await res.blob();
+            };
+
+            // =========================
+            // IndexedDB minimal wrapper
+            // =========================
+            const DB_NAME = "nutri_recorder_db_v1";
+            const DB_VER = 1;
+            const STORE = "records";
+
+            const idb = {
+                db: null,
+                async open() {
+                    if (idb.db) return idb.db;
+                    idb.db = await new Promise((resolve, reject) => {
+                        const req = indexedDB.open(DB_NAME, DB_VER);
+                        req.onupgradeneeded = (e) => {
+                            const db = req.result;
+                            if (!db.objectStoreNames.contains(STORE)) {
+                                const os = db.createObjectStore(STORE, { keyPath: "id" });
+                                os.createIndex("created_at", "created_at", { unique: false });
+                            }
+                        };
+                        req.onsuccess = () => resolve(req.result);
+                        req.onerror = () => reject(req.error);
+                    });
+                    return idb.db;
+                },
+                async tx(mode = "readonly") {
+                    const db = await idb.open();
+                    const t = db.transaction(STORE, mode);
+                    return t.objectStore(STORE);
+                },
+                async put(record) {
+                    const os = await idb.tx("readwrite");
+                    await new Promise((resolve, reject) => {
+                        const req = os.put(record);
+                        req.onsuccess = () => resolve();
+                        req.onerror = () => reject(req.error);
+                    });
+                },
+                async get(id) {
+                    const os = await idb.tx("readonly");
+                    return await new Promise((resolve, reject) => {
+                        const req = os.get(id);
+                        req.onsuccess = () => resolve(req.result || null);
+                        req.onerror = () => reject(req.error);
+                    });
+                },
+                async del(id) {
+                    const os = await idb.tx("readwrite");
+                    await new Promise((resolve, reject) => {
+                        const req = os.delete(id);
+                        req.onsuccess = () => resolve();
+                        req.onerror = () => reject(req.error);
+                    });
+                },
+                async clear() {
+                    const os = await idb.tx("readwrite");
+                    await new Promise((resolve, reject) => {
+                        const req = os.clear();
+                        req.onsuccess = () => resolve();
+                        req.onerror = () => reject(req.error);
+                    });
+                },
+                async getAll() {
+                    const os = await idb.tx("readonly");
+                    return await new Promise((resolve, reject) => {
+                        const req = os.getAll();
+                        req.onsuccess = () => resolve(req.result || []);
+                        req.onerror = () => reject(req.error);
+                    });
+                }
+            };
+
+            // =========================
+            // Settings (localStorage)
+            // =========================
+            const LS_KEY = "nutri_recorder_settings_v1";
+            const defaultSettings = {
+                baseUrl: "https://api.openai.com",
+                path: "/v1/chat/completions",
+                model: "gpt-4o-mini",
+                apiKey: "",
+                twoStage: true,
+                tryResponseFormat: true,
+                mealRules: { breakfast: "05:00-10:00", lunch: "10:00-15:00", dinner: "15:00-21:00" },
+                thresholds: {
+                    kcal_max: 850,
+                    protein_min: 25,
+                    fiber_min: 8,
+                    sodium_max: 800,
+                    sugar_max: 10,
+                    sat_fat_max: 8,
+                    veg_servings_min: 2,
+                    whole_grain_servings_min: 1,
+                    calcium_min: 300,
+                    potassium_min: 700
+                },
+                storagePolicy: {
+                    maxRecords: 1000,
+                    maxThumbBytes: 30 * 1024 * 1024, // ~30MB thumbs budget
+                    lruDropThumbOnly: true
+                }
+            };
+
+            const loadSettings = () => {
+                try {
+                    const raw = localStorage.getItem(LS_KEY);
+                    if (!raw) return structuredClone(defaultSettings);
+                    const obj = JSON.parse(raw);
+                    return deepMerge(structuredClone(defaultSettings), obj);
+                } catch {
+                    return structuredClone(defaultSettings);
+                }
+            };
+            const saveSettings = (s) => localStorage.setItem(LS_KEY, JSON.stringify(s));
+            const deepMerge = (a, b) => {
+                if (!b || typeof b !== "object") return a;
+                for (const k of Object.keys(b)) {
+                    if (b[k] && typeof b[k] === "object" && !Array.isArray(b[k])) {
+                        a[k] = deepMerge(a[k] || {}, b[k]);
+                    } else a[k] = b[k];
+                }
+                return a;
+            };
+
+            // =========================
+            // EXIF orientation (JPEG)
+            // =========================
+            function getJpegOrientation(arrayBuffer) {
+                const view = new DataView(arrayBuffer);
+                if (view.getUint16(0, false) !== 0xFFD8) return 1; // not jpeg
+                let offset = 2;
+                const length = view.byteLength;
+                while (offset < length) {
+                    const marker = view.getUint16(offset, false);
+                    offset += 2;
+                    if (marker === 0xFFE1) {
+                        const size = view.getUint16(offset, false);
+                        offset += 2;
+                        // Exif header "Exif\0\0"
+                        if (view.getUint32(offset, false) !== 0x45786966) return 1;
+                        offset += 6;
+                        const tiffOffset = offset;
+                        const little = view.getUint16(tiffOffset, false) === 0x4949;
+                        const getU16 = (o) => view.getUint16(o, little);
+                        const getU32 = (o) => view.getUint32(o, little);
+                        const firstIFD = tiffOffset + getU32(tiffOffset + 4);
+                        const entries = getU16(firstIFD);
+                        for (let i = 0; i < entries; i++) {
+                            const ent = firstIFD + 2 + i * 12;
+                            const tag = getU16(ent);
+                            if (tag === 0x0112) {
+                                const val = getU16(ent + 8);
+                                return val;
+                            }
+                        }
+                        return 1;
+                    } else {
+                        const size = view.getUint16(offset, false);
+                        offset += size;
+                    }
+                }
+                return 1;
+            }
+
+            async function loadImageBitmapFromBlob(blob) {
+                // Prefer createImageBitmap with orientation if supported
+                if ("createImageBitmap" in window) {
+                    try {
+                        const bmp = await createImageBitmap(blob, { imageOrientation: "from-image" });
+                        return { bmp, orientation: 1 };
+                    } catch { }
+                }
+                // Fallback: decode via <img>, manual orientation
+                const url = URL.createObjectURL(blob);
+                try {
+                    const img = await new Promise((resolve, reject) => {
+                        const el = new Image();
+                        el.onload = () => resolve(el);
+                        el.onerror = reject;
+                        el.src = url;
+                    });
+                    return { img, orientation: 1 };
+                } finally {
+                    URL.revokeObjectURL(url);
+                }
+            }
+
+            function drawOriented(ctx, source, dx, dy, dw, dh, orientation) {
+                // orientation 1..8 for JPEG
+                // If orientation already normalized (createImageBitmap from-image), pass 1.
+                const w = dw, h = dh;
+                ctx.save();
+                // Transform around destination box
+                ctx.translate(dx, dy);
+                switch (orientation) {
+                    case 2: ctx.translate(w, 0); ctx.scale(-1, 1); break;                // mirror X
+                    case 3: ctx.translate(w, h); ctx.rotate(Math.PI); break;              // 180
+                    case 4: ctx.translate(0, h); ctx.scale(1, -1); break;                 // mirror Y
+                    case 5: ctx.rotate(0.5 * Math.PI); ctx.scale(1, -1); break;             // mirror Y + 90
+                    case 6: ctx.translate(w, 0); ctx.rotate(0.5 * Math.PI); break;          // 90
+                    case 7: ctx.translate(w, h); ctx.rotate(0.5 * Math.PI); ctx.scale(-1, 1); break;// mirror X + 90
+                    case 8: ctx.translate(0, h); ctx.rotate(-0.5 * Math.PI); break;         // -90
+                    default: break;
+                }
+                // For rotations, destination w/h swap, easiest: draw into (0,0) with mapped size
+                // We'll just draw scaled to dw/dh; most orientations okay for our cover-crop usage.
+                ctx.drawImage(source, 0, 0, dw, dh);
+                ctx.restore();
+            }
+
+            // =========================
+            // Image compression
+            // =========================
+            async function compressForLLM(file, maxBytes = 200 * 1024) {
+                const arrayBuf = await file.arrayBuffer();
+                const orientation = (file.type === "image/jpeg" || file.type === "image/jpg") ? getJpegOrientation(arrayBuf) : 1;
+                // decode original (orientation not auto unless createImageBitmap supports from-image)
+                let source;
+                let w0, h0;
+                let bmpObj = null;
+
+                // Build a blob from original array buffer (keeps identical bytes)
+                const origBlob = new Blob([arrayBuf], { type: file.type || "image/jpeg" });
+
+                // decode
+                const decoded = await loadImageBitmapFromBlob(origBlob);
+                if (decoded.bmp) {
+                    source = decoded.bmp;
+                    bmpObj = decoded.bmp;
+                    w0 = source.width; h0 = source.height;
+                } else {
+                    source = decoded.img;
+                    w0 = source.naturalWidth; h0 = source.naturalHeight;
+                }
+
+                // target max edge
+                let maxEdge = 1280;
+                const scale = Math.min(1, maxEdge / Math.max(w0, h0));
+                let w = Math.round(w0 * scale);
+                let h = Math.round(h0 * scale);
+
+                // canvas
+                const canvas = document.createElement("canvas");
+                const ctx = canvas.getContext("2d", { alpha: false });
+
+                // if orientation involves rotation, adjust canvas dims for better scaling
+                const rot = [5, 6, 7, 8].includes(orientation);
+                canvas.width = rot ? h : w;
+                canvas.height = rot ? w : h;
+
+                // Draw with orientation corrected
+                // We'll do a simplified approach: draw into an intermediate oriented canvas by transform
+                ctx.save();
+                applyOrientationTransform(ctx, orientation, canvas.width, canvas.height);
+                // Draw source scaled into "logical" w x h
+                ctx.drawImage(source, 0, 0, w, h);
+                ctx.restore();
+
+                // iterative encode
+                const supportsWebP = await canEncodeWebP();
+                const mime = supportsWebP ? "image/webp" : "image/jpeg";
+                let q = 0.80;
+                let blob = await canvasToBlob(canvas, mime, q);
+                // If too large, loop reducing quality then size
+                for (let i = 0; i < 10 && blob.size > maxBytes; i++) {
+                    q = Math.max(0.40, q - 0.10);
+                    blob = await canvasToBlob(canvas, mime, q);
+                }
+                if (blob.size > maxBytes) {
+                    // shrink further
+                    for (let step = 0; step < 4 && blob.size > maxBytes; step++) {
+                        w = Math.round(w * 0.85);
+                        h = Math.round(h * 0.85);
+                        canvas.width = rot ? h : w;
+                        canvas.height = rot ? w : h;
+                        ctx.save();
+                        applyOrientationTransform(ctx, orientation, canvas.width, canvas.height);
+                        ctx.drawImage(source, 0, 0, w, h);
+                        ctx.restore();
+                        q = 0.70;
+                        blob = await canvasToBlob(canvas, mime, q);
+                        for (let i = 0; i < 10 && blob.size > maxBytes; i++) {
+                            q = Math.max(0.35, q - 0.08);
+                            blob = await canvasToBlob(canvas, mime, q);
+                        }
+                    }
+                }
+
+                // cleanup bitmap
+                try { bmpObj && bmpObj.close && bmpObj.close(); } catch { }
+
+                return { blob, width: canvas.width, height: canvas.height, mime, orientation };
+            }
+
+            async function createThumbSquare(file, size = 200, targetBytes = 12 * 1024) {
+                const arrayBuf = await file.arrayBuffer();
+                const orientation = (file.type === "image/jpeg" || file.type === "image/jpg") ? getJpegOrientation(arrayBuf) : 1;
+                const origBlob = new Blob([arrayBuf], { type: file.type || "image/jpeg" });
+                const decoded = await loadImageBitmapFromBlob(origBlob);
+                const source = decoded.bmp || decoded.img;
+                const w0 = decoded.bmp ? source.width : source.naturalWidth;
+                const h0 = decoded.bmp ? source.height : source.naturalHeight;
+
+                // draw square cover crop
+                const canvas = document.createElement("canvas");
+                canvas.width = size; canvas.height = size;
+                const ctx = canvas.getContext("2d", { alpha: false });
+
+                // We first draw oriented into a temp canvas to simplify crop
+                const tmp = document.createElement("canvas");
+                const tctx = tmp.getContext("2d", { alpha: false });
+                const rot = [5, 6, 7, 8].includes(orientation);
+                tmp.width = rot ? h0 : w0;
+                tmp.height = rot ? w0 : h0;
+                tctx.save();
+                applyOrientationTransform(tctx, orientation, tmp.width, tmp.height);
+                tctx.drawImage(source, 0, 0, w0, h0);
+                tctx.restore();
+
+                const tw = tmp.width, th = tmp.height;
+                const s = Math.max(size / tw, size / th);
+                const dw = tw * s, dh = th * s;
+                const dx = (size - dw) / 2;
+                const dy = (size - dh) / 2;
+                ctx.drawImage(tmp, dx, dy, dw, dh);
+
+                const supportsWebP = await canEncodeWebP();
+                const mime = supportsWebP ? "image/webp" : "image/jpeg";
+                let q = 0.55;
+                let blob = await canvasToBlob(canvas, mime, q);
+                for (let i = 0; i < 10 && blob.size > targetBytes; i++) {
+                    q = Math.max(0.30, q - 0.06);
+                    blob = await canvasToBlob(canvas, mime, q);
+                }
+
+                try { decoded.bmp && decoded.bmp.close && decoded.bmp.close(); } catch { }
+                return { blob, mime, size, bytes: blob.size };
+            }
+
+            function applyOrientationTransform(ctx, orientation, w, h) {
+                // index based on EXIF orientation; transforms the canvas so drawing is correct
+                switch (orientation) {
+                    case 2: ctx.translate(w, 0); ctx.scale(-1, 1); break;
+                    case 3: ctx.translate(w, h); ctx.rotate(Math.PI); break;
+                    case 4: ctx.translate(0, h); ctx.scale(1, -1); break;
+                    case 5: ctx.rotate(0.5 * Math.PI); ctx.scale(1, -1); break;
+                    case 6: ctx.translate(w, 0); ctx.rotate(0.5 * Math.PI); break;
+                    case 7: ctx.translate(w, h); ctx.rotate(0.5 * Math.PI); ctx.scale(-1, 1); break;
+                    case 8: ctx.translate(0, h); ctx.rotate(-0.5 * Math.PI); break;
+                    default: break;
+                }
+            }
+
+            function canvasToBlob(canvas, mime, quality) {
+                return new Promise((resolve) => canvas.toBlob((b) => resolve(b), mime, quality));
+            }
+            async function canEncodeWebP() {
+                if (canEncodeWebP._v != null) return canEncodeWebP._v;
+                const c = document.createElement("canvas");
+                c.width = c.height = 2;
+                const b = await new Promise(res => c.toBlob(res, "image/webp", 0.6));
+                canEncodeWebP._v = !!b;
+                return canEncodeWebP._v;
+            }
+
+            // =========================
+            // Nutrition computations
+            // =========================
+            function normalizeFoodItem(food) {
+                const f = structuredClone(food);
+                f.display_name = String(f.display_name || "").trim() || "未命名食物";
+                f.weight_g = Math.max(0, Number(f.weight_g || 0));
+                f.confidence = clamp(Number(f.confidence ?? 0.6), 0, 1);
+                f.notes_short = (f.notes_short ? String(f.notes_short) : "").slice(0, 12);
+                f.kcal = Number(f.kcal || 0);
+                f.macros_g = f.macros_g || { protein: 0, carb: 0, fat: 0 };
+                f.key_micros = f.key_micros || {};
+                // Build per100g for future scaling
+                const base = Math.max(1, f.weight_g || 1);
+                f.per100g = f.per100g || {};
+                f.per100g.kcal = round2(f.kcal / base * 100);
+                f.per100g.macros_g = {
+                    protein: round2((Number(f.macros_g.protein || 0) / base) * 100),
+                    carb: round2((Number(f.macros_g.carb || 0) / base) * 100),
+                    fat: round2((Number(f.macros_g.fat || 0) / base) * 100),
+                };
+                f.per100g.key_micros = {};
+                for (const k of ["fiber_g", "sodium_mg", "sugar_g", "sat_fat_g", "potassium_mg", "calcium_mg", "veg_servings", "whole_grain_servings"]) {
+                    const v = Number(f.key_micros?.[k]);
+                    if (!Number.isFinite(v)) continue;
+                    f.per100g.key_micros[k] = round2(v / base * 100);
+                }
+                return f;
+            }
+
+            function scaleFoodToWeight(food, newWeight) {
+                const w = Math.max(0, Number(newWeight || 0));
+                const per = food.per100g || {};
+                const pv = (v) => Number.isFinite(v) ? v : 0;
+                const out = structuredClone(food);
+
+                out.weight_g = w;
+                out.kcal = round2(pv(per.kcal) * w / 100);
+
+                const pm = per.macros_g || {};
+                out.macros_g = {
+                    protein: round2(pv(pm.protein) * w / 100),
+                    carb: round2(pv(pm.carb) * w / 100),
+                    fat: round2(pv(pm.fat) * w / 100),
+                };
+                out.key_micros = out.key_micros || {};
+                const pk = per.key_micros || {};
+                for (const k of Object.keys(pk)) {
+                    out.key_micros[k] = round2(pv(pk[k]) * w / 100);
+                }
+                return out;
+            }
+
+            function sumTotals(foods) {
+                const tot = {
+                    kcal_total: 0,
+                    macros_total_g: { protein: 0, carb: 0, fat: 0 },
+                    fiber_g: null,
+                    sodium_mg: null,
+                    sugar_g: null,
+                    sat_fat_g: null,
+                    veg_servings: null,
+                    whole_grain_servings: null,
+                    calcium_mg: null,
+                    potassium_mg: null,
+                    balance_score: null
+                };
+                let fiber = 0, sodium = 0, sugar = 0, sat = 0, veg = 0, whole = 0, calcium = 0, potassium = 0;
+                let hasFiber = false, hasSodium = false, hasSugar = false, hasSat = false, hasVeg = false, hasWhole = false, hasCalcium = false, hasPotassium = false;
+
+                for (const f of foods) {
+                    tot.kcal_total += Number(f.kcal || 0);
+                    tot.macros_total_g.protein += Number(f.macros_g?.protein || 0);
+                    tot.macros_total_g.carb += Number(f.macros_g?.carb || 0);
+                    tot.macros_total_g.fat += Number(f.macros_g?.fat || 0);
+
+                    if (Number.isFinite(Number(f.key_micros?.fiber_g))) { fiber += Number(f.key_micros.fiber_g); hasFiber = true; }
+                    if (Number.isFinite(Number(f.key_micros?.sodium_mg))) { sodium += Number(f.key_micros.sodium_mg); hasSodium = true; }
+                    if (Number.isFinite(Number(f.key_micros?.sugar_g))) { sugar += Number(f.key_micros.sugar_g); hasSugar = true; }
+                    if (Number.isFinite(Number(f.key_micros?.sat_fat_g))) { sat += Number(f.key_micros.sat_fat_g); hasSat = true; }
+                    if (Number.isFinite(Number(f.key_micros?.veg_servings))) { veg += Number(f.key_micros.veg_servings); hasVeg = true; }
+                    if (Number.isFinite(Number(f.key_micros?.whole_grain_servings))) { whole += Number(f.key_micros.whole_grain_servings); hasWhole = true; }
+                    if (Number.isFinite(Number(f.key_micros?.calcium_mg))) { calcium += Number(f.key_micros.calcium_mg); hasCalcium = true; }
+                    if (Number.isFinite(Number(f.key_micros?.potassium_mg))) { potassium += Number(f.key_micros.potassium_mg); hasPotassium = true; }
+                }
+
+                tot.kcal_total = round2(tot.kcal_total);
+                tot.macros_total_g.protein = round2(tot.macros_total_g.protein);
+                tot.macros_total_g.carb = round2(tot.macros_total_g.carb);
+                tot.macros_total_g.fat = round2(tot.macros_total_g.fat);
+
+                tot.fiber_g = hasFiber ? round2(fiber) : null;
+                tot.sodium_mg = hasSodium ? round2(sodium) : null;
+                tot.sugar_g = hasSugar ? round2(sugar) : null;
+                tot.sat_fat_g = hasSat ? round2(sat) : null;
+                tot.veg_servings = hasVeg ? round2(veg) : null;
+                tot.whole_grain_servings = hasWhole ? round2(whole) : null;
+                tot.calcium_mg = hasCalcium ? round2(calcium) : null;
+                tot.potassium_mg = hasPotassium ? round2(potassium) : null;
+
+                // Simple balance score: % green metrics among available (life-level heuristic)
+                tot.balance_score = null;
+                return tot;
+            }
+
+            function buildTenMetrics(totals, thresholds) {
+                const items = [
+                    { key: "kcal", label: "热量", value: totals.kcal_total, unit: "kcal", mode: "max", th: thresholds.kcal_max, fmt: (v) => `${Math.round(v)}kcal` },
+                    { key: "protein", label: "蛋白", value: totals.macros_total_g.protein, unit: "g", mode: "min", th: thresholds.protein_min, fmt: (v) => `${round0(v)}g` },
+                    { key: "fiber", label: "纤维", value: totals.fiber_g, unit: "g", mode: "min", th: thresholds.fiber_min, fmt: (v) => `${round0(v)}g` },
+                    { key: "sodium", label: "钠", value: totals.sodium_mg, unit: "mg", mode: "max", th: thresholds.sodium_max, fmt: (v) => `${round0(v)}mg` },
+                    { key: "sugar", label: "添加糖", value: totals.sugar_g, unit: "g", mode: "max", th: thresholds.sugar_max, fmt: (v) => `${round0(v)}g` },
+                    { key: "sat_fat", label: "饱和脂肪", value: totals.sat_fat_g, unit: "g", mode: "max", th: thresholds.sat_fat_max, fmt: (v) => `${round0(v)}g` },
+                    { key: "veg", label: "蔬菜", value: totals.veg_servings, unit: "份", mode: "min", th: thresholds.veg_servings_min, fmt: (v) => `${round1(v)}份` },
+                    { key: "whole", label: "全谷物", value: totals.whole_grain_servings, unit: "份", mode: "min", th: thresholds.whole_grain_servings_min, fmt: (v) => `${round1(v)}份` },
+                    { key: "calcium", label: "钙", value: totals.calcium_mg, unit: "mg", mode: "min", th: thresholds.calcium_min, fmt: (v) => `${round0(v)}mg` },
+                    { key: "potassium", label: "钾", value: totals.potassium_mg, unit: "mg", mode: "min", th: thresholds.potassium_min, fmt: (v) => `${round0(v)}mg` },
+                ];
+
+                const out = [];
+                let avail = 0, green = 0;
+                for (const it of items) {
+                    let status = "gray";
+                    let why = "";
+                    if (it.value == null || !Number.isFinite(Number(it.value))) {
+                        status = "gray";
+                        why = "未知";
+                    } else {
+                        avail++;
+                        const ok = it.mode === "max" ? (Number(it.value) <= Number(it.th)) : (Number(it.value) >= Number(it.th));
+                        status = ok ? "green" : "red";
+                        why = ok ? "OK" : (it.mode === "max" ? "偏高" : "不足");
+                        if (ok) green++;
+                    }
+                    out.push({
+                        key: it.key,
+                        label: it.label,
+                        value_text: it.value == null ? `${it.label} —` : `${it.label} ${it.fmt(Number(it.value))}`,
+                        status,
+                        why_short: why,
+                        threshold_used: it.th
+                    });
+                }
+                // balance score
+                return { ten_metrics: out, balance_score: avail ? Math.round(green / avail * 100) : null, red_count: out.filter(x => x.status === "red").length };
+            }
+
+            function round2(n) { return Math.round((Number(n) || 0) * 100) / 100; }
+            function round1(n) { return Math.round((Number(n) || 0) * 10) / 10; }
+            function round0(n) { return Math.round(Number(n) || 0); }
+
+            function mealTypeFromRules(date, rules) {
+                const m = date.getHours() * 60 + date.getMinutes();
+                const inRange = (range) => {
+                    const [a, b] = range.split("-").map(s => s.trim());
+                    if (!a || !b) return false;
+                    const toMin = (t) => {
+                        const [hh, mm] = t.split(":").map(Number);
+                        return hh * 60 + mm;
+                    };
+                    const x = toMin(a), y = toMin(b);
+                    return m >= x && m < y;
+                };
+                if (inRange(rules.breakfast)) return "breakfast";
+                if (inRange(rules.lunch)) return "lunch";
+                if (inRange(rules.dinner)) return "dinner";
+                return "snack";
+            }
+
+            function mealTypeLabel(t) {
+                return t === "breakfast" ? "早餐" : t === "lunch" ? "午餐" : t === "dinner" ? "晚餐" : "加餐";
+            }
+
+            // =========================
+            // OpenAI compatible HTTP
+            // =========================
+            async function openaiFetchJSON(settings, body, { signal } = {}) {
+                const baseUrl = String(settings.baseUrl || "").trim().replace(/\/+$/, "");
+                const path = String(settings.path || "/v1/chat/completions").trim();
+                const url = baseUrl + (path.startsWith("/") ? path : ("/" + path));
+                const headers = {
+                    "Content-Type": "application/json",
+                };
+                const key = String(settings.apiKey || "").trim();
+                if (key) headers["Authorization"] = `Bearer ${key}`;
+                const res = await fetch(url, { method: "POST", headers, body: JSON.stringify(body), signal });
+                const text = await res.text();
+                if (!res.ok) {
+                    let extra = "";
+                    try {
+                        const j = JSON.parse(text);
+                        extra = j?.error?.message ? `\n${j.error.message}` : "";
+                    } catch { }
+                    throw new Error(`HTTP ${res.status} ${res.statusText}${extra}\n${text.slice(0, 800)}`);
+                }
+                // Many providers return JSON
+                try { return JSON.parse(text); } catch {
+                    throw new Error("响应不是合法 JSON：" + text.slice(0, 200));
+                }
+            }
+
+            function pickContentFromChatCompletion(resp) {
+                // OpenAI-compatible: choices[0].message.content
+                const c = resp?.choices?.[0]?.message?.content;
+                if (typeof c === "string") return c;
+                // Some providers may return an array
+                if (Array.isArray(c)) return c.map(x => x?.text || "").join("");
+                return "";
+            }
+
+            async function callLLM_visionFoods({ settings, imageDataUrl, debug, signal }) {
+                const sys = `你是“食物识别器”。只输出严格 JSON（不要解释，不要 markdown，不要多余文字）。
+目标：从图片中识别餐盘里每个菜品/食物的名称，并估算重量（克）与置信度。
+要求：
+- 必须输出 schema_version="1.0"
+- foods 为数组，每项包含：display_name, weight_g, confidence(0~1), notes_short(<=12字，可空)
+- 不输出营养数值（kcal/macros 在下一步做）
+- 若不确定：confidence 降低，并在 notes_short 写“可能是…”
+输出示例结构：
+{
+  "schema_version":"1.0",
+  "foods":[{"display_name":"米饭","weight_g":180,"confidence":0.7,"notes_short":""}],
+  "warnings":[ "可选：一句不确定性提示" ]
+}`;
+                const user = [
+                    { type: "text", text: "请识别图片中的食物列表与重量估计，输出严格 JSON。" },
+                    { type: "image_url", image_url: { url: imageDataUrl, detail: "low" } }
+                ];
+                const body = {
+                    model: settings.model,
+                    messages: [
+                        { role: "system", content: sys },
+                        { role: "user", content: user }
+                    ],
+                    temperature: 0.2,
+                    max_tokens: 800
+                };
+
+                // Try response_format if enabled
+                let resp;
+                if (settings.tryResponseFormat) {
+                    body.response_format = { type: "json_object" };
+                }
+                try {
+                    resp = await openaiFetchJSON(settings, body, { signal });
+                } catch (e) {
+                    // Retry without response_format in case provider doesn't support it
+                    if (settings.tryResponseFormat) {
+                        delete body.response_format;
+                        resp = await openaiFetchJSON(settings, body, { signal });
+                    } else throw e;
+                }
+                debug && debug(resp);
+                const text = pickContentFromChatCompletion(resp);
+                return safeJsonParse(text);
+            }
+
+            async function callLLM_nutrition({ settings, foods, debug, signal }) {
+                const sys = `你是“营养估算器”，基于给定 foods（菜名+重量克）估算营养（生活级近似）。只输出严格 JSON。
+规则：
+- 不要医疗建议；数值为近似估算
+- foods 输出同名项，补齐每项：kcal, macros_g{protein,carb,fat}, key_micros{fiber_g,sodium_mg,sugar_g,sat_fat_g,potassium_mg,calcium_mg,veg_servings,whole_grain_servings}（不可估则省略该字段）
+- meal_totals 输出：kcal_total, macros_total_g, fiber_g, sodium_mg, sugar_g, sat_fat_g, veg_servings, whole_grain_servings, calcium_mg, potassium_mg
+- poster 输出：keywords(<=3), tips(<=4, 每条<=16字), disclaimer_short(一句)
+- schema_version="1.0"
+
+输出示例结构：
+{
+ "schema_version":"1.0",
+ "foods":[{...}],
+ "meal_totals":{...},
+ "poster":{"keywords":["盐偏高"],"tips":["多配蔬菜"],"disclaimer_short":"仅供参考"}
+}`;
+                const body = {
+                    model: settings.model,
+                    messages: [
+                        { role: "system", content: sys },
+                        { role: "user", content: `foods输入如下（按原样理解与估算）：\n${JSON.stringify(foods, null, 2)}\n请输出严格 JSON。` }
+                    ],
+                    temperature: 0.2,
+                    max_tokens: 1200
+                };
+                if (settings.tryResponseFormat) body.response_format = { type: "json_object" };
+
+                let resp;
+                try {
+                    resp = await openaiFetchJSON(settings, body, { signal });
+                } catch (e) {
+                    if (settings.tryResponseFormat) {
+                        delete body.response_format;
+                        resp = await openaiFetchJSON(settings, body, { signal });
+                    } else throw e;
+                }
+                debug && debug(resp);
+                const text = pickContentFromChatCompletion(resp);
+                return safeJsonParse(text);
+            }
+
+            async function callLLM_allInOne({ settings, imageDataUrl, debug, signal }) {
+                const sys = `你是“食物营养识别器”。只输出严格 JSON（不要解释/markdown/多余文字）。
+要求输出：
+- schema_version="1.0"
+- foods: 每项含 display_name, weight_g, confidence, notes_short, kcal, macros_g, key_micros(可缺省)
+- meal_totals: kcal_total, macros_total_g, fiber_g, sodium_mg, sugar_g, sat_fat_g, veg_servings, whole_grain_servings, calcium_mg, potassium_mg
+- poster: keywords<=3, tips<=4, disclaimer_short
+提示：不确定就降低 confidence，不要假装精确。`;
+                const user = [
+                    { type: "text", text: "请识别图片食物并估算营养，输出严格 JSON。" },
+                    { type: "image_url", image_url: { url: imageDataUrl, detail: "low" } }
+                ];
+                const body = {
+                    model: settings.model,
+                    messages: [
+                        { role: "system", content: sys },
+                        { role: "user", content: user }
+                    ],
+                    temperature: 0.2,
+                    max_tokens: 1600
+                };
+                if (settings.tryResponseFormat) body.response_format = { type: "json_object" };
+
+                let resp;
+                try {
+                    resp = await openaiFetchJSON(settings, body, { signal });
+                } catch (e) {
+                    if (settings.tryResponseFormat) {
+                        delete body.response_format;
+                        resp = await openaiFetchJSON(settings, body, { signal });
+                    } else throw e;
+                }
+                debug && debug(resp);
+                const text = pickContentFromChatCompletion(resp);
+                return safeJsonParse(text);
+            }
+
+            async function callLLM_repairJSON({ settings, badText, debug, signal }) {
+                const sys = `你是 JSON 修复器。把输入文本“修复为严格 JSON”，不要解释，不要输出多余文字。
+要求：尽最大可能保留原内容结构；如果字段缺失，允许补默认值（foods 至少为空数组）。`;
+                const body = {
+                    model: settings.model,
+                    messages: [
+                        { role: "system", content: sys },
+                        { role: "user", content: badText.slice(0, 12000) }
+                    ],
+                    temperature: 0,
+                    max_tokens: 1200
+                };
+                if (settings.tryResponseFormat) body.response_format = { type: "json_object" };
+
+                let resp;
+                try {
+                    resp = await openaiFetchJSON(settings, body, { signal });
+                } catch (e) {
+                    if (settings.tryResponseFormat) {
+                        delete body.response_format;
+                        resp = await openaiFetchJSON(settings, body, { signal });
+                    } else throw e;
+                }
+                debug && debug(resp);
+                const text = pickContentFromChatCompletion(resp);
+                return safeJsonParse(text);
+            }
+
+            // =========================
+            // Poster (canvas rendering)
+            // =========================
+            function rrect(ctx, x, y, w, h, r) {
+                r = Math.min(r, w / 2, h / 2);
+                ctx.beginPath();
+                ctx.moveTo(x + r, y);
+                ctx.arcTo(x + w, y, x + w, y + h, r);
+                ctx.arcTo(x + w, y + h, x, y + h, r);
+                ctx.arcTo(x, y + h, x, y, r);
+                ctx.arcTo(x, y, x + w, y, r);
+                ctx.closePath();
+            }
+
+            function wrapText(ctx, text, x, y, maxWidth, lineHeight, maxLines) {
+                const words = String(text || "").split("");
+                let line = "";
+                const lines = [];
+                for (const ch of words) {
+                    const test = line + ch;
+                    if (ctx.measureText(test).width > maxWidth && line) {
+                        lines.push(line);
+                        line = ch;
+                        if (maxLines && lines.length >= maxLines) break;
+                    } else {
+                        line = test;
+                    }
+                }
+                if (!maxLines || lines.length < maxLines) lines.push(line);
+                if (maxLines && lines.length > maxLines) lines.length = maxLines;
+                for (let i = 0; i < lines.length; i++) {
+                    ctx.fillText(lines[i], x, y + i * lineHeight);
+                }
+                return lines.length;
+            }
+
+            async function drawPoster(canvas, data) {
+                // data: {photoSource: HTMLImageElement|ImageBitmap|null, thumbBlob|... , record, settings}
+                const ctx = canvas.getContext("2d");
+                const W = canvas.width, H = canvas.height;
+                ctx.clearRect(0, 0, W, H);
+
+                // background
+                const bg = ctx.createLinearGradient(0, 0, 0, H);
+                bg.addColorStop(0, "#0b0f19");
+                bg.addColorStop(1, "#070a12");
+                ctx.fillStyle = bg;
+                ctx.fillRect(0, 0, W, H);
+
+                const pad = 48;
+                const gap = 24;
+                const metricsH = 420;
+                const topH = H - pad * 2 - metricsH - gap;
+
+                const photoW = 620;
+                const rightW = W - pad * 2 - photoW - gap;
+
+                // areas
+                const photoX = pad, photoY = pad, photoH = topH;
+                const rightX = pad + photoW + gap, rightY = pad, rightH = topH;
+                const metricsX = pad, metricsY = pad + topH + gap, metricsW = W - pad * 2;
+
+                // glow accents
+                ctx.save();
+                ctx.globalAlpha = 0.22;
+                ctx.fillStyle = "#7c3aed";
+                rrect(ctx, pad - 10, pad - 10, 260, 180, 34);
+                ctx.fill();
+                ctx.fillStyle = "#22c55e";
+                rrect(ctx, W - pad - 260, pad + 70, 260, 160, 34);
+                ctx.fill();
+                ctx.restore();
+
+                // photo panel
+                ctx.save();
+                rrect(ctx, photoX, photoY, photoW, photoH, 28);
+                ctx.clip();
+                // photo
+                if (data.photoSource) {
+                    // cover crop
+                    const img = data.photoSource;
+                    const iw = img.width || img.naturalWidth;
+                    const ih = img.height || img.naturalHeight;
+                    const scale = Math.max(photoW / iw, photoH / ih);
+                    const dw = iw * scale, dh = ih * scale;
+                    const dx = photoX + (photoW - dw) / 2;
+                    const dy = photoY + (photoH - dh) / 2;
+                    ctx.drawImage(img, dx, dy, dw, dh);
+                    // dark overlay for readability
+                    const g = ctx.createLinearGradient(0, photoY, 0, photoY + photoH);
+                    g.addColorStop(0, "rgba(0,0,0,.35)");
+                    g.addColorStop(0.55, "rgba(0,0,0,.12)");
+                    g.addColorStop(1, "rgba(0,0,0,.55)");
+                    ctx.fillStyle = g;
+                    ctx.fillRect(photoX, photoY, photoW, photoH);
+                } else {
+                    // placeholder
+                    ctx.fillStyle = "rgba(255,255,255,.06)";
+                    ctx.fillRect(photoX, photoY, photoW, photoH);
+                    ctx.fillStyle = "rgba(255,255,255,.7)";
+                    ctx.font = "700 20px system-ui";
+                    ctx.fillText("未保存原图 · 用缩略图重绘", photoX + 28, photoY + 44);
+                }
+                ctx.restore();
+                // photo border
+                ctx.strokeStyle = "rgba(255,255,255,.14)";
+                ctx.lineWidth = 2;
+                rrect(ctx, photoX, photoY, photoW, photoH, 28);
+                ctx.stroke();
+
+                // right cards background
+                ctx.fillStyle = "rgba(255,255,255,.06)";
+                rrect(ctx, rightX, rightY, rightW, rightH, 28);
+                ctx.fill();
+                ctx.strokeStyle = "rgba(255,255,255,.12)";
+                ctx.lineWidth = 2;
+                rrect(ctx, rightX, rightY, rightW, rightH, 28);
+                ctx.stroke();
+
+                const record = data.record;
+                const foods = record.foods || [];
+                const totals = record.meal_totals || {};
+                const ten = record.ten_metrics || [];
+                const poster = record.poster || {};
+
+                // Header text on photo
+                ctx.fillStyle = "rgba(255,255,255,.92)";
+                ctx.font = "900 34px system-ui";
+                ctx.fillText("本餐营养报告", photoX + 28, photoY + 52);
+
+                ctx.font = "700 14px system-ui";
+                ctx.fillStyle = "rgba(255,255,255,.70)";
+                ctx.fillText(`${mealTypeLabel(record.meal_type)} · ${fmtDate(record.created_at)}`, photoX + 28, photoY + 78);
+
+                // Overview in right
+                let cx = rightX + 20, cy = rightY + 22;
+                ctx.fillStyle = "rgba(255,255,255,.92)";
+                ctx.font = "900 38px system-ui";
+                ctx.fillText(`${Math.round(Number(totals.kcal_total || 0))}`, cx, cy + 34);
+                ctx.font = "800 14px system-ui";
+                ctx.fillStyle = "rgba(255,255,255,.70)";
+                ctx.fillText("kcal", cx + 140, cy + 28);
+
+                // balance score
+                ctx.fillStyle = "rgba(255,255,255,.90)";
+                ctx.font = "800 14px system-ui";
+                ctx.fillText(`均衡评分`, cx, cy + 58);
+                ctx.fillStyle = "rgba(255,255,255,.70)";
+                ctx.font = "700 13px system-ui";
+                ctx.fillText(`${record.balance_score != null ? record.balance_score : "—"} / 100`, cx + 72, cy + 58);
+
+                // macros line
+                const p = round0(totals.macros_total_g?.protein);
+                const c = round0(totals.macros_total_g?.carb);
+                const f = round0(totals.macros_total_g?.fat);
+                ctx.fillStyle = "rgba(255,255,255,.82)";
+                ctx.font = "800 14px system-ui";
+                ctx.fillText(`P ${p}g  ·  C ${c}g  ·  F ${f}g`, cx, cy + 84);
+
+                // keywords chips
+                const keywords = Array.isArray(poster.keywords) ? poster.keywords.slice(0, 3) : [];
+                let ky = cy + 104;
+                let kx = cx;
+                ctx.font = "700 12px system-ui";
+                for (const kw of keywords) {
+                    const txt = String(kw).slice(0, 12);
+                    const w = Math.min(rightW - 40, ctx.measureText(txt).width + 18);
+                    ctx.fillStyle = "rgba(255,255,255,.08)";
+                    rrect(ctx, kx, ky, w, 24, 12);
+                    ctx.fill();
+                    ctx.strokeStyle = "rgba(255,255,255,.12)";
+                    ctx.lineWidth = 1;
+                    rrect(ctx, kx, ky, w, 24, 12);
+                    ctx.stroke();
+                    ctx.fillStyle = "rgba(255,255,255,.86)";
+                    ctx.fillText(txt, kx + 10, ky + 16);
+                    kx += w + 8;
+                    if (kx > rightX + rightW - 60) { kx = cx; ky += 30; }
+                }
+
+                // dishes list card
+                const listY = ky + 34;
+                ctx.fillStyle = "rgba(0,0,0,.18)";
+                rrect(ctx, rightX + 14, listY, rightW - 28, rightH - (listY - rightY) - 86, 20);
+                ctx.fill();
+                ctx.strokeStyle = "rgba(255,255,255,.10)";
+                ctx.lineWidth = 1;
+                rrect(ctx, rightX + 14, listY, rightW - 28, rightH - (listY - rightY) - 86, 20);
+                ctx.stroke();
+
+                ctx.fillStyle = "rgba(255,255,255,.88)";
+                ctx.font = "900 14px system-ui";
+                ctx.fillText("菜品明细", rightX + 28, listY + 26);
+
+                ctx.font = "700 12px system-ui";
+                ctx.fillStyle = "rgba(255,255,255,.72)";
+                let y = listY + 48;
+
+                const maxDish = 6;
+                const show = foods.slice(0, maxDish);
+                for (const it of show) {
+                    const name = String(it.display_name || "").slice(0, 16);
+                    ctx.fillStyle = "rgba(255,255,255,.85)";
+                    ctx.font = "800 13px system-ui";
+                    ctx.fillText(name, rightX + 28, y);
+                    ctx.fillStyle = "rgba(255,255,255,.65)";
+                    ctx.font = "700 12px system-ui";
+                    const rightText = `${Math.round(Number(it.weight_g || 0))}g · ${Math.round(Number(it.kcal || 0))}kcal`;
+                    const tw = ctx.measureText(rightText).width;
+                    ctx.fillText(rightText, rightX + rightW - 28 - tw, y);
+
+                    ctx.fillStyle = "rgba(255,255,255,.55)";
+                    ctx.font = "700 11px system-ui";
+                    const line2 = `P${round0(it.macros_g?.protein)} C${round0(it.macros_g?.carb)} F${round0(it.macros_g?.fat)}`;
+                    ctx.fillText(line2, rightX + 28, y + 16);
+
+                    y += 34;
+                    if (y > rightY + rightH - 140) break;
+                }
+                if (foods.length > maxDish) {
+                    ctx.fillStyle = "rgba(255,255,255,.60)";
+                    ctx.font = "700 12px system-ui";
+                    ctx.fillText(`+${foods.length - maxDish} 项`, rightX + 28, y);
+                }
+
+                // tips
+                const tips = Array.isArray(poster.tips) ? poster.tips.slice(0, 4) : [];
+                const tipsY = rightY + rightH - 66;
+                ctx.fillStyle = "rgba(255,255,255,.90)";
+                ctx.font = "900 13px system-ui";
+                ctx.fillText("建议", rightX + 20, tipsY);
+                ctx.fillStyle = "rgba(255,255,255,.70)";
+                ctx.font = "700 12px system-ui";
+                let ty = tipsY + 18;
+                for (const t of tips) {
+                    ctx.fillText("• " + String(t).slice(0, 16), rightX + 20, ty);
+                    ty += 16;
+                }
+
+                // Metrics panel
+                ctx.fillStyle = "rgba(255,255,255,.06)";
+                rrect(ctx, metricsX, metricsY, metricsW, metricsH, 28);
+                ctx.fill();
+                ctx.strokeStyle = "rgba(255,255,255,.12)";
+                ctx.lineWidth = 2;
+                rrect(ctx, metricsX, metricsY, metricsW, metricsH, 28);
+                ctx.stroke();
+
+                ctx.fillStyle = "rgba(255,255,255,.90)";
+                ctx.font = "900 16px system-ui";
+                ctx.fillText("10 指标红绿灯", metricsX + 20, metricsY + 28);
+
+                // 2x5 grid
+                const gridX = metricsX + 18;
+                const gridY = metricsY + 44;
+                const cols = 5, rows = 2;
+                const tileW = (metricsW - 18 * 2 - (cols - 1) * 10) / cols;
+                const tileH = (metricsH - 54 - 18 - (rows - 1) * 10) / rows;
+
+                for (let i = 0; i < 10; i++) {
+                    const r = Math.floor(i / cols);
+                    const c = i % cols;
+                    const x = gridX + c * (tileW + 10);
+                    const y2 = gridY + r * (tileH + 10);
+                    ctx.fillStyle = "rgba(0,0,0,.16)";
+                    rrect(ctx, x, y2, tileW, tileH, 18);
+                    ctx.fill();
+                    ctx.strokeStyle = "rgba(255,255,255,.10)";
+                    ctx.lineWidth = 1;
+                    rrect(ctx, x, y2, tileW, tileH, 18);
+                    ctx.stroke();
+
+                    const item = ten[i] || { label: "—", value_text: "—", status: "gray", why_short: "" };
+                    const status = item.status;
+                    let col = "rgba(148,163,184,.85)";
+                    if (status === "green") col = "rgba(34,197,94,.92)";
+                    if (status === "red") col = "rgba(239,68,68,.92)";
+
+                    // light dot
+                    ctx.fillStyle = col;
+                    ctx.beginPath();
+                    ctx.arc(x + 18, y2 + 20, 7, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    ctx.fillStyle = "rgba(255,255,255,.90)";
+                    ctx.font = "900 13px system-ui";
+                    ctx.fillText(String(item.label || "").slice(0, 6), x + 30, y2 + 24);
+
+                    ctx.fillStyle = "rgba(255,255,255,.70)";
+                    ctx.font = "700 12px system-ui";
+                    const val = String(item.value_text || "").replace(String(item.label || "") + " ", "").slice(0, 10);
+                    ctx.fillText(val, x + 18, y2 + 44);
+
+                    ctx.fillStyle = "rgba(255,255,255,.55)";
+                    ctx.font = "700 11px system-ui";
+                    ctx.fillText(String(item.why_short || "").slice(0, 4), x + 18, y2 + 62);
+                }
+
+                // footer
+                ctx.fillStyle = "rgba(255,255,255,.50)";
+                ctx.font = "700 12px system-ui";
+                const disc = String(poster.disclaimer_short || "AI 估算仅供参考").slice(0, 16);
+                ctx.fillText(disc, metricsX + 20, metricsY + metricsH - 16);
+            }
+
+            // =========================
+            // App State
+            // =========================
+            const state = {
+                settings: loadSettings(),
+                tab: "record",
+
+                // current photo
+                photoFile: null,
+                photoObjectUrl: null, // for preview
+                photoInfo: null, // {compressedBlob, compressedDataUrl, thumbBlob,...}
+                photoBitmap: null, // ImageBitmap for poster (only during session)
+                analyzing: false,
+                aborter: null,
+
+                // analysis
+                foods: [],
+                meal_totals: null,
+                ten_metrics: [],
+                poster: { keywords: [], tips: [], disclaimer_short: "AI 估算仅供参考" },
+                warnings: [],
+                meal_type: "lunch",
+                balance_score: null,
+                red_count: 0,
+
+                // history
+                recordsCache: [],
+                pageSize: 20,
+                historyShown: 0,
+                historyObjectUrls: new Map(), // id -> url
+                selectedRecord: null,
+
+                // ui debug
+                debugOn: false
+            };
+
+            // =========================
+            // DOM refs
+            // =========================
+            const pages = {
+                record: $("#page-record"),
+                history: $("#page-history"),
+                me: $("#page-me"),
+            };
+
+            const fileCamera = $("#fileCamera");
+            const fileGallery = $("#fileGallery");
+            const photoPreview = $("#photoPreview");
+            const photoEmpty = $("#photoEmpty");
+            const photoBadge = $("#photoBadge");
+            const progressArea = $("#progressArea");
+            const progressText = $("#progressText");
+            const progressBar = $("#progressBar");
+            const errorArea = $("#errorArea");
+            const debugBox = $("#debugBox");
+
+            const adjustCard = $("#adjustCard");
+            const foodsList = $("#foodsList");
+            const sumKcal = $("#sumKcal");
+            const sumMacro = $("#sumMacro");
+            const mealTypeSelect = $("#mealTypeSelect");
+
+            const masonry = $("#masonry");
+            const btnLoadMore = $("#btnLoadMore");
+
+            const posterDialog = $("#posterDialog");
+            const posterCanvas = $("#posterCanvas");
+            const posterHint = $("#posterHint");
+            const posterTitle = $("#posterTitle");
+
+            const manualDialog = $("#manualDialog");
+            const manualText = $("#manualText");
+
+            // Settings inputs
+            const baseUrlInput = $("#baseUrlInput");
+            const pathInput = $("#pathInput");
+            const modelInput = $("#modelInput");
+            const apiKeyInput = $("#apiKeyInput");
+            const twoStageSelect = $("#twoStageSelect");
+            const respFmtSelect = $("#respFmtSelect");
+            const testResult = $("#testResult");
+
+            // Rules
+            const ruleBreakfast = $("#ruleBreakfast");
+            const ruleLunch = $("#ruleLunch");
+            const ruleDinner = $("#ruleDinner");
+
+            // Thresholds
+            const thKcal = $("#thKcal");
+            const thProtein = $("#thProtein");
+            const thFiber = $("#thFiber");
+            const thSodium = $("#thSodium");
+            const thSugar = $("#thSugar");
+            const thSatFat = $("#thSatFat");
+            const thVeg = $("#thVeg");
+            const thWhole = $("#thWhole");
+            const thCalcium = $("#thCalcium");
+            const thPotassium = $("#thPotassium");
+
+            const storageInfo = $("#storageInfo");
+
+            // Mosaic
+            const mosaicGrid = $("#mosaicGrid");
+            const todayKcal = $("#todayKcal");
+            const weekAvg = $("#weekAvg");
+
+            // =========================
+            // UI navigation
+            // =========================
+            function setTab(tab) {
+                state.tab = tab;
+                for (const k of Object.keys(pages)) pages[k].classList.toggle("active", k === tab);
+                $$(".tabbar button").forEach(b => b.classList.toggle("active", b.dataset.tab === tab));
+                if (tab === "history") renderHistory(true);
+                if (tab === "me") renderSettingsUI();
+            }
+
+            // =========================
+            // Photo handling
+            // =========================
+            function clearPhotoSession() {
+                state.photoFile = null;
+                if (state.photoObjectUrl) URL.revokeObjectURL(state.photoObjectUrl);
+                state.photoObjectUrl = null;
+                state.photoInfo = null;
+                try { state.photoBitmap && state.photoBitmap.close && state.photoBitmap.close(); } catch { }
+                state.photoBitmap = null;
+
+                photoPreview.style.display = "none";
+                photoEmpty.classList.remove("hidden");
+                photoBadge.classList.add("hidden");
+                $("#btnClearPhoto").disabled = true;
+
+                // clear analysis session UI
+                state.foods = [];
+                state.meal_totals = null;
+                state.ten_metrics = [];
+                state.poster = { keywords: [], tips: [], disclaimer_short: "AI 估算仅供参考" };
+                state.warnings = [];
+                state.balance_score = null;
+                state.red_count = 0;
+
+                adjustCard.classList.add("hidden");
+                errorArea.classList.add("hidden");
+                progressArea.classList.add("hidden");
+            }
+
+            async function setPhoto(file) {
+                clearPhotoSession();
+                state.photoFile = file;
+
+                state.photoObjectUrl = URL.createObjectURL(file);
+                photoPreview.src = state.photoObjectUrl;
+                photoPreview.style.display = "block";
+                photoEmpty.classList.add("hidden");
+                $("#btnClearPhoto").disabled = false;
+
+                // show meta badge
+                photoBadge.classList.remove("hidden");
+                photoBadge.textContent = `原图 ${Math.round(file.size / 1024)}KB`;
+
+                // infer meal type
+                state.meal_type = mealTypeFromRules(new Date(), state.settings.mealRules);
+                mealTypeSelect.value = state.meal_type;
+
+                // prepare a bitmap for poster (session only)
+                try {
+                    const decoded = await loadImageBitmapFromBlob(file);
+                    state.photoBitmap = decoded.bmp || decoded.img;
+                } catch { }
+            }
+
+            // =========================
+            // Analyze workflow
+            // =========================
+            function setProgress(on, text = "", pct = 0, errText = "") {
+                progressArea.classList.toggle("hidden", !on);
+                if (on) {
+                    progressText.textContent = text;
+                    progressBar.style.width = `${clamp(pct, 0, 100)}%`;
+                    $("#btnCancelAnalyze").disabled = false;
+                    debugBox.classList.toggle("hidden", !state.debugOn);
+                } else {
+                    progressBar.style.width = "0%";
+                }
+                if (errText) {
+                    errorArea.textContent = errText;
+                    errorArea.classList.remove("hidden");
+                } else {
+                    errorArea.classList.add("hidden");
+                }
+            }
+
+            function setDebug(obj) {
+                if (!state.debugOn) return;
+                const text = typeof obj === "string" ? obj : JSON.stringify(obj, null, 2);
+                debugBox.textContent = text.slice(0, 8000);
+            }
+
+            async function analyzeCurrentPhoto() {
+                const s = state.settings;
+                if (!s.apiKey || !s.baseUrl || !s.model) {
+                    toast("请先在「我的」设置 BaseURL/Model/API Key");
+                    setTab("me");
+                    return;
+                }
+                if (!state.photoFile) {
+                    toast("请先拍照/上传");
+                    return;
+                }
+
+                state.analyzing = true;
+                const aborter = new AbortController();
+                state.aborter = aborter;
+
+                try {
+                    setProgress(true, "压缩图片（≤200KB）…", 10);
+                    const { blob: compressedBlob, width, height, mime } = await compressForLLM(state.photoFile, 200 * 1024);
+                    const dataUrl = await blobToDataUrl(compressedBlob);
+
+                    setProgress(true, `生成缩略图（≈10KB）…`, 22);
+                    const thumb = await createThumbSquare(state.photoFile, 200, 12 * 1024);
+
+                    state.photoInfo = { compressedBlob, compressedDataUrl: dataUrl, thumbBlob: thumb.blob, thumbBytes: thumb.bytes, compressedMeta: { width, height, mime } };
+                    photoBadge.textContent = `发送 ${Math.round(compressedBlob.size / 1024)}KB · 缩略 ${Math.round(thumb.bytes / 1024)}KB`;
+
+                    setProgress(true, "调用模型识别…", 38);
+                    const debug = state.debugOn ? setDebug : null;
+
+                    let result;
+                    if (s.twoStage) {
+                        const r1 = await callLLM_visionFoods({ settings: s, imageDataUrl: dataUrl, debug, signal: aborter.signal });
+                        setProgress(true, "估算营养与指标…", 62);
+                        const foodsIn = Array.isArray(r1.foods) ? r1.foods : [];
+                        const r2 = await callLLM_nutrition({ settings: s, foods: foodsIn, debug, signal: aborter.signal });
+                        result = {
+                            schema_version: "1.0",
+                            foods: r2.foods || foodsIn,
+                            meal_totals: r2.meal_totals || null,
+                            poster: r2.poster || {},
+                            warnings: ([]).concat(r1.warnings || [], r2.warnings || [])
+                        };
+                    } else {
+                        result = await callLLM_allInOne({ settings: s, imageDataUrl: dataUrl, debug, signal: aborter.signal });
+                    }
+
+                    // Normalize & compute derived totals/metrics
+                    const foodsNorm = (Array.isArray(result.foods) ? result.foods : []).map(normalizeFoodItem);
+                    state.foods = foodsNorm;
+                    state.meal_totals = sumTotals(state.foods);
+
+                    // poster defaults
+                    const poster = result.poster || {};
+                    state.poster = {
+                        keywords: Array.isArray(poster.keywords) ? poster.keywords.slice(0, 3) : [],
+                        tips: Array.isArray(poster.tips) ? poster.tips.slice(0, 4) : [],
+                        disclaimer_short: String(poster.disclaimer_short || "AI 估算仅供参考").slice(0, 16)
+                    };
+                    state.warnings = Array.isArray(result.warnings) ? result.warnings : [];
+
+                    const { ten_metrics, balance_score, red_count } = buildTenMetrics(state.meal_totals, state.settings.thresholds);
+                    state.ten_metrics = ten_metrics;
+                    state.balance_score = balance_score;
+                    state.red_count = red_count;
+
+                    adjustCard.classList.remove("hidden");
+                    renderFoodsList();
+                    renderSummaryBar();
+
+                    setProgress(true, "完成 ✅", 100);
+                    await sleep(450);
+                    setProgress(false);
+
+                    toast("识别完成：可微调重量并生成 Poster");
+                } catch (e) {
+                    const msg = String(e?.message || e);
+                    setProgress(false, "", 0, msg);
+                    toast("识别失败：可尝试修复/手动输入");
+                } finally {
+                    state.analyzing = false;
+                    state.aborter = null;
+                }
+            }
+
+            // =========================
+            // Foods editing UI
+            // =========================
+            function renderFoodsList() {
+                foodsList.innerHTML = "";
+                const foods = state.foods || [];
+                foods.forEach((f, idx) => {
+                    const max = Math.max(300, Math.round((f.weight_g || 0) * 2), 1000);
+                    const wrap = document.createElement("div");
+                    wrap.className = "foodItem";
+                    wrap.dataset.idx = String(idx);
+
+                    const confChip = f.confidence >= 0.75 ? "ok" : (f.confidence >= 0.5 ? "warn" : "bad");
+                    const confText = `置信度 ${(Math.round(f.confidence * 100))}%`;
+
+                    wrap.innerHTML = `
+        <div class="foodTop">
+          <div style="min-width:0">
+            <div class="foodName" contenteditable="true" data-role="name">${escapeHtml(f.display_name)}</div>
+            <div class="chipRow">
+              <span class="chip ${confChip}">${confText}</span>
+              ${f.notes_short ? `<span class="chip low">${escapeHtml(f.notes_short)}</span>` : ""}
+              <span class="chip low">${Math.round(f.kcal)} kcal</span>
+            </div>
+          </div>
+          <div class="weightBox">
+            <div class="weightBig"><span></span>${Math.round(f.weight_g || 0)}<span>g</span></div>
+            <div class="weightMeta">P ${round0(f.macros_g?.protein)} · C ${round0(f.macros_g?.carb)} · F ${round0(f.macros_g?.fat)}</div>
+          </div>
+        </div>
+
+        <input type="range" min="0" max="${max}" step="5" value="${Math.round(f.weight_g || 0)}" data-role="range"/>
+
+        <div class="foodActions">
+          <button class="btn small ghost" data-act="minus">-5g</button>
+          <button class="btn small ghost" data-act="plus">+5g</button>
+          <button class="btn small" data-act="edit">输入重量</button>
+          <button class="btn small danger" data-act="delete">删除</button>
+        </div>
+      `;
+                    foodsList.appendChild(wrap);
+                });
+            }
+
+            function renderSummaryBar() {
+                const tot = state.meal_totals || sumTotals(state.foods);
+                const { ten_metrics, balance_score, red_count } = buildTenMetrics(tot, state.settings.thresholds);
+                state.ten_metrics = ten_metrics;
+                state.balance_score = balance_score;
+                state.red_count = red_count;
+                state.meal_totals = tot;
+                sumKcal.textContent = `总热量：${Math.round(Number(tot.kcal_total || 0))} kcal`;
+                sumMacro.textContent = `P ${round0(tot.macros_total_g?.protein)}g · C ${round0(tot.macros_total_g?.carb)}g · F ${round0(tot.macros_total_g?.fat)}g · 红灯 ${red_count}`;
+            }
+
+            function escapeHtml(s) {
+                return String(s || "").replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+            }
+
+            // delegate events in foods list
+            foodsList.addEventListener("click", (e) => {
+                const btn = e.target.closest("button");
+                const item = e.target.closest(".foodItem");
+                if (!btn || !item) return;
+                const idx = Number(item.dataset.idx);
+                const food = state.foods[idx];
+                const act = btn.dataset.act;
+
+                if (act === "delete") {
+                    state.foods.splice(idx, 1);
+                    renderFoodsList();
+                    renderSummaryBar();
+                    return;
+                }
+                if (act === "minus") updateFoodWeight(idx, Math.max(0, (food.weight_g || 0) - 5));
+                if (act === "plus") updateFoodWeight(idx, (food.weight_g || 0) + 5);
+                if (act === "edit") {
+                    const v = prompt("输入重量（克）", String(Math.round(food.weight_g || 0)));
+                    if (v == null) return;
+                    const n = Number(v);
+                    if (!Number.isFinite(n) || n < 0) { toast("重量无效"); return; }
+                    updateFoodWeight(idx, n);
+                }
+            });
+
+            foodsList.addEventListener("input", (e) => {
+                const item = e.target.closest(".foodItem");
+                if (!item) return;
+                const idx = Number(item.dataset.idx);
+                const role = e.target.dataset.role;
+                if (role !== "range") return;
+                updateFoodWeight(idx, Number(e.target.value));
+            });
+
+            foodsList.addEventListener("blur", (e) => {
+                const el = e.target;
+                if (el.dataset?.role !== "name") return;
+                const item = el.closest(".foodItem");
+                if (!item) return;
+                const idx = Number(item.dataset.idx);
+                const name = el.textContent.trim();
+                state.foods[idx].display_name = name || "未命名食物";
+                renderFoodsList();
+                renderSummaryBar();
+            }, true);
+
+            function updateFoodWeight(idx, w) {
+                const f = state.foods[idx];
+                const scaled = scaleFoodToWeight(f, w);
+                // keep name/confidence/notes/per100g
+                scaled.display_name = f.display_name;
+                scaled.confidence = f.confidence;
+                scaled.notes_short = f.notes_short;
+                scaled.per100g = f.per100g;
+                state.foods[idx] = scaled;
+
+                // update UI row quickly by re-rendering list (simple + safe)
+                renderFoodsList();
+                renderSummaryBar();
+            }
+
+            // =========================
+            // Save record (IndexedDB)
+            // =========================
+            async function saveCurrentRecord() {
+                if (!state.foods.length) { toast("还没有可保存的识别结果"); return; }
+                const rec = {
+                    id: uid(),
+                    created_at: nowISO(),
+                    meal_type: state.meal_type,
+                    location_text: "",
+                    photo_meta: {
+                        source: state.photoFile ? { name: state.photoFile.name || "", type: state.photoFile.type || "" } : null,
+                        note: "不保存原图，仅本地保存缩略图"
+                    },
+                    foods: state.foods,
+                    meal_totals: state.meal_totals,
+                    ten_metrics: state.ten_metrics,
+                    poster: state.poster,
+                    warnings: state.warnings || [],
+                    balance_score: state.balance_score,
+                    schema_version: "1.0",
+                    thumb_blob: state.photoInfo?.thumbBlob || null,
+                    thumb_mime: state.photoInfo?.thumbBlob?.type || "image/webp"
+                };
+                await idb.put(rec);
+                await refreshRecordsCache();
+                await applyLRUIfNeeded();
+                renderMosaic();
+                toast("已保存到历史");
+            }
+
+            async function applyLRUIfNeeded() {
+                const s = state.settings.storagePolicy;
+                const recs = state.recordsCache.slice().sort((a, b) => (a.created_at < b.created_at ? 1 : -1)); // desc
+                if (recs.length <= s.maxRecords) return;
+
+                // Remove oldest records beyond maxRecords (or only drop thumbs)
+                const extras = recs.slice(s.maxRecords).sort((a, b) => (a.created_at < b.created_at ? -1 : 1)); // oldest first
+                for (const r of extras) {
+                    if (s.lruDropThumbOnly) {
+                        if (r.thumb_blob) {
+                            r.thumb_blob = null;
+                            r.thumb_mime = null;
+                            await idb.put(r);
+                        }
+                    } else {
+                        await idb.del(r.id);
+                    }
+                }
+
+                // Thumb bytes budget
+                const updated = await idb.getAll();
+                let thumbBytes = 0;
+                for (const r of updated) thumbBytes += (r.thumb_blob?.size || 0);
+                if (thumbBytes <= s.maxThumbBytes) {
+                    state.recordsCache = updated;
+                    return;
+                }
+                // Drop oldest thumbs until under budget
+                const byOld = updated.slice().sort((a, b) => (a.created_at < b.created_at ? -1 : 1));
+                for (const r of byOld) {
+                    if (thumbBytes <= s.maxThumbBytes) break;
+                    if (r.thumb_blob) {
+                        thumbBytes -= r.thumb_blob.size;
+                        r.thumb_blob = null;
+                        r.thumb_mime = null;
+                        await idb.put(r);
+                    }
+                }
+                state.recordsCache = await idb.getAll();
+            }
+
+            // =========================
+            // Poster dialog
+            // =========================
+            async function openPosterForCurrent() {
+                const rec = buildRecordSnapshotForPoster("当前识别");
+                await openPoster(rec, /*fromHistory*/ false);
+            }
+
+            function buildRecordSnapshotForPoster(title) {
+                const rec = {
+                    id: "session",
+                    created_at: nowISO(),
+                    meal_type: state.meal_type,
+                    foods: state.foods,
+                    meal_totals: state.meal_totals,
+                    ten_metrics: state.ten_metrics,
+                    poster: state.poster,
+                    balance_score: state.balance_score,
+                    schema_version: "1.0"
+                };
+                posterTitle.textContent = `Poster 预览 · ${title}`;
+                return rec;
+            }
+
+            async function openPoster(record, fromHistory) {
+                state.selectedRecord = record;
+                posterHint.textContent = fromHistory
+                    ? "提示：历史记录未保存原图，此 Poster 用缩略图重绘，清晰度低于当次导出。"
+                    : "导出建议：首次导出最清晰（使用原图/当前会话图）。";
+
+                // choose photo source
+                let photoSource = null;
+                if (!fromHistory && state.photoBitmap) {
+                    photoSource = state.photoBitmap;
+                } else if (fromHistory && record.thumb_blob) {
+                    // decode thumb blob to image element for canvas draw
+                    const url = URL.createObjectURL(record.thumb_blob);
+                    photoSource = await new Promise((resolve, reject) => {
+                        const img = new Image();
+                        img.onload = () => resolve(img);
+                        img.onerror = reject;
+                        img.src = url;
+                    });
+                    // keep url until closed
+                    posterDialog.dataset.thumbUrl = url;
+                } else {
+                    photoSource = null;
+                }
+
+                await drawPoster(posterCanvas, {
+                    photoSource,
+                    record
+                });
+
+                // cleanup thumb url after draw? Keep for saving maybe; safe to revoke now.
+                if (posterDialog.dataset.thumbUrl) {
+                    URL.revokeObjectURL(posterDialog.dataset.thumbUrl);
+                    posterDialog.dataset.thumbUrl = "";
+                }
+
+                // open modal
+                if (typeof posterDialog.showModal === "function") posterDialog.showModal();
+                else posterDialog.open = true; // fallback
+            }
+
+            async function saveCanvasAs(type) {
+                const name = `poster_${Date.now()}.${type === "png" ? "png" : "jpg"}`;
+                const canvas = posterCanvas;
+                let blob;
+                if (type === "png") {
+                    blob = await new Promise(r => canvas.toBlob(r, "image/png"));
+                } else {
+                    blob = await new Promise(r => canvas.toBlob(r, "image/jpeg", 0.92));
+                }
+                if (!blob) { toast("导出失败"); return; }
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = name;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                setTimeout(() => URL.revokeObjectURL(url), 1500);
+                toast("已触发下载/保存");
+            }
+
+            async function sharePoster() {
+                const canvas = posterCanvas;
+                const blob = await new Promise(r => canvas.toBlob(r, "image/jpeg", 0.92));
+                if (!blob) { toast("分享失败"); return; }
+                const file = new File([blob], `poster_${Date.now()}.jpg`, { type: blob.type });
+                if (navigator.canShare && navigator.canShare({ files: [file] }) && navigator.share) {
+                    try {
+                        await navigator.share({ files: [file], title: "营养报告 Poster" });
+                    } catch (e) { }
+                } else {
+                    toast("当前浏览器不支持直接分享");
+                }
+            }
+
+            function copyJsonSummary(record) {
+                const payload = {
+                    schema_version: "1.0",
+                    id: record.id || "",
+                    created_at: record.created_at,
+                    meal_type: record.meal_type,
+                    meal_totals: record.meal_totals,
+                    ten_metrics: record.ten_metrics,
+                    poster: record.poster,
+                    foods: record.foods
+                };
+                navigator.clipboard?.writeText(JSON.stringify(payload, null, 2))
+                    .then(() => toast("已复制 JSON"))
+                    .catch(() => toast("复制失败（可能不在 https/localhost）"));
+            }
+
+            // =========================
+            // History feed
+            // =========================
+            async function refreshRecordsCache() {
+                state.recordsCache = await idb.getAll();
+            }
+
+            function filterRecords() {
+                const q = ($("#searchInput").value || "").trim().toLowerCase();
+                const days = $("#daysSelect").value;
+                const meal = $("#mealFilter").value;
+                const red = $("#redFilter").value;
+
+                const now = Date.now();
+                const minTime = (days === "9999") ? 0 : (now - Number(days) * 24 * 3600 * 1000);
+
+                let arr = state.recordsCache.slice().sort((a, b) => (a.created_at < b.created_at ? 1 : -1));
+                arr = arr.filter(r => new Date(r.created_at).getTime() >= minTime);
+
+                if (meal !== "all") arr = arr.filter(r => r.meal_type === meal);
+
+                if (red !== "all") {
+                    const rc = (r) => (r.ten_metrics || []).filter(x => x.status === "red").length;
+                    if (red === "gt0") arr = arr.filter(r => rc(r) > 0);
+                    if (red === "eq0") arr = arr.filter(r => rc(r) === 0);
+                }
+
+                if (q) {
+                    arr = arr.filter(r => {
+                        const foods = (r.foods || []).map(x => String(x.display_name || "")).join(" ").toLowerCase();
+                        const keys = (r.poster?.keywords || []).join(" ").toLowerCase();
+                        return foods.includes(q) || keys.includes(q);
+                    });
+                }
+                return arr;
+            }
+
+            function clearHistoryObjectUrls() {
+                for (const url of state.historyObjectUrls.values()) URL.revokeObjectURL(url);
+                state.historyObjectUrls.clear();
+            }
+
+            function renderHistory(reset = false) {
+                if (reset) {
+                    state.historyShown = 0;
+                    masonry.innerHTML = "";
+                    clearHistoryObjectUrls();
+                }
+                const list = filterRecords();
+                const slice = list.slice(state.historyShown, state.historyShown + state.pageSize);
+                state.historyShown += slice.length;
+
+                for (const r of slice) {
+                    const div = document.createElement("div");
+                    div.className = "cardPost";
+                    div.dataset.id = r.id;
+
+                    let imgUrl = "";
+                    if (r.thumb_blob) {
+                        imgUrl = URL.createObjectURL(r.thumb_blob);
+                        state.historyObjectUrls.set(r.id, imgUrl);
+                    }
+
+                    const redCount = (r.ten_metrics || []).filter(x => x.status === "red").length;
+                    const kcal = Math.round(Number(r.meal_totals?.kcal_total || 0));
+                    const topName = (r.foods && r.foods[0]) ? String(r.foods[0].display_name || "") : mealTypeLabel(r.meal_type);
+
+                    div.innerHTML = `
+        <img src="${imgUrl || ""}" alt="thumb" loading="lazy" />
+        <div class="corner">
+          <span class="tag">${mealTypeLabel(r.meal_type)}</span>
+          <span class="tag ${redCount ? "bad" : "ok"}">${redCount ? "⚠️" + redCount : "✅0"}</span>
+          <span class="tag">${kcal}kcal</span>
+        </div>
+        <div class="meta">
+          <div class="t">${escapeHtml(topName)}</div>
+          <div class="d">${fmtDate(r.created_at)}</div>
+        </div>
+      `;
+                    masonry.appendChild(div);
+                }
+
+                btnLoadMore.disabled = (state.historyShown >= filterRecords().length);
+            }
+
+            masonry.addEventListener("click", async (e) => {
+                const card = e.target.closest(".cardPost");
+                if (!card) return;
+                const id = card.dataset.id;
+                const r = await idb.get(id);
+                if (!r) return;
+                // open poster from history
+                await openPoster(r, true);
+            });
+
+            // =========================
+            // Mosaic / stats
+            // =========================
+            function renderMosaic() {
+                const recs = state.recordsCache.slice().sort((a, b) => (a.created_at < b.created_at ? 1 : -1));
+                const thumbs = recs.filter(r => r.thumb_blob).slice(0, 12);
+
+                // mosaic grid 6x? -> 6 cols x 3 rows = 18 tiles, repeat if less
+                mosaicGrid.innerHTML = "";
+                const tiles = 18;
+                for (let i = 0; i < tiles; i++) {
+                    const t = document.createElement("div");
+                    t.className = "tile";
+                    const r = thumbs[i % Math.max(1, thumbs.length)];
+                    if (r && r.thumb_blob) {
+                        const url = URL.createObjectURL(r.thumb_blob);
+                        t.style.backgroundImage = `url("${url}")`;
+                        // revoke later
+                        setTimeout(() => URL.revokeObjectURL(url), 2500);
+                    }
+                    mosaicGrid.appendChild(t);
+                }
+
+                // today kcal
+                const today = new Date();
+                const y = today.getFullYear(), m = today.getMonth(), d = today.getDate();
+                const start = new Date(y, m, d, 0, 0, 0).getTime();
+                let sum = 0;
+                const todays = recs.filter(r => new Date(r.created_at).getTime() >= start);
+                for (const r of todays) sum += Number(r.meal_totals?.kcal_total || 0);
+
+                todayKcal.innerHTML = `${Math.round(sum)}<span>kcal 今日累计</span>`;
+
+                // week avg
+                const min = Date.now() - 7 * 24 * 3600 * 1000;
+                const week = recs.filter(r => new Date(r.created_at).getTime() >= min);
+                const avg = week.length ? Math.round(week.reduce((a, r) => a + Number(r.meal_totals?.kcal_total || 0), 0) / week.length) : 0;
+                weekAvg.textContent = `近7天均值：${avg} kcal/餐`;
+            }
+
+            // =========================
+            // Settings UI
+            // =========================
+            function renderSettingsUI() {
+                const s = state.settings;
+
+                baseUrlInput.value = s.baseUrl || "";
+                pathInput.value = s.path || "";
+                modelInput.value = s.model || "";
+                apiKeyInput.value = s.apiKey || "";
+                twoStageSelect.value = s.twoStage ? "yes" : "no";
+                respFmtSelect.value = s.tryResponseFormat ? "yes" : "no";
+
+                ruleBreakfast.value = s.mealRules.breakfast;
+                ruleLunch.value = s.mealRules.lunch;
+                ruleDinner.value = s.mealRules.dinner;
+
+                thKcal.value = s.thresholds.kcal_max;
+                thProtein.value = s.thresholds.protein_min;
+                thFiber.value = s.thresholds.fiber_min;
+                thSodium.value = s.thresholds.sodium_max;
+                thSugar.value = s.thresholds.sugar_max;
+                thSatFat.value = s.thresholds.sat_fat_max;
+                thVeg.value = s.thresholds.veg_servings_min;
+                thWhole.value = s.thresholds.whole_grain_servings_min;
+                thCalcium.value = s.thresholds.calcium_min;
+                thPotassium.value = s.thresholds.potassium_min;
+
+                updateStorageInfo();
+            }
+
+            async function updateStorageInfo() {
+                const recs = state.recordsCache;
+                const cnt = recs.length;
+                let thumbs = 0;
+                for (const r of recs) thumbs += (r.thumb_blob?.size || 0);
+
+                let quota = null;
+                try {
+                    const est = await navigator.storage?.estimate?.();
+                    quota = est ? { usage: est.usage, quota: est.quota } : null;
+                } catch { }
+
+                storageInfo.textContent =
+                    `记录数：${cnt} 条；缩略图占用：${Math.round(thumbs / 1024)} KB` +
+                    (quota ? `；浏览器总用量：${Math.round(quota.usage / 1024 / 1024)}MB / 配额：${Math.round(quota.quota / 1024 / 1024)}MB` : "");
+            }
+
+            function persistSettingsFromUI() {
+                const s = state.settings;
+                s.baseUrl = baseUrlInput.value.trim() || defaultSettings.baseUrl;
+                s.path = pathInput.value.trim() || defaultSettings.path;
+                s.model = modelInput.value.trim() || defaultSettings.model;
+                s.apiKey = apiKeyInput.value.trim();
+                s.twoStage = (twoStageSelect.value === "yes");
+                s.tryResponseFormat = (respFmtSelect.value === "yes");
+                saveSettings(s);
+                toast("已保存设置");
+            }
+
+            // =========================
+            // Export / Import
+            // =========================
+            async function exportJSON() {
+                const range = $("#exportRange").value;
+                const includeThumb = ($("#exportThumb").value === "yes");
+
+                const now = Date.now();
+                const min = range === "all" ? 0 : (now - Number(range) * 24 * 3600 * 1000);
+
+                const recs = state.recordsCache
+                    .filter(r => new Date(r.created_at).getTime() >= min)
+                    .slice()
+                    .sort((a, b) => (a.created_at < b.created_at ? 1 : -1));
+
+                const out = [];
+                for (const r of recs) {
+                    const x = structuredClone(r);
+                    if (includeThumb && x.thumb_blob) {
+                        const url = URL.createObjectURL(x.thumb_blob);
+                        const imgData = await fetch(url).then(res => res.blob()).then(blobToDataUrl);
+                        URL.revokeObjectURL(url);
+                        x.thumb_base64 = imgData;
+                    }
+                    delete x.thumb_blob;
+                    out.push(x);
+                }
+
+                const payload = {
+                    schema_version: "1.0",
+                    exported_at: nowISO(),
+                    note: includeThumb ? "包含缩略图base64（体积较大）" : "不包含缩略图",
+                    records: out
+                };
+
+                const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = `nutri_records_${Date.now()}.json`;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                setTimeout(() => URL.revokeObjectURL(url), 1500);
+                toast("已导出 JSON");
+            }
+
+            async function importJSONFile(file) {
+                const text = await file.text();
+                const data = JSON.parse(text);
+                const recs = Array.isArray(data.records) ? data.records : [];
+                let inserted = 0;
+
+                const existing = new Set(state.recordsCache.map(r => r.id));
+
+                for (const r0 of recs) {
+                    const r = structuredClone(r0);
+                    // optional thumb
+                    if (r.thumb_base64) {
+                        try {
+                            const blob = await dataUrlToBlob(r.thumb_base64);
+                            r.thumb_blob = blob;
+                            r.thumb_mime = blob.type;
+                        } catch { }
+                        delete r.thumb_base64;
+                    }
+                    if (!r.id) r.id = uid();
+                    if (existing.has(r.id)) continue;
+                    // minimal sanitize
+                    r.schema_version = r.schema_version || "1.0";
+                    r.foods = Array.isArray(r.foods) ? r.foods.map(normalizeFoodItem) : [];
+                    if (!r.meal_totals) r.meal_totals = sumTotals(r.foods);
+
+                    const tm = buildTenMetrics(r.meal_totals, state.settings.thresholds);
+                    r.ten_metrics = Array.isArray(r.ten_metrics) ? r.ten_metrics : tm.ten_metrics;
+                    r.balance_score = r.balance_score ?? tm.balance_score;
+
+                    await idb.put(r);
+                    inserted++;
+                }
+
+                await refreshRecordsCache();
+                await applyLRUIfNeeded();
+                renderMosaic();
+                updateStorageInfo();
+                toast(`导入完成：新增 ${inserted} 条`);
+            }
+
+            // =========================
+            // Wire events
+            // =========================
+            $$(".tabbar button").forEach(b => b.addEventListener("click", () => setTab(b.dataset.tab)));
+
+            $("#btnGoSettings").addEventListener("click", () => setTab("me"));
+
+            $("#btnCamera").addEventListener("click", () => fileCamera.click());
+            $("#btnGallery").addEventListener("click", () => fileGallery.click());
+            $("#btnQuickUpload").addEventListener("click", () => fileGallery.click());
+            $("#btnHistoryUpload").addEventListener("click", () => { setTab("record"); fileGallery.click(); });
+
+            fileCamera.addEventListener("change", async (e) => {
+                const f = e.target.files?.[0];
+                if (f) await setPhoto(f);
+                fileCamera.value = "";
+            });
+            fileGallery.addEventListener("change", async (e) => {
+                const f = e.target.files?.[0];
+                if (f) await setPhoto(f);
+                fileGallery.value = "";
+            });
+
+            $("#btnClearPhoto").addEventListener("click", clearPhotoSession);
+            $("#btnClearPhoto").disabled = true;
+
+            $("#btnAnalyze").addEventListener("click", analyzeCurrentPhoto);
+            $("#btnCancelAnalyze").addEventListener("click", () => {
+                try { state.aborter?.abort(); } catch { }
+                setProgress(false);
+                toast("已取消（若网络已发出，服务端可能仍在处理）");
+            });
+
+            $("#btnAddFood").addEventListener("click", () => {
+                state.foods.push(normalizeFoodItem({
+                    display_name: "新增食物",
+                    weight_g: 100,
+                    confidence: 0.6,
+                    notes_short: "手动",
+                    kcal: 0,
+                    macros_g: { protein: 0, carb: 0, fat: 0 },
+                    key_micros: {}
+                }));
+                renderFoodsList();
+                renderSummaryBar();
+            });
+
+            mealTypeSelect.addEventListener("change", () => {
+                state.meal_type = mealTypeSelect.value;
+                toast(`餐别：${mealTypeLabel(state.meal_type)}`);
+            });
+
+            $("#btnPoster").addEventListener("click", openPosterForCurrent);
+            $("#btnSaveRecord").addEventListener("click", saveCurrentRecord);
+
+            $("#btnReanalyze").addEventListener("click", analyzeCurrentPhoto);
+            $("#btnCopyJson").addEventListener("click", () => {
+                const rec = buildRecordSnapshotForPoster("复制");
+                copyJsonSummary(rec);
+            });
+
+            $("#btnClosePoster").addEventListener("click", () => posterDialog.close());
+            $("#btnSaveJpg").addEventListener("click", () => saveCanvasAs("jpg"));
+            $("#btnSavePng").addEventListener("click", () => saveCanvasAs("png"));
+            $("#btnShare").addEventListener("click", sharePoster);
+            $("#btnCopyPosterJson").addEventListener("click", () => {
+                const rec = state.selectedRecord || buildRecordSnapshotForPoster("复制");
+                copyJsonSummary(rec);
+            });
+
+            $("#btnManual").addEventListener("click", () => manualDialog.showModal());
+            $("#btnCloseManual").addEventListener("click", () => manualDialog.close());
+            $("#btnManualToAnalyze").addEventListener("click", async () => {
+                const s = state.settings;
+                if (!s.apiKey) { toast("请先设置 API Key"); setTab("me"); return; }
+                const lines = (manualText.value || "").split("\n").map(x => x.trim()).filter(Boolean);
+                const foods = lines.map(line => {
+                    const parts = line.split(/[，,]/).map(x => x.trim());
+                    const name = parts[0] || "未命名";
+                    const w = Number(parts[1] || 0);
+                    return { display_name: name, weight_g: Number.isFinite(w) ? w : 0, confidence: 0.65, notes_short: "手动" };
+                });
+                manualDialog.close();
+
+                // no photo, directly nutrition step
+                try {
+                    setProgress(true, "估算营养…", 40);
+                    const debug = state.debugOn ? setDebug : null;
+                    const r2 = await callLLM_nutrition({ settings: s, foods, debug });
+                    const foodsNorm = (Array.isArray(r2.foods) ? r2.foods : foods).map(normalizeFoodItem);
+                    state.foods = foodsNorm;
+                    state.meal_totals = sumTotals(state.foods);
+                    state.poster = {
+                        keywords: Array.isArray(r2.poster?.keywords) ? r2.poster.keywords.slice(0, 3) : [],
+                        tips: Array.isArray(r2.poster?.tips) ? r2.poster.tips.slice(0, 4) : [],
+                        disclaimer_short: String(r2.poster?.disclaimer_short || "AI 估算仅供参考").slice(0, 16)
+                    };
+                    const tm = buildTenMetrics(state.meal_totals, state.settings.thresholds);
+                    state.ten_metrics = tm.ten_metrics;
+                    state.balance_score = tm.balance_score;
+                    state.red_count = tm.red_count;
+
+                    state.meal_type = mealTypeFromRules(new Date(), state.settings.mealRules);
+                    mealTypeSelect.value = state.meal_type;
+
+                    adjustCard.classList.remove("hidden");
+                    renderFoodsList();
+                    renderSummaryBar();
+
+                    setProgress(false);
+                    toast("手动录入完成");
+                } catch (e) {
+                    setProgress(false, "", 0, String(e?.message || e));
+                }
+            });
+
+            // History filters
+            $("#searchInput").addEventListener("input", () => renderHistory(true));
+            $("#daysSelect").addEventListener("change", () => renderHistory(true));
+            $("#mealFilter").addEventListener("change", () => renderHistory(true));
+            $("#redFilter").addEventListener("change", () => renderHistory(true));
+            $("#btnRefreshHistory").addEventListener("click", () => renderHistory(true));
+            $("#btnLoadMore").addEventListener("click", () => renderHistory(false));
+
+            // Settings actions
+            $("#btnSaveSettings").addEventListener("click", () => {
+                persistSettingsFromUI();
+                state.settings = loadSettings();
+                toast("设置已更新");
+            });
+
+            $("#btnSaveRules").addEventListener("click", () => {
+                state.settings.mealRules.breakfast = ruleBreakfast.value.trim() || defaultSettings.mealRules.breakfast;
+                state.settings.mealRules.lunch = ruleLunch.value.trim() || defaultSettings.mealRules.lunch;
+                state.settings.mealRules.dinner = ruleDinner.value.trim() || defaultSettings.mealRules.dinner;
+                saveSettings(state.settings);
+                toast("时间段已保存");
+            });
+
+            $("#btnSaveThresholds").addEventListener("click", () => {
+                const t = state.settings.thresholds;
+                t.kcal_max = Number(thKcal.value) || defaultSettings.thresholds.kcal_max;
+                t.protein_min = Number(thProtein.value) || defaultSettings.thresholds.protein_min;
+                t.fiber_min = Number(thFiber.value) || defaultSettings.thresholds.fiber_min;
+                t.sodium_max = Number(thSodium.value) || defaultSettings.thresholds.sodium_max;
+                t.sugar_max = Number(thSugar.value) || defaultSettings.thresholds.sugar_max;
+                t.sat_fat_max = Number(thSatFat.value) || defaultSettings.thresholds.sat_fat_max;
+                t.veg_servings_min = Number(thVeg.value) || defaultSettings.thresholds.veg_servings_min;
+                t.whole_grain_servings_min = Number(thWhole.value) || defaultSettings.thresholds.whole_grain_servings_min;
+                t.calcium_min = Number(thCalcium.value) || defaultSettings.thresholds.calcium_min;
+                t.potassium_min = Number(thPotassium.value) || defaultSettings.thresholds.potassium_min;
+                saveSettings(state.settings);
+                renderSummaryBar();
+                toast("阈值已保存");
+            });
+
+            $("#btnTest").addEventListener("click", async () => {
+                try {
+                    persistSettingsFromUI();
+                    state.settings = loadSettings();
+                    testResult.classList.remove("hidden");
+                    testResult.style.color = "rgba(255,255,255,.75)";
+                    testResult.textContent = "测试中…（会产生极少 token）";
+                    const s = state.settings;
+                    const body = {
+                        model: s.model,
+                        messages: [
+                            { role: "system", content: "只输出严格 JSON" },
+                            { role: "user", content: "返回 {\"ok\":true,\"msg\":\"pong\"}，不要多余文字" }
+                        ],
+                        temperature: 0,
+                        max_tokens: 50
+                    };
+                    if (s.tryResponseFormat) body.response_format = { type: "json_object" };
+
+                    let resp;
+                    try {
+                        resp = await openaiFetchJSON(s, body);
+                    } catch (e) {
+                        if (s.tryResponseFormat) {
+                            delete body.response_format;
+                            resp = await openaiFetchJSON(s, body);
+                        } else throw e;
+                    }
+                    const txt = pickContentFromChatCompletion(resp);
+                    const j = safeJsonParse(txt);
+                    testResult.style.color = "rgba(34,197,94,.92)";
+                    testResult.textContent = `成功：${JSON.stringify(j)}`;
+                } catch (e) {
+                    testResult.style.color = "rgba(239,68,68,.92)";
+                    testResult.textContent = `失败：${String(e?.message || e).slice(0, 300)}`;
+                }
+            });
+
+            $("#btnExport").addEventListener("click", exportJSON);
+            $("#btnImport").addEventListener("click", () => $("#importFile").click());
+            $("#importFile").addEventListener("change", async (e) => {
+                const f = e.target.files?.[0];
+                if (!f) return;
+                try {
+                    await importJSONFile(f);
+                } catch (err) {
+                    toast("导入失败：JSON 格式不正确");
+                } finally {
+                    $("#importFile").value = "";
+                }
+            });
+
+            $("#btnClearAll").addEventListener("click", async () => {
+                if (!confirm("确认清空所有记录与缩略图？")) return;
+                await idb.clear();
+                await refreshRecordsCache();
+                clearHistoryObjectUrls();
+                masonry.innerHTML = "";
+                renderMosaic();
+                updateStorageInfo();
+                toast("已清空");
+            });
+
+            $("#btnClearKey").addEventListener("click", () => {
+                state.settings.apiKey = "";
+                saveSettings(state.settings);
+                apiKeyInput.value = "";
+                toast("API Key 已清除");
+            });
+
+            // PWA install prompt
+            let deferredPrompt = null;
+            const installBtn = $("#installBtn");
+            window.addEventListener("beforeinstallprompt", (e) => {
+                e.preventDefault();
+                deferredPrompt = e;
+                installBtn.classList.remove("hidden");
+            });
+            installBtn.addEventListener("click", async () => {
+                if (!deferredPrompt) return;
+                deferredPrompt.prompt();
+                try { await deferredPrompt.userChoice; } catch { }
+                deferredPrompt = null;
+                installBtn.classList.add("hidden");
+            });
+
+            // Register Service Worker if present
+            if ("serviceWorker" in navigator) {
+                navigator.serviceWorker.register("sw.js").catch(() => { });
+            }
+
+            // =========================
+            // Init
+            // =========================
+            async function init() {
+                state.settings = loadSettings();
+                renderSettingsUI();
+
+                await refreshRecordsCache();
+                renderMosaic();
+                updateStorageInfo();
+
+                // initial meal select
+                state.meal_type = mealTypeFromRules(new Date(), state.settings.mealRules);
+                mealTypeSelect.value = state.meal_type;
+
+                clearPhotoSession();
+            }
+            init();
+
+        })();
+    </script>
+</body>
+
+</html>

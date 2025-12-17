@@ -1,0 +1,3367 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>健身成片工作台 | FitStudio</title>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Noto+Sans+SC:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+
+    <!-- MediaPipe Pose -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"
+        crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
+
+    <style>
+        :root {
+            /* 深色工作台主题 */
+            --bg-primary: #0d0d0f;
+            --bg-secondary: #141418;
+            --bg-tertiary: #1a1a1f;
+            --bg-elevated: #222228;
+            --bg-hover: #2a2a32;
+
+            /* 强调色 - 活力橙 */
+            --accent-primary: #ff6b35;
+            --accent-secondary: #ff8c5a;
+            --accent-tertiary: #ffb088;
+            --accent-glow: rgba(255, 107, 53, 0.3);
+
+            /* 辅助色 */
+            --success: #10b981;
+            --warning: #f59e0b;
+            --error: #ef4444;
+            --info: #3b82f6;
+
+            /* 文字 */
+            --text-primary: #f5f5f7;
+            --text-secondary: #a1a1aa;
+            --text-tertiary: #71717a;
+            --text-muted: #52525b;
+
+            /* 边框 */
+            --border-subtle: rgba(255, 255, 255, 0.06);
+            --border-default: rgba(255, 255, 255, 0.1);
+            --border-strong: rgba(255, 255, 255, 0.15);
+
+            /* 尺寸 */
+            --radius-sm: 6px;
+            --radius-md: 10px;
+            --radius-lg: 14px;
+            --radius-xl: 20px;
+
+            /* 字体 */
+            --font-sans: 'Noto Sans SC', -apple-system, sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+
+            /* 布局 */
+            --topbar-height: 56px;
+            --sidebar-width: 280px;
+            --panel-width: 320px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--font-sans);
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        /* 滚动条样式 */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border-default);
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--border-strong);
+        }
+
+        /* ========== 布局结构 ========== */
+        .app-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        /* 顶栏 */
+        .topbar {
+            height: var(--topbar-height);
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-subtle);
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            gap: 16px;
+            flex-shrink: 0;
+            z-index: 100;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 600;
+            font-size: 18px;
+            color: var(--text-primary);
+        }
+
+        .logo-icon {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            border-radius: var(--radius-sm);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+        }
+
+        .topbar-actions {
+            display: flex;
+            gap: 8px;
+            margin-left: auto;
+        }
+
+        /* 主内容区 */
+        .main-content {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        /* 左侧边栏 */
+        .sidebar {
+            width: var(--sidebar-width);
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border-subtle);
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+        }
+
+        .sidebar-section {
+            padding: 16px;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+
+        .sidebar-title {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-tertiary);
+            margin-bottom: 12px;
+        }
+
+        /* 中间预览区 */
+        .preview-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: var(--bg-primary);
+            overflow: hidden;
+        }
+
+        .preview-container {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .preview-wrapper {
+            position: relative;
+            background: #000;
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        }
+
+        .preview-canvas-container {
+            position: relative;
+        }
+
+        #previewVideo {
+            display: block;
+            max-width: 100%;
+            max-height: 100%;
+        }
+
+        #overlayCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        /* 空状态 */
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 60px 40px;
+            text-align: center;
+        }
+
+        .empty-icon {
+            width: 80px;
+            height: 80px;
+            background: var(--bg-tertiary);
+            border-radius: var(--radius-xl);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 36px;
+            margin-bottom: 20px;
+            border: 2px dashed var(--border-default);
+        }
+
+        .empty-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .empty-desc {
+            font-size: 14px;
+            color: var(--text-secondary);
+            max-width: 300px;
+            line-height: 1.6;
+        }
+
+        /* 时间轴 */
+        .timeline {
+            height: 140px;
+            background: var(--bg-secondary);
+            border-top: 1px solid var(--border-subtle);
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+        }
+
+        .timeline-controls {
+            display: flex;
+            align-items: center;
+            padding: 8px 16px;
+            gap: 12px;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+
+        .play-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: var(--accent-primary);
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        .play-btn:hover {
+            background: var(--accent-secondary);
+            transform: scale(1.05);
+        }
+
+        .time-display {
+            font-family: var(--font-mono);
+            font-size: 13px;
+            color: var(--text-secondary);
+            min-width: 120px;
+        }
+
+        .timeline-track {
+            flex: 1;
+            padding: 12px 16px;
+            overflow-x: auto;
+            overflow-y: hidden;
+        }
+
+        .track-container {
+            position: relative;
+            height: 100%;
+            min-width: 100%;
+        }
+
+        .track-ruler {
+            height: 20px;
+            position: relative;
+            border-bottom: 1px solid var(--border-subtle);
+            margin-bottom: 8px;
+        }
+
+        .track-segments {
+            display: flex;
+            gap: 4px;
+            height: 50px;
+        }
+
+        .segment-block {
+            background: var(--bg-elevated);
+            border: 1px solid var(--border-default);
+            border-radius: var(--radius-sm);
+            padding: 6px 10px;
+            font-size: 12px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            cursor: pointer;
+            transition: all 0.2s;
+            min-width: 60px;
+        }
+
+        .segment-block:hover {
+            background: var(--bg-hover);
+            border-color: var(--accent-primary);
+        }
+
+        .segment-block.active {
+            background: rgba(255, 107, 53, 0.15);
+            border-color: var(--accent-primary);
+        }
+
+        .segment-time {
+            font-family: var(--font-mono);
+            font-size: 10px;
+            color: var(--text-tertiary);
+        }
+
+        /* 右侧面板 */
+        .panel {
+            width: var(--panel-width);
+            background: var(--bg-secondary);
+            border-left: 1px solid var(--border-subtle);
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+            overflow: hidden;
+        }
+
+        .panel-tabs {
+            display: flex;
+            border-bottom: 1px solid var(--border-subtle);
+            flex-shrink: 0;
+        }
+
+        .panel-tab {
+            flex: 1;
+            padding: 12px;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+        }
+
+        .panel-tab:hover {
+            color: var(--text-primary);
+            background: var(--bg-tertiary);
+        }
+
+        .panel-tab.active {
+            color: var(--accent-primary);
+        }
+
+        .panel-tab.active::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: var(--accent-primary);
+        }
+
+        .panel-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+        }
+
+        .panel-section {
+            margin-bottom: 24px;
+        }
+
+        .panel-section-title {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* ========== 组件样式 ========== */
+
+        /* 按钮 */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 10px 16px;
+            font-size: 13px;
+            font-weight: 500;
+            font-family: inherit;
+            border-radius: var(--radius-md);
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        .btn-primary {
+            background: var(--accent-primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--accent-secondary);
+        }
+
+        .btn-secondary {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            border: 1px solid var(--border-default);
+        }
+
+        .btn-secondary:hover {
+            background: var(--bg-hover);
+            border-color: var(--border-strong);
+        }
+
+        .btn-ghost {
+            background: transparent;
+            color: var(--text-secondary);
+        }
+
+        .btn-ghost:hover {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+        }
+
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 12px;
+        }
+
+        .btn-lg {
+            padding: 14px 24px;
+            font-size: 15px;
+        }
+
+        .btn-icon {
+            width: 36px;
+            height: 36px;
+            padding: 0;
+        }
+
+        /* 输入框 */
+        .input-group {
+            margin-bottom: 16px;
+        }
+
+        .input-label {
+            display: block;
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+        }
+
+        .input {
+            width: 100%;
+            padding: 10px 12px;
+            font-size: 13px;
+            font-family: inherit;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-default);
+            border-radius: var(--radius-md);
+            color: var(--text-primary);
+            transition: all 0.2s;
+        }
+
+        .input:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 3px var(--accent-glow);
+        }
+
+        .input::placeholder {
+            color: var(--text-muted);
+        }
+
+        /* 选择框 */
+        .select {
+            width: 100%;
+            padding: 10px 12px;
+            font-size: 13px;
+            font-family: inherit;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-default);
+            border-radius: var(--radius-md);
+            color: var(--text-primary);
+            cursor: pointer;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2371717a' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+        }
+
+        .select:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+        }
+
+        /* 滑块 */
+        .slider-group {
+            margin-bottom: 16px;
+        }
+
+        .slider-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .slider-value {
+            font-family: var(--font-mono);
+            font-size: 12px;
+            color: var(--accent-primary);
+        }
+
+        .slider {
+            width: 100%;
+            height: 4px;
+            background: var(--bg-tertiary);
+            border-radius: 2px;
+            appearance: none;
+            cursor: pointer;
+        }
+
+        .slider::-webkit-slider-thumb {
+            appearance: none;
+            width: 14px;
+            height: 14px;
+            background: var(--accent-primary);
+            border-radius: 50%;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .slider::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+        }
+
+        /* 开关 */
+        .switch-group {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 0;
+        }
+
+        .switch-label {
+            font-size: 13px;
+            color: var(--text-primary);
+        }
+
+        .switch {
+            position: relative;
+            width: 44px;
+            height: 24px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .switch-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: var(--bg-tertiary);
+            border-radius: 12px;
+            transition: 0.3s;
+        }
+
+        .switch-slider::before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background: white;
+            border-radius: 50%;
+            transition: 0.3s;
+        }
+
+        .switch input:checked+.switch-slider {
+            background: var(--accent-primary);
+        }
+
+        .switch input:checked+.switch-slider::before {
+            transform: translateX(20px);
+        }
+
+        /* 标签/徽章 */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 8px;
+            font-size: 11px;
+            font-weight: 600;
+            border-radius: var(--radius-sm);
+            background: var(--bg-tertiary);
+            color: var(--text-secondary);
+        }
+
+        .badge-success {
+            background: rgba(16, 185, 129, 0.15);
+            color: var(--success);
+        }
+
+        .badge-warning {
+            background: rgba(245, 158, 11, 0.15);
+            color: var(--warning);
+        }
+
+        .badge-error {
+            background: rgba(239, 68, 68, 0.15);
+            color: var(--error);
+        }
+
+        /* 卡片 */
+        .card {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-default);
+            border-radius: var(--radius-md);
+            padding: 16px;
+        }
+
+        .card-title {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        /* 上传区 */
+        .upload-zone {
+            border: 2px dashed var(--border-default);
+            border-radius: var(--radius-lg);
+            padding: 32px 24px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: var(--bg-tertiary);
+        }
+
+        .upload-zone:hover {
+            border-color: var(--accent-primary);
+            background: rgba(255, 107, 53, 0.05);
+        }
+
+        .upload-zone.dragover {
+            border-color: var(--accent-primary);
+            background: rgba(255, 107, 53, 0.1);
+        }
+
+        .upload-icon {
+            font-size: 32px;
+            margin-bottom: 12px;
+        }
+
+        .upload-title {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .upload-hint {
+            font-size: 12px;
+            color: var(--text-tertiary);
+        }
+
+        /* 进度条 */
+        .progress {
+            height: 4px;
+            background: var(--bg-tertiary);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: var(--accent-primary);
+            border-radius: 2px;
+            transition: width 0.3s;
+        }
+
+        /* 模板卡片 */
+        .template-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 12px;
+        }
+
+        .template-card {
+            background: var(--bg-tertiary);
+            border: 2px solid var(--border-default);
+            border-radius: var(--radius-md);
+            padding: 16px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .template-card:hover {
+            border-color: var(--border-strong);
+            transform: translateY(-2px);
+        }
+
+        .template-card.selected {
+            border-color: var(--accent-primary);
+            background: rgba(255, 107, 53, 0.08);
+        }
+
+        .template-preview {
+            width: 100%;
+            aspect-ratio: 9/16;
+            background: var(--bg-primary);
+            border-radius: var(--radius-sm);
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            overflow: hidden;
+        }
+
+        .template-name {
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .template-desc {
+            font-size: 11px;
+            color: var(--text-tertiary);
+        }
+
+        /* 字幕列表 */
+        .subtitle-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .subtitle-item {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-default);
+            border-radius: var(--radius-sm);
+            padding: 10px 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .subtitle-item:hover {
+            background: var(--bg-hover);
+        }
+
+        .subtitle-item.active {
+            border-color: var(--accent-primary);
+            background: rgba(255, 107, 53, 0.1);
+        }
+
+        .subtitle-time {
+            font-family: var(--font-mono);
+            font-size: 11px;
+            color: var(--text-tertiary);
+            margin-bottom: 4px;
+        }
+
+        .subtitle-text {
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        /* 模态框 */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal {
+            background: var(--bg-secondary);
+            border-radius: var(--radius-lg);
+            width: 90%;
+            max-width: 500px;
+            max-height: 80vh;
+            overflow: hidden;
+            transform: scale(0.95);
+            transition: transform 0.3s;
+        }
+
+        .modal-overlay.active .modal {
+            transform: scale(1);
+        }
+
+        .modal-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid var(--border-subtle);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .modal-title {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .modal-close {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            transition: all 0.2s;
+        }
+
+        .modal-close:hover {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+        }
+
+        .modal-body {
+            padding: 24px;
+            overflow-y: auto;
+            max-height: calc(80vh - 140px);
+        }
+
+        .modal-footer {
+            padding: 16px 24px;
+            border-top: 1px solid var(--border-subtle);
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+        }
+
+        /* Toast 通知 */
+        .toast-container {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            z-index: 1100;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .toast {
+            background: var(--bg-elevated);
+            border: 1px solid var(--border-default);
+            border-radius: var(--radius-md);
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-width: 280px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .toast-icon {
+            font-size: 18px;
+        }
+
+        .toast-success .toast-icon {
+            color: var(--success);
+        }
+
+        .toast-error .toast-icon {
+            color: var(--error);
+        }
+
+        .toast-warning .toast-icon {
+            color: var(--warning);
+        }
+
+        .toast-info .toast-icon {
+            color: var(--info);
+        }
+
+        /* 骨架加载 */
+        .skeleton {
+            background: linear-gradient(90deg, var(--bg-tertiary) 25%, var(--bg-hover) 50%, var(--bg-tertiary) 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+            border-radius: var(--radius-sm);
+        }
+
+        @keyframes shimmer {
+            0% {
+                background-position: 200% 0;
+            }
+
+            100% {
+                background-position: -200% 0;
+            }
+        }
+
+        /* HUD 样式 */
+        .hud-overlay {
+            position: absolute;
+            pointer-events: none;
+        }
+
+        .hud-angle {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.75);
+            padding: 4px 10px;
+            border-radius: var(--radius-sm);
+            font-family: var(--font-mono);
+            font-size: 12px;
+            font-weight: 600;
+            border-left: 3px solid var(--accent-primary);
+        }
+
+        .hud-angle.warning {
+            border-color: var(--warning);
+            color: var(--warning);
+        }
+
+        .hud-angle.error {
+            border-color: var(--error);
+            color: var(--error);
+        }
+
+        /* 导出进度 */
+        .export-progress {
+            background: var(--bg-tertiary);
+            border-radius: var(--radius-md);
+            padding: 20px;
+            text-align: center;
+        }
+
+        .export-progress-ring {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 16px;
+        }
+
+        .export-progress-text {
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        /* 响应式 */
+        @media (max-width: 1200px) {
+            .sidebar {
+                width: 240px;
+            }
+
+            .panel {
+                width: 280px;
+            }
+        }
+
+        @media (max-width: 992px) {
+            .main-content {
+                flex-direction: column;
+            }
+
+            .sidebar {
+                width: 100%;
+                height: auto;
+                flex-direction: row;
+                border-right: none;
+                border-bottom: 1px solid var(--border-subtle);
+                overflow-x: auto;
+            }
+
+            .sidebar-section {
+                border-bottom: none;
+                border-right: 1px solid var(--border-subtle);
+                min-width: 200px;
+            }
+
+            .panel {
+                width: 100%;
+                height: 300px;
+                border-left: none;
+                border-top: 1px solid var(--border-subtle);
+            }
+
+            .timeline {
+                height: 120px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .topbar {
+                padding: 0 12px;
+            }
+
+            .logo span {
+                display: none;
+            }
+
+            .topbar-actions .btn span {
+                display: none;
+            }
+
+            .preview-container {
+                padding: 12px;
+            }
+
+            .mobile-tabs {
+                display: flex;
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                background: var(--bg-secondary);
+                border-top: 1px solid var(--border-subtle);
+                z-index: 100;
+            }
+
+            .mobile-tab {
+                flex: 1;
+                padding: 12px;
+                text-align: center;
+                font-size: 12px;
+                color: var(--text-secondary);
+                background: transparent;
+                border: none;
+                cursor: pointer;
+            }
+
+            .mobile-tab.active {
+                color: var(--accent-primary);
+            }
+        }
+
+        /* 隐藏类 */
+        .hidden {
+            display: none !important;
+        }
+
+        /* 文件输入隐藏 */
+        .file-input {
+            display: none;
+        }
+
+        /* 视频信息 */
+        .video-info {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-top: 12px;
+        }
+
+        .info-item {
+            background: var(--bg-tertiary);
+            padding: 8px 12px;
+            border-radius: var(--radius-sm);
+            font-size: 12px;
+        }
+
+        .info-label {
+            color: var(--text-tertiary);
+            margin-right: 6px;
+        }
+
+        .info-value {
+            font-family: var(--font-mono);
+            color: var(--text-primary);
+        }
+
+        /* 颜色选择 */
+        .color-picker-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .color-picker {
+            width: 36px;
+            height: 36px;
+            padding: 0;
+            border: 2px solid var(--border-default);
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            background: transparent;
+        }
+
+        .color-picker::-webkit-color-swatch-wrapper {
+            padding: 2px;
+        }
+
+        .color-picker::-webkit-color-swatch {
+            border: none;
+            border-radius: 2px;
+        }
+
+        /* 关键词高亮预览 */
+        .keyword-preview {
+            background: var(--bg-tertiary);
+            padding: 16px;
+            border-radius: var(--radius-md);
+            margin-top: 12px;
+        }
+
+        .keyword-highlight {
+            color: var(--accent-primary);
+            font-weight: 600;
+        }
+
+        /* 姿态指标面板 */
+        .metrics-panel {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+
+        .metric-card {
+            background: var(--bg-tertiary);
+            border-radius: var(--radius-md);
+            padding: 12px;
+            text-align: center;
+        }
+
+        .metric-value {
+            font-family: var(--font-mono);
+            font-size: 24px;
+            font-weight: 600;
+            color: var(--accent-primary);
+        }
+
+        .metric-label {
+            font-size: 11px;
+            color: var(--text-tertiary);
+            margin-top: 4px;
+        }
+
+        .metric-status {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 4px;
+        }
+
+        .metric-status.good {
+            background: var(--success);
+        }
+
+        .metric-status.warning {
+            background: var(--warning);
+        }
+
+        .metric-status.error {
+            background: var(--error);
+        }
+
+        /* 加载状态 */
+        .loading-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(13, 13, 15, 0.9);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 50;
+        }
+
+        .spinner {
+            width: 48px;
+            height: 48px;
+            border: 3px solid var(--border-default);
+            border-top-color: var(--accent-primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .loading-text {
+            margin-top: 16px;
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        /* 分割线 */
+        .divider {
+            height: 1px;
+            background: var(--border-subtle);
+            margin: 16px 0;
+        }
+
+        /* 工具提示 */
+        [data-tooltip] {
+            position: relative;
+        }
+
+        [data-tooltip]:hover::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 6px 10px;
+            background: var(--bg-elevated);
+            border: 1px solid var(--border-default);
+            border-radius: var(--radius-sm);
+            font-size: 12px;
+            white-space: nowrap;
+            z-index: 100;
+            margin-bottom: 6px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- 顶栏 -->
+        <header class="topbar">
+            <div class="logo">
+                <div class="logo-icon">🏋️</div>
+                <span>FitStudio</span>
+            </div>
+
+            <div class="topbar-actions">
+                <button class="btn btn-secondary btn-sm" onclick="importProject()">
+                    <span>📂</span>
+                    <span>导入工程</span>
+                </button>
+                <button class="btn btn-secondary btn-sm" onclick="exportProject()">
+                    <span>💾</span>
+                    <span>保存工程</span>
+                </button>
+                <button class="btn btn-primary btn-sm" onclick="showExportModal()">
+                    <span>🎬</span>
+                    <span>导出视频</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- 主内容区 -->
+        <div class="main-content">
+            <!-- 左侧边栏 -->
+            <aside class="sidebar">
+                <!-- 视频导入 -->
+                <div class="sidebar-section">
+                    <div class="sidebar-title">📹 视频素材</div>
+                    <div id="videoUploadZone" class="upload-zone"
+                        onclick="document.getElementById('videoInput').click()">
+                        <div class="upload-icon">🎥</div>
+                        <div class="upload-title">导入视频</div>
+                        <div class="upload-hint">支持 MP4 / MOV / WebM</div>
+                    </div>
+                    <input type="file" id="videoInput" class="file-input" accept="video/*"
+                        onchange="handleVideoUpload(event)">
+
+                    <div id="videoInfo" class="video-info hidden">
+                        <div class="info-item">
+                            <span class="info-label">时长</span>
+                            <span class="info-value" id="videoDuration">--</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">分辨率</span>
+                            <span class="info-value" id="videoResolution">--</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">估计FPS</span>
+                            <span class="info-value" id="videoFps">--</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 字幕导入 -->
+                <div class="sidebar-section">
+                    <div class="sidebar-title">📝 字幕文件</div>
+                    <div id="subtitleUploadZone" class="upload-zone"
+                        onclick="document.getElementById('subtitleInput').click()">
+                        <div class="upload-icon">📄</div>
+                        <div class="upload-title">导入字幕</div>
+                        <div class="upload-hint">支持 SRT / VTT / JSON</div>
+                    </div>
+                    <input type="file" id="subtitleInput" class="file-input" accept=".srt,.vtt,.json"
+                        onchange="handleSubtitleUpload(event)">
+
+                    <div id="subtitleInfo" class="hidden" style="margin-top: 12px;">
+                        <div class="badge badge-success" id="subtitleCount">0 条字幕</div>
+                    </div>
+                </div>
+
+                <!-- 输出设置 -->
+                <div class="sidebar-section">
+                    <div class="sidebar-title">🖼️ 输出画幅</div>
+                    <div class="input-group" style="margin-bottom: 0;">
+                        <select class="select" id="aspectRatio" onchange="updateAspectRatio()">
+                            <option value="9:16">竖屏 9:16 (推荐)</option>
+                            <option value="16:9">横屏 16:9</option>
+                            <option value="1:1">方形 1:1</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- 姿态识别开关 -->
+                <div class="sidebar-section">
+                    <div class="sidebar-title">🦴 姿态识别</div>
+                    <div class="switch-group">
+                        <span class="switch-label">启用姿态分析</span>
+                        <label class="switch">
+                            <input type="checkbox" id="poseEnabled" onchange="togglePoseDetection()">
+                            <span class="switch-slider"></span>
+                        </label>
+                    </div>
+                    <div id="poseStatus" class="hidden" style="margin-top: 8px;">
+                        <div class="badge" id="poseStatusBadge">模型加载中...</div>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- 中间预览区 -->
+            <main class="preview-area">
+                <div class="preview-container">
+                    <!-- 空状态 -->
+                    <div id="emptyState" class="empty-state">
+                        <div class="empty-icon">🎬</div>
+                        <div class="empty-title">开始创作你的健身视频</div>
+                        <div class="empty-desc">导入视频和字幕，选择模板，一键生成专业的健身教学内容</div>
+                        <button class="btn btn-primary btn-lg" style="margin-top: 20px;"
+                            onclick="document.getElementById('videoInput').click()">
+                            导入视频开始
+                        </button>
+                    </div>
+
+                    <!-- 预览包装器 -->
+                    <div id="previewWrapper" class="preview-wrapper hidden">
+                        <div class="preview-canvas-container">
+                            <video id="previewVideo" crossorigin="anonymous"></video>
+                            <canvas id="overlayCanvas"></canvas>
+                        </div>
+
+                        <!-- 加载状态 -->
+                        <div id="loadingOverlay" class="loading-overlay hidden">
+                            <div class="spinner"></div>
+                            <div class="loading-text">处理中...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 时间轴 -->
+                <div class="timeline">
+                    <div class="timeline-controls">
+                        <button class="play-btn" id="playBtn" onclick="togglePlay()">▶</button>
+                        <div class="time-display">
+                            <span id="currentTime">00:00.000</span> / <span id="totalTime">00:00.000</span>
+                        </div>
+                        <input type="range" class="slider" id="seekSlider" min="0" max="100" value="0" step="0.1"
+                            oninput="seekVideo(this.value)" style="flex: 1;">
+                        <button class="btn btn-ghost btn-sm" onclick="addMarker()">📍 标记</button>
+                    </div>
+                    <div class="timeline-track">
+                        <div class="track-container">
+                            <div class="track-ruler" id="trackRuler"></div>
+                            <div class="track-segments" id="trackSegments"></div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+
+            <!-- 右侧面板 -->
+            <aside class="panel">
+                <div class="panel-tabs">
+                    <button class="panel-tab active" data-tab="style" onclick="switchTab('style')">字幕样式</button>
+                    <button class="panel-tab" data-tab="pose" onclick="switchTab('pose')">姿态设置</button>
+                    <button class="panel-tab" data-tab="template" onclick="switchTab('template')">模板</button>
+                </div>
+
+                <div class="panel-content">
+                    <!-- 字幕样式面板 -->
+                    <div id="stylePanel" class="panel-section">
+                        <div class="panel-section-title">📐 字幕排版</div>
+
+                        <div class="slider-group">
+                            <div class="slider-header">
+                                <label class="input-label">字号大小</label>
+                                <span class="slider-value" id="fontSizeValue">48px</span>
+                            </div>
+                            <input type="range" class="slider" id="fontSize" min="24" max="72" value="48"
+                                oninput="updateSubtitleStyle()">
+                        </div>
+
+                        <div class="slider-group">
+                            <div class="slider-header">
+                                <label class="input-label">行高</label>
+                                <span class="slider-value" id="lineHeightValue">1.4</span>
+                            </div>
+                            <input type="range" class="slider" id="lineHeight" min="1" max="2" step="0.1" value="1.4"
+                                oninput="updateSubtitleStyle()">
+                        </div>
+
+                        <div class="slider-group">
+                            <div class="slider-header">
+                                <label class="input-label">底部安全区</label>
+                                <span class="slider-value" id="bottomMarginValue">80px</span>
+                            </div>
+                            <input type="range" class="slider" id="bottomMargin" min="20" max="200" value="80"
+                                oninput="updateSubtitleStyle()">
+                        </div>
+
+                        <div class="divider"></div>
+
+                        <div class="panel-section-title">🎨 字幕颜色</div>
+
+                        <div class="input-group">
+                            <label class="input-label">文字颜色</label>
+                            <div class="color-picker-group">
+                                <input type="color" class="color-picker" id="textColor" value="#ffffff"
+                                    onchange="updateSubtitleStyle()">
+                                <input type="text" class="input" value="#ffffff" style="width: 100px;" id="textColorHex"
+                                    oninput="syncColorFromHex('textColor')">
+                            </div>
+                        </div>
+
+                        <div class="input-group">
+                            <label class="input-label">描边颜色</label>
+                            <div class="color-picker-group">
+                                <input type="color" class="color-picker" id="strokeColor" value="#000000"
+                                    onchange="updateSubtitleStyle()">
+                                <input type="text" class="input" value="#000000" style="width: 100px;"
+                                    id="strokeColorHex" oninput="syncColorFromHex('strokeColor')">
+                            </div>
+                        </div>
+
+                        <div class="slider-group">
+                            <div class="slider-header">
+                                <label class="input-label">描边宽度</label>
+                                <span class="slider-value" id="strokeWidthValue">3px</span>
+                            </div>
+                            <input type="range" class="slider" id="strokeWidth" min="0" max="8" value="3"
+                                oninput="updateSubtitleStyle()">
+                        </div>
+
+                        <div class="divider"></div>
+
+                        <div class="panel-section-title">✨ 动效设置</div>
+
+                        <div class="input-group">
+                            <label class="input-label">出场动画</label>
+                            <select class="select" id="animationType" onchange="updateSubtitleStyle()">
+                                <option value="pop">弹入 (Pop-in)</option>
+                                <option value="word">逐词出现 (Word-by-word)</option>
+                                <option value="fade">淡入 (Fade-in)</option>
+                                <option value="slide">滑入 (Slide-up)</option>
+                            </select>
+                        </div>
+
+                        <div class="input-group">
+                            <label class="input-label">关键词高亮</label>
+                            <input type="text" class="input" id="keywords" placeholder="膝盖,腰,肩胛,髋（逗号分隔）"
+                                value="膝盖,腰,肩胛,髋,深蹲,硬拉" oninput="updateSubtitleStyle()">
+                        </div>
+
+                        <div class="switch-group">
+                            <span class="switch-label">段末 Freeze</span>
+                            <label class="switch">
+                                <input type="checkbox" id="freezeEnabled" checked onchange="updateSubtitleStyle()">
+                                <span class="switch-slider"></span>
+                            </label>
+                        </div>
+
+                        <div class="slider-group">
+                            <div class="slider-header">
+                                <label class="input-label">Freeze 时长</label>
+                                <span class="slider-value" id="freezeDurationValue">0.8s</span>
+                            </div>
+                            <input type="range" class="slider" id="freezeDuration" min="0.3" max="2" step="0.1"
+                                value="0.8" oninput="updateSubtitleStyle()">
+                        </div>
+                    </div>
+
+                    <!-- 姿态设置面板 -->
+                    <div id="posePanel" class="panel-section hidden">
+                        <div class="panel-section-title">🎯 姿态显示</div>
+
+                        <div class="switch-group">
+                            <span class="switch-label">显示骨架</span>
+                            <label class="switch">
+                                <input type="checkbox" id="showSkeleton" checked onchange="updatePoseSettings()">
+                                <span class="switch-slider"></span>
+                            </label>
+                        </div>
+
+                        <div class="slider-group">
+                            <div class="slider-header">
+                                <label class="input-label">骨架透明度</label>
+                                <span class="slider-value" id="skeletonOpacityValue">80%</span>
+                            </div>
+                            <input type="range" class="slider" id="skeletonOpacity" min="20" max="100" value="80"
+                                oninput="updatePoseSettings()">
+                        </div>
+
+                        <div class="slider-group">
+                            <div class="slider-header">
+                                <label class="input-label">关键点大小</label>
+                                <span class="slider-value" id="keypointSizeValue">8px</span>
+                            </div>
+                            <input type="range" class="slider" id="keypointSize" min="4" max="16" value="8"
+                                oninput="updatePoseSettings()">
+                        </div>
+
+                        <div class="input-group">
+                            <label class="input-label">骨架颜色</label>
+                            <div class="color-picker-group">
+                                <input type="color" class="color-picker" id="skeletonColor" value="#ff6b35"
+                                    onchange="updatePoseSettings()">
+                                <input type="text" class="input" value="#ff6b35" style="width: 100px;"
+                                    id="skeletonColorHex" oninput="syncColorFromHex('skeletonColor')">
+                            </div>
+                        </div>
+
+                        <div class="divider"></div>
+
+                        <div class="panel-section-title">📊 HUD 指标</div>
+
+                        <div class="switch-group">
+                            <span class="switch-label">躯干前倾角</span>
+                            <label class="switch">
+                                <input type="checkbox" id="showTrunkAngle" checked onchange="updatePoseSettings()">
+                                <span class="switch-slider"></span>
+                            </label>
+                        </div>
+
+                        <div class="switch-group">
+                            <span class="switch-label">膝关节角度</span>
+                            <label class="switch">
+                                <input type="checkbox" id="showKneeAngle" checked onchange="updatePoseSettings()">
+                                <span class="switch-slider"></span>
+                            </label>
+                        </div>
+
+                        <div class="switch-group">
+                            <span class="switch-label">膝内扣检测</span>
+                            <label class="switch">
+                                <input type="checkbox" id="showKneeValgus" onchange="updatePoseSettings()">
+                                <span class="switch-slider"></span>
+                            </label>
+                        </div>
+
+                        <div class="divider"></div>
+
+                        <div class="panel-section-title">⚙️ 识别参数</div>
+
+                        <div class="slider-group">
+                            <div class="slider-header">
+                                <label class="input-label">置信度阈值</label>
+                                <span class="slider-value" id="confidenceThresholdValue">0.6</span>
+                            </div>
+                            <input type="range" class="slider" id="confidenceThreshold" min="0.3" max="0.9" step="0.05"
+                                value="0.6" oninput="updatePoseSettings()">
+                        </div>
+
+                        <div class="slider-group">
+                            <div class="slider-header">
+                                <label class="input-label">采样帧率</label>
+                                <span class="slider-value" id="sampleFpsValue">15 fps</span>
+                            </div>
+                            <input type="range" class="slider" id="sampleFps" min="5" max="30" value="15"
+                                oninput="updatePoseSettings()">
+                        </div>
+
+                        <div class="switch-group">
+                            <span class="switch-label">时序平滑</span>
+                            <label class="switch">
+                                <input type="checkbox" id="smoothing" checked onchange="updatePoseSettings()">
+                                <span class="switch-slider"></span>
+                            </label>
+                        </div>
+
+                        <div class="divider"></div>
+
+                        <div class="panel-section-title">📈 实时指标</div>
+                        <div class="metrics-panel" id="metricsPanel">
+                            <div class="metric-card">
+                                <div class="metric-value" id="trunkAngleMetric">--°</div>
+                                <div class="metric-label"><span class="metric-status good"></span>躯干角</div>
+                            </div>
+                            <div class="metric-card">
+                                <div class="metric-value" id="kneeAngleMetric">--°</div>
+                                <div class="metric-label"><span class="metric-status good"></span>膝角</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 模板面板 -->
+                    <div id="templatePanel" class="panel-section hidden">
+                        <div class="panel-section-title">🎨 选择模板</div>
+
+                        <div class="template-grid">
+                            <div class="template-card selected" data-template="hook" onclick="selectTemplate('hook')">
+                                <div class="template-preview">
+                                    <div style="font-size: 12px; padding: 8px; text-align: center;">
+                                        <div style="font-weight: bold; color: var(--error);">❌ 错误示范</div>
+                                        <div style="margin: 8px 0; font-size: 10px; color: var(--text-secondary);">膝盖内扣
+                                        </div>
+                                        <div style="font-weight: bold; color: var(--success);">✅ 正确做法</div>
+                                    </div>
+                                </div>
+                                <div class="template-name">Hook + 纠错</div>
+                                <div class="template-desc">最通用的教学模板</div>
+                            </div>
+
+                            <div class="template-card" data-template="score" onclick="selectTemplate('score')">
+                                <div class="template-preview">
+                                    <div style="font-size: 12px; padding: 8px; text-align: center;">
+                                        <div style="font-size: 24px; font-weight: bold; color: var(--accent-primary);">
+                                            92</div>
+                                        <div style="font-size: 10px; color: var(--text-secondary);">动作评分</div>
+                                        <div
+                                            style="margin-top: 8px; height: 4px; background: var(--bg-hover); border-radius: 2px;">
+                                            <div
+                                                style="width: 92%; height: 100%; background: var(--accent-primary); border-radius: 2px;">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="template-name">评分条</div>
+                                <div class="template-desc">专业感强的动作评估</div>
+                            </div>
+
+                            <div class="template-card" data-template="compare" onclick="selectTemplate('compare')">
+                                <div class="template-preview">
+                                    <div style="font-size: 12px; padding: 8px; text-align: center;">
+                                        <div style="display: flex; justify-content: space-around;">
+                                            <div>
+                                                <div style="font-size: 10px; color: var(--text-tertiary);">第1次</div>
+                                                <div style="font-size: 16px;">85°</div>
+                                            </div>
+                                            <div style="font-size: 16px; color: var(--success);">→</div>
+                                            <div>
+                                                <div style="font-size: 10px; color: var(--text-tertiary);">第2次</div>
+                                                <div style="font-size: 16px; color: var(--success);">92°</div>
+                                            </div>
+                                        </div>
+                                        <div style="margin-top: 8px; font-size: 10px; color: var(--success);">+7° 进步！
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="template-name">对比两次</div>
+                                <div class="template-desc">展示进步的爽感</div>
+                            </div>
+                        </div>
+
+                        <div class="divider"></div>
+
+                        <div class="panel-section-title">⚙️ 模板参数</div>
+
+                        <div class="input-group">
+                            <label class="input-label">Hook 标题</label>
+                            <input type="text" class="input" id="hookTitle" placeholder="深蹲膝盖内扣？一个技巧解决！"
+                                value="深蹲膝盖内扣？一个技巧解决！">
+                        </div>
+
+                        <div class="input-group">
+                            <label class="input-label">CTA 文案</label>
+                            <input type="text" class="input" id="ctaText" placeholder="关注学习更多健身干货" value="关注学习更多健身干货">
+                        </div>
+
+                        <div class="switch-group">
+                            <span class="switch-label">显示 Hook</span>
+                            <label class="switch">
+                                <input type="checkbox" id="showHook" checked onchange="updateTemplateSettings()">
+                                <span class="switch-slider"></span>
+                            </label>
+                        </div>
+
+                        <div class="switch-group">
+                            <span class="switch-label">显示 CTA</span>
+                            <label class="switch">
+                                <input type="checkbox" id="showCta" checked onchange="updateTemplateSettings()">
+                                <span class="switch-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </aside>
+        </div>
+    </div>
+
+    <!-- 导出模态框 -->
+    <div class="modal-overlay" id="exportModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 class="modal-title">🎬 导出视频</h2>
+                <button class="modal-close" onclick="closeExportModal()">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="input-group">
+                    <label class="input-label">输出格式</label>
+                    <select class="select" id="exportFormat">
+                        <option value="webm">WebM (推荐)</option>
+                        <option value="mp4">MP4 (需浏览器支持)</option>
+                    </select>
+                </div>
+
+                <div class="input-group">
+                    <label class="input-label">画质档位</label>
+                    <select class="select" id="exportQuality">
+                        <option value="fast">快速 (720p, 低码率)</option>
+                        <option value="standard" selected>标准 (1080p)</option>
+                        <option value="high">高清 (原始分辨率)</option>
+                    </select>
+                </div>
+
+                <div class="input-group">
+                    <label class="input-label">帧率</label>
+                    <select class="select" id="exportFps">
+                        <option value="24">24 fps</option>
+                        <option value="30" selected>30 fps</option>
+                    </select>
+                </div>
+
+                <div class="switch-group">
+                    <span class="switch-label">包含姿态骨架</span>
+                    <label class="switch">
+                        <input type="checkbox" id="exportWithPose" checked>
+                        <span class="switch-slider"></span>
+                    </label>
+                </div>
+
+                <div class="switch-group">
+                    <span class="switch-label">导出封面图</span>
+                    <label class="switch">
+                        <input type="checkbox" id="exportCover" checked>
+                        <span class="switch-slider"></span>
+                    </label>
+                </div>
+
+                <div id="exportProgress" class="export-progress hidden">
+                    <svg class="export-progress-ring" viewBox="0 0 100 100">
+                        <circle cx="50" cy="50" r="45" stroke="var(--bg-hover)" stroke-width="8" fill="none" />
+                        <circle id="progressCircle" cx="50" cy="50" r="45" stroke="var(--accent-primary)"
+                            stroke-width="8" fill="none" stroke-dasharray="283" stroke-dashoffset="283"
+                            stroke-linecap="round" transform="rotate(-90 50 50)" />
+                    </svg>
+                    <div class="export-progress-text" id="exportProgressText">准备导出...</div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeExportModal()">取消</button>
+                <button class="btn btn-primary" id="startExportBtn" onclick="startExport()">开始导出</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast 容器 -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script>
+        // ========== 全局状态 ==========
+        const state = {
+            project: {
+                id: generateId(),
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+                videoMeta: null,
+                aspect: '9:16',
+                templateId: 'hook',
+                segments: [],
+                poseTracks: [],
+                markers: [],
+                exportProfiles: []
+            },
+
+            // 播放状态
+            isPlaying: false,
+            currentTime: 0,
+            duration: 0,
+
+            // 姿态识别
+            poseEnabled: false,
+            poseModel: null,
+            poseResults: null,
+            poseHistory: [],
+
+            // 渲染
+            renderLoop: null,
+
+            // 配置
+            subtitleStyle: {
+                fontSize: 48,
+                lineHeight: 1.4,
+                bottomMargin: 80,
+                textColor: '#ffffff',
+                strokeColor: '#000000',
+                strokeWidth: 3,
+                animationType: 'pop',
+                keywords: ['膝盖', '腰', '肩胛', '髋', '深蹲', '硬拉'],
+                freezeEnabled: true,
+                freezeDuration: 0.8
+            },
+
+            poseSettings: {
+                showSkeleton: true,
+                skeletonOpacity: 0.8,
+                keypointSize: 8,
+                skeletonColor: '#ff6b35',
+                showTrunkAngle: true,
+                showKneeAngle: true,
+                showKneeValgus: false,
+                confidenceThreshold: 0.6,
+                sampleFps: 15,
+                smoothing: true
+            },
+
+            templateSettings: {
+                hookTitle: '深蹲膝盖内扣？一个技巧解决！',
+                ctaText: '关注学习更多健身干货',
+                showHook: true,
+                showCta: true
+            }
+        };
+
+        // DOM 元素引用
+        const elements = {
+            video: document.getElementById('previewVideo'),
+            canvas: document.getElementById('overlayCanvas'),
+            emptyState: document.getElementById('emptyState'),
+            previewWrapper: document.getElementById('previewWrapper'),
+            playBtn: document.getElementById('playBtn'),
+            currentTime: document.getElementById('currentTime'),
+            totalTime: document.getElementById('totalTime'),
+            seekSlider: document.getElementById('seekSlider'),
+            trackSegments: document.getElementById('trackSegments'),
+            loadingOverlay: document.getElementById('loadingOverlay')
+        };
+
+        // Canvas 上下文
+        let ctx = null;
+
+        // ========== 工具函数 ==========
+        function generateId() {
+            return 'proj_' + Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
+        }
+
+        function formatTime(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            const ms = Math.floor((seconds % 1) * 1000);
+            return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}.${ms.toString().padStart(3, '0')}`;
+        }
+
+        function showToast(message, type = 'info') {
+            const icons = {
+                success: '✓',
+                error: '✕',
+                warning: '⚠',
+                info: 'ℹ'
+            };
+
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            toast.innerHTML = `
+                <span class="toast-icon">${icons[type]}</span>
+                <span>${message}</span>
+            `;
+
+            document.getElementById('toastContainer').appendChild(toast);
+
+            setTimeout(() => {
+                toast.style.animation = 'slideIn 0.3s ease reverse';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        function showLoading(text = '处理中...') {
+            elements.loadingOverlay.classList.remove('hidden');
+            elements.loadingOverlay.querySelector('.loading-text').textContent = text;
+        }
+
+        function hideLoading() {
+            elements.loadingOverlay.classList.add('hidden');
+        }
+
+        // ========== 视频处理 ==========
+        function handleVideoUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            showLoading('加载视频...');
+
+            const url = URL.createObjectURL(file);
+            elements.video.src = url;
+
+            elements.video.onloadedmetadata = () => {
+                state.duration = elements.video.duration;
+                state.project.videoMeta = {
+                    duration: elements.video.duration,
+                    width: elements.video.videoWidth,
+                    height: elements.video.videoHeight,
+                    fps: 30, // 估计值
+                    filename: file.name
+                };
+
+                // 更新 UI
+                document.getElementById('videoDuration').textContent = formatTime(state.duration);
+                document.getElementById('videoResolution').textContent = `${elements.video.videoWidth}×${elements.video.videoHeight}`;
+                document.getElementById('videoFps').textContent = '~30';
+                document.getElementById('videoInfo').classList.remove('hidden');
+
+                elements.totalTime.textContent = formatTime(state.duration);
+                elements.emptyState.classList.add('hidden');
+                elements.previewWrapper.classList.remove('hidden');
+
+                // 设置 canvas
+                setupCanvas();
+
+                // 更新视频上传区
+                document.getElementById('videoUploadZone').innerHTML = `
+                    <div class="upload-icon">✓</div>
+                    <div class="upload-title">${file.name}</div>
+                    <div class="upload-hint">点击更换视频</div>
+                `;
+
+                hideLoading();
+                showToast('视频加载成功', 'success');
+
+                // 开始渲染循环
+                startRenderLoop();
+            };
+
+            elements.video.onerror = () => {
+                hideLoading();
+                showToast('视频加载失败，请检查格式', 'error');
+            };
+        }
+
+        function setupCanvas() {
+            const video = elements.video;
+            const canvas = elements.canvas;
+            const aspect = state.project.aspect;
+
+            let targetWidth, targetHeight;
+
+            if (aspect === '9:16') {
+                targetHeight = 640;
+                targetWidth = 360;
+            } else if (aspect === '16:9') {
+                targetWidth = 640;
+                targetHeight = 360;
+            } else {
+                targetWidth = targetHeight = 480;
+            }
+
+            canvas.width = targetWidth;
+            canvas.height = targetHeight;
+
+            // 调整预览大小
+            elements.previewWrapper.style.width = targetWidth + 'px';
+            elements.previewWrapper.style.height = targetHeight + 'px';
+            video.style.width = targetWidth + 'px';
+            video.style.height = targetHeight + 'px';
+            video.style.objectFit = 'cover';
+
+            ctx = canvas.getContext('2d');
+        }
+
+        function updateAspectRatio() {
+            state.project.aspect = document.getElementById('aspectRatio').value;
+            if (state.project.videoMeta) {
+                setupCanvas();
+            }
+        }
+
+        // ========== 字幕处理 ==========
+        function handleSubtitleUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const content = e.target.result;
+                const ext = file.name.split('.').pop().toLowerCase();
+
+                try {
+                    let segments;
+
+                    if (ext === 'json') {
+                        segments = parseJSONSubtitle(content);
+                    } else if (ext === 'srt') {
+                        segments = parseSRTSubtitle(content);
+                    } else if (ext === 'vtt') {
+                        segments = parseVTTSubtitle(content);
+                    } else {
+                        throw new Error('不支持的格式');
+                    }
+
+                    state.project.segments = segments;
+
+                    // 更新 UI
+                    document.getElementById('subtitleCount').textContent = `${segments.length} 条字幕`;
+                    document.getElementById('subtitleInfo').classList.remove('hidden');
+
+                    document.getElementById('subtitleUploadZone').innerHTML = `
+                        <div class="upload-icon">✓</div>
+                        <div class="upload-title">${file.name}</div>
+                        <div class="upload-hint">点击更换字幕</div>
+                    `;
+
+                    // 渲染时间轴字幕块
+                    renderTimelineSegments();
+
+                    showToast(`成功导入 ${segments.length} 条字幕`, 'success');
+                } catch (err) {
+                    showToast('字幕解析失败: ' + err.message, 'error');
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function parseJSONSubtitle(content) {
+            const data = JSON.parse(content);
+            if (Array.isArray(data)) {
+                return data.map((item, i) => ({
+                    id: 'seg_' + i,
+                    t0: item.start || item.t0 || 0,
+                    t1: item.end || item.t1 || 0,
+                    text: item.text || item.content || '',
+                    style: item.style || {},
+                    actions: item.actions || []
+                }));
+            }
+            return [];
+        }
+
+        function parseSRTSubtitle(content) {
+            const segments = [];
+            const blocks = content.trim().split(/\n\n+/);
+
+            blocks.forEach((block, i) => {
+                const lines = block.split('\n');
+                if (lines.length >= 3) {
+                    const timeMatch = lines[1].match(/(\d{2}):(\d{2}):(\d{2})[,.](\d{3})\s*-->\s * (\d{ 2}):(\d{ 2 }): (\d{ 2 })[,.](\d{ 3}) /);
+            if (timeMatch) {
+                const t0 = parseInt(timeMatch[1]) * 3600 + parseInt(timeMatch[2]) * 60 + parseInt(timeMatch[3]) + parseInt(timeMatch[4]) / 1000;
+                const t1 = parseInt(timeMatch[5]) * 3600 + parseInt(timeMatch[6]) * 60 + parseInt(timeMatch[7]) + parseInt(timeMatch[8]) / 1000;
+                const text = lines.slice(2).join('\n').replace(/<[^>]+>/g, '');
+
+                segments.push({
+                    id: 'seg_' + i,
+                    t0,
+                    t1,
+                    text,
+                    style: {},
+                    actions: []
+                });
+            }
+        }
+            });
+
+        return segments;
+        }
+
+        function parseVTTSubtitle(content) {
+            const segments = [];
+            const lines = content.split('\n');
+            let currentSegment = null;
+            let index = 0;
+
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i].trim();
+
+                if (line.includes('-->')) {
+                    const timeMatch = line.match(/(\d{2}):(\d{2})[.:,](\d{3})\s*-->\s*(\d{2}):(\d{2})[.:,](\d{3})/);
+                    if (timeMatch) {
+                        const t0 = parseInt(timeMatch[1]) * 60 + parseInt(timeMatch[2]) + parseInt(timeMatch[3]) / 1000;
+                        const t1 = parseInt(timeMatch[4]) * 60 + parseInt(timeMatch[5]) + parseInt(timeMatch[6]) / 1000;
+
+                        currentSegment = {
+                            id: 'seg_' + index++,
+                            t0,
+                            t1,
+                            text: '',
+                            style: {},
+                            actions: []
+                        };
+                    }
+                } else if (currentSegment && line) {
+                    currentSegment.text += (currentSegment.text ? '\n' : '') + line.replace(/<[^>]+>/g, '');
+                } else if (currentSegment && !line) {
+                    segments.push(currentSegment);
+                    currentSegment = null;
+                }
+            }
+
+            if (currentSegment) {
+                segments.push(currentSegment);
+            }
+
+            return segments;
+        }
+
+        function renderTimelineSegments() {
+            const container = elements.trackSegments;
+            container.innerHTML = '';
+
+            if (!state.project.segments.length || !state.duration) return;
+
+            const totalWidth = container.parentElement.offsetWidth - 32;
+
+            state.project.segments.forEach((seg, i) => {
+                const left = (seg.t0 / state.duration) * totalWidth;
+                const width = Math.max(60, ((seg.t1 - seg.t0) / state.duration) * totalWidth);
+
+                const block = document.createElement('div');
+                block.className = 'segment-block';
+                block.style.position = 'absolute';
+                block.style.left = left + 'px';
+                block.style.width = width + 'px';
+                block.dataset.index = i;
+
+                block.innerHTML = `
+                    <div class="segment-time">${formatTime(seg.t0).slice(0, 5)}</div>
+                    <div style="font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${seg.text.substring(0, 20)}...</div>
+                `;
+
+                block.onclick = () => {
+                    elements.video.currentTime = seg.t0;
+                    document.querySelectorAll('.segment-block').forEach(b => b.classList.remove('active'));
+                    block.classList.add('active');
+                };
+
+                container.appendChild(block);
+            });
+        }
+
+        // ========== 播放控制 ==========
+        function togglePlay() {
+            if (state.isPlaying) {
+                elements.video.pause();
+                elements.playBtn.textContent = '▶';
+            } else {
+                elements.video.play();
+                elements.playBtn.textContent = '⏸';
+            }
+            state.isPlaying = !state.isPlaying;
+        }
+
+        function seekVideo(value) {
+            const time = (value / 100) * state.duration;
+            elements.video.currentTime = time;
+        }
+
+        // 视频时间更新
+        elements.video.addEventListener('timeupdate', () => {
+            state.currentTime = elements.video.currentTime;
+            elements.currentTime.textContent = formatTime(state.currentTime);
+            elements.seekSlider.value = (state.currentTime / state.duration) * 100;
+
+            // 高亮当前字幕段
+            highlightCurrentSegment();
+        });
+
+        elements.video.addEventListener('ended', () => {
+            state.isPlaying = false;
+            elements.playBtn.textContent = '▶';
+        });
+
+        function highlightCurrentSegment() {
+            const currentTime = state.currentTime;
+            const segments = state.project.segments;
+
+            document.querySelectorAll('.segment-block').forEach((block, i) => {
+                const seg = segments[i];
+                if (seg && currentTime >= seg.t0 && currentTime <= seg.t1) {
+                    block.classList.add('active');
+                } else {
+                    block.classList.remove('active');
+                }
+            });
+        }
+
+        // ========== 姿态识别 ==========
+        async function togglePoseDetection() {
+            const enabled = document.getElementById('poseEnabled').checked;
+            state.poseEnabled = enabled;
+
+            if (enabled && !state.poseModel) {
+                document.getElementById('poseStatus').classList.remove('hidden');
+                document.getElementById('poseStatusBadge').textContent = '模型加载中...';
+                document.getElementById('poseStatusBadge').className = 'badge badge-warning';
+
+                try {
+                    await initPoseModel();
+                    document.getElementById('poseStatusBadge').textContent = '模型已就绪';
+                    document.getElementById('poseStatusBadge').className = 'badge badge-success';
+                    showToast('姿态识别模型加载成功', 'success');
+                } catch (err) {
+                    document.getElementById('poseStatusBadge').textContent = '加载失败';
+                    document.getElementById('poseStatusBadge').className = 'badge badge-error';
+                    showToast('模型加载失败: ' + err.message, 'error');
+                    state.poseEnabled = false;
+                    document.getElementById('poseEnabled').checked = false;
+                }
+            } else if (!enabled) {
+                document.getElementById('poseStatus').classList.add('hidden');
+            }
+        }
+
+        async function initPoseModel() {
+            return new Promise((resolve, reject) => {
+                try {
+                    state.poseModel = new Pose({
+                        locateFile: (file) => {
+                            return `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`;
+                        }
+                    });
+
+                    state.poseModel.setOptions({
+                        modelComplexity: 1,
+                        smoothLandmarks: true,
+                        enableSegmentation: false,
+                        smoothSegmentation: false,
+                        minDetectionConfidence: 0.5,
+                        minTrackingConfidence: 0.5
+                    });
+
+                    state.poseModel.onResults((results) => {
+                        state.poseResults = results;
+                        if (results.poseLandmarks) {
+                            // 平滑处理
+                            if (state.poseSettings.smoothing) {
+                                state.poseHistory.push(results.poseLandmarks);
+                                if (state.poseHistory.length > 5) {
+                                    state.poseHistory.shift();
+                                }
+                            }
+
+                            // 计算指标
+                            updateMetrics(results.poseLandmarks);
+                        }
+                    });
+
+                    state.poseModel.initialize().then(() => {
+                        resolve();
+                    }).catch(reject);
+                } catch (err) {
+                    reject(err);
+                }
+            });
+        }
+
+        function updateMetrics(landmarks) {
+            if (!landmarks) return;
+
+            // 躯干前倾角 (肩膀-髋部连线与垂直线的夹角)
+            const leftShoulder = landmarks[11];
+            const leftHip = landmarks[23];
+            if (leftShoulder && leftHip) {
+                const trunkAngle = Math.abs(Math.atan2(
+                    leftShoulder.x - leftHip.x,
+                    leftHip.y - leftShoulder.y
+                ) * 180 / Math.PI);
+
+                document.getElementById('trunkAngleMetric').textContent = Math.round(trunkAngle) + '°';
+
+                // 状态指示
+                const status = document.querySelector('#metricsPanel .metric-card:first-child .metric-status');
+                if (trunkAngle > 45) {
+                    status.className = 'metric-status error';
+                } else if (trunkAngle > 30) {
+                    status.className = 'metric-status warning';
+                } else {
+                    status.className = 'metric-status good';
+                }
+            }
+
+            // 膝关节角度 (髋-膝-踝)
+            const leftKnee = landmarks[25];
+            const leftAnkle = landmarks[27];
+            if (leftHip && leftKnee && leftAnkle) {
+                const kneeAngle = calculateAngle(leftHip, leftKnee, leftAnkle);
+
+                document.getElementById('kneeAngleMetric').textContent = Math.round(kneeAngle) + '°';
+
+                const status = document.querySelector('#metricsPanel .metric-card:last-child .metric-status');
+                if (kneeAngle < 70) {
+                    status.className = 'metric-status error';
+                } else if (kneeAngle < 90) {
+                    status.className = 'metric-status warning';
+                } else {
+                    status.className = 'metric-status good';
+                }
+            }
+        }
+
+        function calculateAngle(p1, p2, p3) {
+            const a = { x: p1.x - p2.x, y: p1.y - p2.y };
+            const b = { x: p3.x - p2.x, y: p3.y - p2.y };
+
+            const dot = a.x * b.x + a.y * b.y;
+            const magA = Math.sqrt(a.x * a.x + a.y * a.y);
+            const magB = Math.sqrt(b.x * b.x + b.y * b.y);
+
+            return Math.acos(dot / (magA * magB)) * 180 / Math.PI;
+        }
+
+        // ========== 渲染循环 ==========
+        function startRenderLoop() {
+            let lastPoseTime = 0;
+            const poseInterval = 1000 / state.poseSettings.sampleFps;
+
+            function render() {
+                if (!ctx) {
+                    state.renderLoop = requestAnimationFrame(render);
+                    return;
+                }
+
+                const canvas = elements.canvas;
+                const video = elements.video;
+
+                // 清空 canvas
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                // 姿态识别
+                if (state.poseEnabled && state.poseModel && !video.paused) {
+                    const now = performance.now();
+                    if (now - lastPoseTime > poseInterval) {
+                        state.poseModel.send({ image: video });
+                        lastPoseTime = now;
+                    }
+                }
+
+                // 绘制骨架
+                if (state.poseEnabled && state.poseResults && state.poseSettings.showSkeleton) {
+                    drawSkeleton(state.poseResults);
+                }
+
+                // 绘制 HUD
+                if (state.poseEnabled && state.poseResults) {
+                    drawHUD(state.poseResults);
+                }
+
+                // 绘制字幕
+                drawSubtitle();
+
+                // 绘制模板元素
+                drawTemplateElements();
+
+                state.renderLoop = requestAnimationFrame(render);
+            }
+
+            render();
+        }
+
+        function drawSkeleton(results) {
+            if (!results.poseLandmarks) return;
+
+            const landmarks = state.poseSettings.smoothing && state.poseHistory.length > 0
+                ? smoothLandmarks(state.poseHistory)
+                : results.poseLandmarks;
+
+            const canvas = elements.canvas;
+            const settings = state.poseSettings;
+
+            ctx.globalAlpha = settings.skeletonOpacity;
+
+            // 连接线
+            const connections = [
+                [11, 12], // 肩膀
+                [11, 13], [13, 15], // 左臂
+                [12, 14], [14, 16], // 右臂
+                [11, 23], [12, 24], // 躯干
+                [23, 24], // 髋部
+                [23, 25], [25, 27], // 左腿
+                [24, 26], [26, 28], // 右腿
+                [27, 29], [29, 31], // 左脚
+                [28, 30], [30, 32]  // 右脚
+            ];
+
+            ctx.strokeStyle = settings.skeletonColor;
+            ctx.lineWidth = 3;
+            ctx.lineCap = 'round';
+
+            connections.forEach(([i, j]) => {
+                const p1 = landmarks[i];
+                const p2 = landmarks[j];
+
+                if (p1.visibility > settings.confidenceThreshold &&
+                    p2.visibility > settings.confidenceThreshold) {
+                    ctx.beginPath();
+                    ctx.moveTo(p1.x * canvas.width, p1.y * canvas.height);
+                    ctx.lineTo(p2.x * canvas.width, p2.y * canvas.height);
+                    ctx.stroke();
+                }
+            });
+
+            // 关键点
+            landmarks.forEach((point, i) => {
+                if (point.visibility > settings.confidenceThreshold) {
+                    ctx.beginPath();
+                    ctx.arc(
+                        point.x * canvas.width,
+                        point.y * canvas.height,
+                        settings.keypointSize / 2,
+                        0,
+                        Math.PI * 2
+                    );
+                    ctx.fillStyle = settings.skeletonColor;
+                    ctx.fill();
+
+                    // 白色边框
+                    ctx.strokeStyle = '#ffffff';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                }
+            });
+
+            ctx.globalAlpha = 1;
+        }
+
+        function smoothLandmarks(history) {
+            if (history.length === 0) return null;
+            if (history.length === 1) return history[0];
+
+            const result = [];
+            const numPoints = history[0].length;
+
+            for (let i = 0; i < numPoints; i++) {
+                let x = 0, y = 0, z = 0, visibility = 0;
+
+                history.forEach(frame => {
+                    x += frame[i].x;
+                    y += frame[i].y;
+                    z += frame[i].z || 0;
+                    visibility += frame[i].visibility;
+                });
+
+                result.push({
+                    x: x / history.length,
+                    y: y / history.length,
+                    z: z / history.length,
+                    visibility: visibility / history.length
+                });
+            }
+
+            return result;
+        }
+
+        function drawHUD(results) {
+            if (!results.poseLandmarks) return;
+
+            const landmarks = results.poseLandmarks;
+            const canvas = elements.canvas;
+            const settings = state.poseSettings;
+
+            // 躯干前倾角 HUD
+            if (settings.showTrunkAngle) {
+                const leftShoulder = landmarks[11];
+                const leftHip = landmarks[23];
+
+                if (leftShoulder.visibility > settings.confidenceThreshold &&
+                    leftHip.visibility > settings.confidenceThreshold) {
+                    const angle = Math.abs(Math.atan2(
+                        leftShoulder.x - leftHip.x,
+                        leftHip.y - leftShoulder.y
+                    ) * 180 / Math.PI);
+
+                    const x = leftShoulder.x * canvas.width + 20;
+                    const y = (leftShoulder.y + leftHip.y) / 2 * canvas.height;
+
+                    drawHUDLabel(x, y, `躯干 ${Math.round(angle)}°`, angle > 45 ? 'error' : angle > 30 ? 'warning' : 'normal');
+                }
+            }
+
+            // 膝角 HUD
+            if (settings.showKneeAngle) {
+                const leftHip = landmarks[23];
+                const leftKnee = landmarks[25];
+                const leftAnkle = landmarks[27];
+
+                if (leftHip.visibility > settings.confidenceThreshold &&
+                    leftKnee.visibility > settings.confidenceThreshold &&
+                    leftAnkle.visibility > settings.confidenceThreshold) {
+                    const angle = calculateAngle(leftHip, leftKnee, leftAnkle);
+
+                    const x = leftKnee.x * canvas.width + 20;
+                    const y = leftKnee.y * canvas.height;
+
+                    drawHUDLabel(x, y, `膝角 ${Math.round(angle)}°`, angle < 70 ? 'error' : angle < 90 ? 'warning' : 'normal');
+                }
+            }
+        }
+
+        function drawHUDLabel(x, y, text, status = 'normal') {
+            const colors = {
+                normal: { bg: 'rgba(0,0,0,0.75)', border: '#ff6b35', text: '#ffffff' },
+                warning: { bg: 'rgba(245,158,11,0.2)', border: '#f59e0b', text: '#f59e0b' },
+                error: { bg: 'rgba(239,68,68,0.2)', border: '#ef4444', text: '#ef4444' }
+            };
+
+            const style = colors[status];
+            const padding = { x: 10, y: 5 };
+
+            ctx.font = '600 12px "JetBrains Mono", monospace';
+            const metrics = ctx.measureText(text);
+            const width = metrics.width + padding.x * 2;
+            const height = 24;
+
+            // 背景
+            ctx.fillStyle = style.bg;
+            ctx.beginPath();
+            ctx.roundRect(x, y - height / 2, width, height, 4);
+            ctx.fill();
+
+            // 左边框
+            ctx.fillStyle = style.border;
+            ctx.fillRect(x, y - height / 2, 3, height);
+
+            // 文字
+            ctx.fillStyle = style.text;
+            ctx.textBaseline = 'middle';
+            ctx.fillText(text, x + padding.x + 3, y);
+        }
+
+        function drawSubtitle() {
+            const currentTime = state.currentTime;
+            const segments = state.project.segments;
+            const style = state.subtitleStyle;
+            const canvas = elements.canvas;
+
+            // 找到当前字幕
+            const currentSegment = segments.find(seg =>
+                currentTime >= seg.t0 && currentTime <= seg.t1
+            );
+
+            if (!currentSegment) return;
+
+            const text = currentSegment.text;
+            const progress = (currentTime - currentSegment.t0) / (currentSegment.t1 - currentSegment.t0);
+
+            // 设置字体
+            ctx.font = `600 ${style.fontSize}px "Noto Sans SC", sans-serif`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'bottom';
+
+            // 位置
+            const x = canvas.width / 2;
+            const y = canvas.height - style.bottomMargin;
+
+            // 处理换行
+            const maxWidth = canvas.width - 40;
+            const lines = wrapText(text, maxWidth);
+
+            // 动画效果
+            let alpha = 1;
+            let scale = 1;
+            let offsetY = 0;
+
+            switch (style.animationType) {
+                case 'pop':
+                    if (progress < 0.1) {
+                        scale = 0.5 + progress * 5;
+                        alpha = progress * 10;
+                    }
+                    break;
+                case 'fade':
+                    if (progress < 0.15) {
+                        alpha = progress / 0.15;
+                    } else if (progress > 0.85) {
+                        alpha = (1 - progress) / 0.15;
+                    }
+                    break;
+                case 'slide':
+                    if (progress < 0.1) {
+                        offsetY = (1 - progress * 10) * 30;
+                        alpha = progress * 10;
+                    }
+                    break;
+            }
+
+            ctx.globalAlpha = alpha;
+            ctx.save();
+            ctx.translate(x, y + offsetY);
+            ctx.scale(scale, scale);
+            ctx.translate(-x, -(y + offsetY));
+
+            // 绘制每行
+            lines.forEach((line, i) => {
+                const lineY = y + offsetY - (lines.length - 1 - i) * style.fontSize * style.lineHeight;
+
+                // Word-by-word 动画
+                if (style.animationType === 'word') {
+                    drawWordByWord(line, x, lineY, progress, i, lines.length);
+                } else {
+                    drawTextWithHighlight(line, x, lineY);
+                }
+            });
+
+            ctx.restore();
+            ctx.globalAlpha = 1;
+        }
+
+        function wrapText(text, maxWidth) {
+            const words = text.split('');
+            const lines = [];
+            let currentLine = '';
+
+            words.forEach(char => {
+                const testLine = currentLine + char;
+                const metrics = ctx.measureText(testLine);
+
+                if (metrics.width > maxWidth && currentLine) {
+                    lines.push(currentLine);
+                    currentLine = char;
+                } else {
+                    currentLine = testLine;
+                }
+            });
+
+            if (currentLine) {
+                lines.push(currentLine);
+            }
+
+            return lines;
+        }
+
+        function drawTextWithHighlight(text, x, y) {
+            const style = state.subtitleStyle;
+            const keywords = style.keywords;
+
+            // 检查是否有关键词
+            let hasKeyword = false;
+            let keywordIndex = -1;
+            let keywordLength = 0;
+
+            for (const keyword of keywords) {
+                const idx = text.indexOf(keyword);
+                if (idx !== -1) {
+                    hasKeyword = true;
+                    keywordIndex = idx;
+                    keywordLength = keyword.length;
+                    break;
+                }
+            }
+
+            if (!hasKeyword) {
+                // 普通绘制
+                ctx.strokeStyle = style.strokeColor;
+                ctx.lineWidth = style.strokeWidth;
+                ctx.strokeText(text, x, y);
+                ctx.fillStyle = style.textColor;
+                ctx.fillText(text, x, y);
+            } else {
+                // 分段绘制
+                const before = text.substring(0, keywordIndex);
+                const keyword = text.substring(keywordIndex, keywordIndex + keywordLength);
+                const after = text.substring(keywordIndex + keywordLength);
+
+                // 计算宽度
+                const beforeWidth = ctx.measureText(before).width;
+                const keywordWidth = ctx.measureText(keyword).width;
+                const totalWidth = ctx.measureText(text).width;
+
+                const startX = x - totalWidth / 2;
+
+                // 绘制前半部分
+                ctx.textAlign = 'left';
+                ctx.strokeStyle = style.strokeColor;
+                ctx.lineWidth = style.strokeWidth;
+                ctx.strokeText(before, startX, y);
+                ctx.fillStyle = style.textColor;
+                ctx.fillText(before, startX, y);
+
+                // 绘制关键词 (高亮)
+                ctx.strokeStyle = '#ff6b35';
+                ctx.lineWidth = style.strokeWidth + 1;
+                ctx.strokeText(keyword, startX + beforeWidth, y);
+                ctx.fillStyle = '#ff6b35';
+                ctx.fillText(keyword, startX + beforeWidth, y);
+
+                // 绘制后半部分
+                ctx.strokeStyle = style.strokeColor;
+                ctx.lineWidth = style.strokeWidth;
+                ctx.strokeText(after, startX + beforeWidth + keywordWidth, y);
+                ctx.fillStyle = style.textColor;
+                ctx.fillText(after, startX + beforeWidth + keywordWidth, y);
+
+                ctx.textAlign = 'center';
+            }
+        }
+
+        function drawWordByWord(line, x, y, progress, lineIndex, totalLines) {
+            const style = state.subtitleStyle;
+            const chars = line.split('');
+            const lineProgress = progress * totalLines - lineIndex;
+            const visibleChars = Math.floor(lineProgress * chars.length);
+
+            const totalWidth = ctx.measureText(line).width;
+            let currentX = x - totalWidth / 2;
+
+            ctx.textAlign = 'left';
+
+            chars.forEach((char, i) => {
+                const charWidth = ctx.measureText(char).width;
+
+                if (i < visibleChars) {
+                    ctx.strokeStyle = style.strokeColor;
+                    ctx.lineWidth = style.strokeWidth;
+                    ctx.strokeText(char, currentX, y);
+
+                    // 检查是否是关键词的一部分
+                    const isKeyword = style.keywords.some(kw => {
+                        const idx = line.indexOf(kw);
+                        return idx !== -1 && i >= idx && i < idx + kw.length;
+                    });
+
+                    ctx.fillStyle = isKeyword ? '#ff6b35' : style.textColor;
+                    ctx.fillText(char, currentX, y);
+                }
+
+                currentX += charWidth;
+            });
+
+            ctx.textAlign = 'center';
+        }
+
+        function drawTemplateElements() {
+            const canvas = elements.canvas;
+            const settings = state.templateSettings;
+            const template = state.project.templateId;
+
+            // Hook 标题 (开头几秒显示)
+            if (settings.showHook && state.currentTime < 3) {
+                const alpha = state.currentTime < 2 ? 1 : (3 - state.currentTime);
+                ctx.globalAlpha = alpha;
+
+                ctx.font = '700 28px "Noto Sans SC", sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'top';
+
+                const hookY = 60;
+
+                // 背景
+                const hookWidth = ctx.measureText(settings.hookTitle).width + 40;
+                ctx.fillStyle = 'rgba(255, 107, 53, 0.9)';
+                ctx.beginPath();
+                ctx.roundRect(canvas.width / 2 - hookWidth / 2, hookY - 10, hookWidth, 50, 8);
+                ctx.fill();
+
+                // 文字
+                ctx.fillStyle = '#ffffff';
+                ctx.fillText(settings.hookTitle, canvas.width / 2, hookY);
+
+                ctx.globalAlpha = 1;
+            }
+
+            // CTA (结尾几秒显示)
+            if (settings.showCta && state.duration - state.currentTime < 3) {
+                const alpha = state.duration - state.currentTime < 2 ? 1 : (state.duration - state.currentTime - 1);
+                ctx.globalAlpha = Math.max(0, alpha);
+
+                ctx.font = '600 20px "Noto Sans SC", sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'bottom';
+
+                const ctaY = canvas.height - 160;
+
+                // 背景
+                const ctaWidth = ctx.measureText(settings.ctaText).width + 40;
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+                ctx.beginPath();
+                ctx.roundRect(canvas.width / 2 - ctaWidth / 2, ctaY - 35, ctaWidth, 40, 6);
+                ctx.fill();
+
+                // 边框
+                ctx.strokeStyle = '#ff6b35';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                // 文字
+                ctx.fillStyle = '#ffffff';
+                ctx.fillText(settings.ctaText, canvas.width / 2, ctaY);
+
+                ctx.globalAlpha = 1;
+            }
+        }
+
+        // ========== UI 更新函数 ==========
+        function switchTab(tabName) {
+            document.querySelectorAll('.panel-tab').forEach(tab => {
+                tab.classList.toggle('active', tab.dataset.tab === tabName);
+            });
+
+            document.getElementById('stylePanel').classList.toggle('hidden', tabName !== 'style');
+            document.getElementById('posePanel').classList.toggle('hidden', tabName !== 'pose');
+            document.getElementById('templatePanel').classList.toggle('hidden', tabName !== 'template');
+        }
+
+        function updateSubtitleStyle() {
+            state.subtitleStyle.fontSize = parseInt(document.getElementById('fontSize').value);
+            state.subtitleStyle.lineHeight = parseFloat(document.getElementById('lineHeight').value);
+            state.subtitleStyle.bottomMargin = parseInt(document.getElementById('bottomMargin').value);
+            state.subtitleStyle.textColor = document.getElementById('textColor').value;
+            state.subtitleStyle.strokeColor = document.getElementById('strokeColor').value;
+            state.subtitleStyle.strokeWidth = parseInt(document.getElementById('strokeWidth').value);
+            state.subtitleStyle.animationType = document.getElementById('animationType').value;
+            state.subtitleStyle.keywords = document.getElementById('keywords').value.split(',').map(k => k.trim()).filter(k => k);
+            state.subtitleStyle.freezeEnabled = document.getElementById('freezeEnabled').checked;
+            state.subtitleStyle.freezeDuration = parseFloat(document.getElementById('freezeDuration').value);
+
+            // 更新显示值
+            document.getElementById('fontSizeValue').textContent = state.subtitleStyle.fontSize + 'px';
+            document.getElementById('lineHeightValue').textContent = state.subtitleStyle.lineHeight.toFixed(1);
+            document.getElementById('bottomMarginValue').textContent = state.subtitleStyle.bottomMargin + 'px';
+            document.getElementById('strokeWidthValue').textContent = state.subtitleStyle.strokeWidth + 'px';
+            document.getElementById('freezeDurationValue').textContent = state.subtitleStyle.freezeDuration.toFixed(1) + 's';
+
+            // 同步颜色 hex
+            document.getElementById('textColorHex').value = state.subtitleStyle.textColor;
+            document.getElementById('strokeColorHex').value = state.subtitleStyle.strokeColor;
+        }
+
+        function updatePoseSettings() {
+            state.poseSettings.showSkeleton = document.getElementById('showSkeleton').checked;
+            state.poseSettings.skeletonOpacity = parseInt(document.getElementById('skeletonOpacity').value) / 100;
+            state.poseSettings.keypointSize = parseInt(document.getElementById('keypointSize').value);
+            state.poseSettings.skeletonColor = document.getElementById('skeletonColor').value;
+            state.poseSettings.showTrunkAngle = document.getElementById('showTrunkAngle').checked;
+            state.poseSettings.showKneeAngle = document.getElementById('showKneeAngle').checked;
+            state.poseSettings.showKneeValgus = document.getElementById('showKneeValgus').checked;
+            state.poseSettings.confidenceThreshold = parseFloat(document.getElementById('confidenceThreshold').value);
+            state.poseSettings.sampleFps = parseInt(document.getElementById('sampleFps').value);
+            state.poseSettings.smoothing = document.getElementById('smoothing').checked;
+
+            // 更新显示值
+            document.getElementById('skeletonOpacityValue').textContent = Math.round(state.poseSettings.skeletonOpacity * 100) + '%';
+            document.getElementById('keypointSizeValue').textContent = state.poseSettings.keypointSize + 'px';
+            document.getElementById('confidenceThresholdValue').textContent = state.poseSettings.confidenceThreshold.toFixed(2);
+            document.getElementById('sampleFpsValue').textContent = state.poseSettings.sampleFps + ' fps';
+
+            // 同步颜色 hex
+            document.getElementById('skeletonColorHex').value = state.poseSettings.skeletonColor;
+        }
+
+        function updateTemplateSettings() {
+            state.templateSettings.hookTitle = document.getElementById('hookTitle').value;
+            state.templateSettings.ctaText = document.getElementById('ctaText').value;
+            state.templateSettings.showHook = document.getElementById('showHook').checked;
+            state.templateSettings.showCta = document.getElementById('showCta').checked;
+        }
+
+        function syncColorFromHex(colorId) {
+            const hexInput = document.getElementById(colorId + 'Hex');
+            const colorInput = document.getElementById(colorId);
+
+            if (/^#[0-9A-Fa-f]{6}$/.test(hexInput.value)) {
+                colorInput.value = hexInput.value;
+
+                if (colorId === 'textColor' || colorId === 'strokeColor') {
+                    updateSubtitleStyle();
+                } else {
+                    updatePoseSettings();
+                }
+            }
+        }
+
+        function selectTemplate(templateId) {
+            state.project.templateId = templateId;
+
+            document.querySelectorAll('.template-card').forEach(card => {
+                card.classList.toggle('selected', card.dataset.template === templateId);
+            });
+
+            showToast(`已选择「${templateId === 'hook' ? 'Hook+纠错' : templateId === 'score' ? '评分条' : '对比两次'}」模板`, 'success');
+        }
+
+        function addMarker() {
+            const marker = {
+                id: 'marker_' + Date.now(),
+                time: state.currentTime,
+                type: 'freeze',
+                label: '关键点'
+            };
+
+            state.project.markers.push(marker);
+            showToast(`已添加标记点 @ ${formatTime(state.currentTime)}`, 'success');
+        }
+
+        // ========== 导入导出 ==========
+        function showExportModal() {
+            document.getElementById('exportModal').classList.add('active');
+        }
+
+        function closeExportModal() {
+            document.getElementById('exportModal').classList.remove('active');
+            document.getElementById('exportProgress').classList.add('hidden');
+            document.getElementById('startExportBtn').disabled = false;
+        }
+
+        async function startExport() {
+            if (!state.project.videoMeta) {
+                showToast('请先导入视频', 'warning');
+                return;
+            }
+
+            const format = document.getElementById('exportFormat').value;
+            const quality = document.getElementById('exportQuality').value;
+            const fps = parseInt(document.getElementById('exportFps').value);
+            const withPose = document.getElementById('exportWithPose').checked;
+            const exportCover = document.getElementById('exportCover').checked;
+
+            document.getElementById('exportProgress').classList.remove('hidden');
+            document.getElementById('startExportBtn').disabled = true;
+
+            try {
+                // 配置导出参数
+                let targetWidth, targetHeight, bitrate;
+
+                switch (quality) {
+                    case 'fast':
+                        if (state.project.aspect === '9:16') {
+                            targetWidth = 720; targetHeight = 1280;
+                        } else if (state.project.aspect === '16:9') {
+                            targetWidth = 1280; targetHeight = 720;
+                        } else {
+                            targetWidth = targetHeight = 720;
+                        }
+                        bitrate = 2000000;
+                        break;
+                    case 'high':
+                        targetWidth = state.project.videoMeta.width;
+                        targetHeight = state.project.videoMeta.height;
+                        bitrate = 8000000;
+                        break;
+                    default: // standard
+                        if (state.project.aspect === '9:16') {
+                            targetWidth = 1080; targetHeight = 1920;
+                        } else if (state.project.aspect === '16:9') {
+                            targetWidth = 1920; targetHeight = 1080;
+                        } else {
+                            targetWidth = targetHeight = 1080;
+                        }
+                        bitrate = 5000000;
+                }
+
+                // 创建导出 canvas
+                const exportCanvas = document.createElement('canvas');
+                exportCanvas.width = targetWidth;
+                exportCanvas.height = targetHeight;
+                const exportCtx = exportCanvas.getContext('2d');
+
+                // 使用 MediaRecorder
+                const stream = exportCanvas.captureStream(fps);
+                const mimeType = format === 'mp4' ? 'video/mp4' : 'video/webm';
+
+                let recorder;
+                try {
+                    recorder = new MediaRecorder(stream, {
+                        mimeType: mimeType,
+                        videoBitsPerSecond: bitrate
+                    });
+                } catch (e) {
+                    // 降级到 webm
+                    recorder = new MediaRecorder(stream, {
+                        mimeType: 'video/webm',
+                        videoBitsPerSecond: bitrate
+                    });
+                }
+
+                const chunks = [];
+                recorder.ondataavailable = (e) => chunks.push(e.data);
+
+                recorder.onstop = () => {
+                    const blob = new Blob(chunks, { type: recorder.mimeType });
+                    const url = URL.createObjectURL(blob);
+
+                    // 下载
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `fitness_video_${Date.now()}.${format}`;
+                    a.click();
+
+                    // 导出封面
+                    if (exportCover) {
+                        exportCoverImage(exportCanvas, exportCtx);
+                    }
+
+                    closeExportModal();
+                    showToast('视频导出成功！', 'success');
+                };
+
+                recorder.start();
+
+                // 逐帧渲染
+                const video = elements.video;
+                video.currentTime = 0;
+
+                const frameDuration = 1 / fps;
+                let currentFrame = 0;
+                const totalFrames = Math.floor(state.duration * fps);
+
+                const renderExportFrame = () => {
+                    if (currentFrame >= totalFrames) {
+                        recorder.stop();
+                        return;
+                    }
+
+                    const time = currentFrame * frameDuration;
+                    video.currentTime = time;
+                    state.currentTime = time;
+
+                    // 更新进度
+                    const progress = currentFrame / totalFrames;
+                    updateExportProgress(progress);
+
+                    // 等待视频 seek 完成
+                    video.onseeked = () => {
+                        // 绘制视频帧
+                        exportCtx.drawImage(video, 0, 0, targetWidth, targetHeight);
+
+                        // 绘制叠加层（复用现有渲染逻辑）
+                        const tempCanvas = elements.canvas;
+                        const originalCtx = ctx;
+
+                        // 临时替换 ctx
+                        ctx = exportCtx;
+                        elements.canvas.width = targetWidth;
+                        elements.canvas.height = targetHeight;
+
+                        if (withPose && state.poseResults && state.poseSettings.showSkeleton) {
+                            drawSkeleton(state.poseResults);
+                        }
+                        if (withPose && state.poseResults) {
+                            drawHUD(state.poseResults);
+                        }
+                        drawSubtitle();
+                        drawTemplateElements();
+
+                        // 恢复
+                        ctx = originalCtx;
+                        setupCanvas();
+
+                        currentFrame++;
+                        setTimeout(renderExportFrame, 0);
+                    };
+                };
+
+                renderExportFrame();
+
+            } catch (err) {
+                console.error('Export error:', err);
+                showToast('导出失败: ' + err.message, 'error');
+                closeExportModal();
+            }
+        }
+
+        function updateExportProgress(progress) {
+            const circle = document.getElementById('progressCircle');
+            const text = document.getElementById('exportProgressText');
+
+            const circumference = 2 * Math.PI * 45;
+            const offset = circumference * (1 - progress);
+            circle.style.strokeDashoffset = offset;
+
+            text.textContent = `导出中... ${Math.round(progress * 100)}%`;
+        }
+
+        function exportCoverImage(canvas, ctx) {
+            // 找到第一个 freeze 点或视频中间
+            const freezeTime = state.project.markers.length > 0
+                ? state.project.markers[0].time
+                : state.duration / 2;
+
+            elements.video.currentTime = freezeTime;
+
+            setTimeout(() => {
+                ctx.drawImage(elements.video, 0, 0, canvas.width, canvas.height);
+
+                // 添加大标题
+                ctx.font = '700 48px "Noto Sans SC", sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillStyle = '#ffffff';
+                ctx.strokeStyle = '#000000';
+                ctx.lineWidth = 4;
+
+                const title = state.templateSettings.hookTitle || '健身教学';
+                ctx.strokeText(title, canvas.width / 2, canvas.height / 2);
+                ctx.fillText(title, canvas.width / 2, canvas.height / 2);
+
+                // 导出
+                const dataUrl = canvas.toDataURL('image/png');
+                const a = document.createElement('a');
+                a.href = dataUrl;
+                a.download = `cover_${Date.now()}.png`;
+                a.click();
+            }, 100);
+        }
+
+        function exportProject() {
+            const projectData = {
+                ...state.project,
+                subtitleStyle: state.subtitleStyle,
+                poseSettings: state.poseSettings,
+                templateSettings: state.templateSettings,
+                exportedAt: new Date().toISOString()
+            };
+
+            const blob = new Blob([JSON.stringify(projectData, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `fitstudio_project_${Date.now()}.json`;
+            a.click();
+
+            showToast('工程文件已保存', 'success');
+        }
+
+        function importProject() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+
+            input.onchange = (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const data = JSON.parse(e.target.result);
+
+                        // 恢复状态
+                        Object.assign(state.project, data);
+                        if (data.subtitleStyle) Object.assign(state.subtitleStyle, data.subtitleStyle);
+                        if (data.poseSettings) Object.assign(state.poseSettings, data.poseSettings);
+                        if (data.templateSettings) Object.assign(state.templateSettings, data.templateSettings);
+
+                        // 更新 UI
+                        updateUIFromState();
+
+                        showToast('工程文件已加载', 'success');
+                    } catch (err) {
+                        showToast('工程文件解析失败', 'error');
+                    }
+                };
+                reader.readAsText(file);
+            };
+
+            input.click();
+        }
+
+        function updateUIFromState() {
+            // 字幕样式
+            document.getElementById('fontSize').value = state.subtitleStyle.fontSize;
+            document.getElementById('lineHeight').value = state.subtitleStyle.lineHeight;
+            document.getElementById('bottomMargin').value = state.subtitleStyle.bottomMargin;
+            document.getElementById('textColor').value = state.subtitleStyle.textColor;
+            document.getElementById('strokeColor').value = state.subtitleStyle.strokeColor;
+            document.getElementById('strokeWidth').value = state.subtitleStyle.strokeWidth;
+            document.getElementById('animationType').value = state.subtitleStyle.animationType;
+            document.getElementById('keywords').value = state.subtitleStyle.keywords.join(',');
+            document.getElementById('freezeEnabled').checked = state.subtitleStyle.freezeEnabled;
+            document.getElementById('freezeDuration').value = state.subtitleStyle.freezeDuration;
+
+            // 姿态设置
+            document.getElementById('showSkeleton').checked = state.poseSettings.showSkeleton;
+            document.getElementById('skeletonOpacity').value = state.poseSettings.skeletonOpacity * 100;
+            document.getElementById('keypointSize').value = state.poseSettings.keypointSize;
+            document.getElementById('skeletonColor').value = state.poseSettings.skeletonColor;
+            document.getElementById('showTrunkAngle').checked = state.poseSettings.showTrunkAngle;
+            document.getElementById('showKneeAngle').checked = state.poseSettings.showKneeAngle;
+            document.getElementById('showKneeValgus').checked = state.poseSettings.showKneeValgus;
+            document.getElementById('confidenceThreshold').value = state.poseSettings.confidenceThreshold;
+            document.getElementById('sampleFps').value = state.poseSettings.sampleFps;
+            document.getElementById('smoothing').checked = state.poseSettings.smoothing;
+
+            // 模板设置
+            document.getElementById('hookTitle').value = state.templateSettings.hookTitle;
+            document.getElementById('ctaText').value = state.templateSettings.ctaText;
+            document.getElementById('showHook').checked = state.templateSettings.showHook;
+            document.getElementById('showCta').checked = state.templateSettings.showCta;
+
+            // 画幅
+            document.getElementById('aspectRatio').value = state.project.aspect;
+
+            // 模板选择
+            selectTemplate(state.project.templateId);
+
+            // 更新显示值
+            updateSubtitleStyle();
+            updatePoseSettings();
+
+            // 字幕段
+            if (state.project.segments.length > 0) {
+                document.getElementById('subtitleCount').textContent = `${state.project.segments.length} 条字幕`;
+                document.getElementById('subtitleInfo').classList.remove('hidden');
+                renderTimelineSegments();
+            }
+        }
+
+        // ========== 拖拽上传 ==========
+        ['videoUploadZone', 'subtitleUploadZone'].forEach(id => {
+            const zone = document.getElementById(id);
+
+            zone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                zone.classList.add('dragover');
+            });
+
+            zone.addEventListener('dragleave', () => {
+                zone.classList.remove('dragover');
+            });
+
+            zone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                zone.classList.remove('dragover');
+
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    const file = files[0];
+
+                    if (id === 'videoUploadZone' && file.type.startsWith('video/')) {
+                        document.getElementById('videoInput').files = files;
+                        handleVideoUpload({ target: { files } });
+                    } else if (id === 'subtitleUploadZone') {
+                        document.getElementById('subtitleInput').files = files;
+                        handleSubtitleUpload({ target: { files } });
+                    }
+                }
+            });
+        });
+
+        // ========== 键盘快捷键 ==========
+        document.addEventListener('keydown', (e) => {
+            // 空格播放/暂停
+            if (e.code === 'Space' && !e.target.matches('input, textarea')) {
+                e.preventDefault();
+                togglePlay();
+            }
+
+            // 左右箭头快进/快退
+            if (e.code === 'ArrowLeft') {
+                elements.video.currentTime = Math.max(0, elements.video.currentTime - 5);
+            }
+            if (e.code === 'ArrowRight') {
+                elements.video.currentTime = Math.min(state.duration, elements.video.currentTime + 5);
+            }
+
+            // M 键添加标记
+            if (e.code === 'KeyM' && !e.target.matches('input, textarea')) {
+                addMarker();
+            }
+        });
+
+        // ========== 初始化 ==========
+        console.log('🏋️ FitStudio 健身成片工作台已启动');
+
+        // Polyfill for roundRect
+        if (!CanvasRenderingContext2D.prototype.roundRect) {
+            CanvasRenderingContext2D.prototype.roundRect = function (x, y, w, h, r) {
+                if (w < 2 * r) r = w / 2;
+                if (h < 2 * r) r = h / 2;
+                this.moveTo(x + r, y);
+                this.arcTo(x + w, y, x + w, y + h, r);
+                this.arcTo(x + w, y + h, x, y + h, r);
+                this.arcTo(x, y + h, x, y, r);
+                this.arcTo(x, y, x + w, y, r);
+                this.closePath();
+                return this;
+            };
+        }
+    </script>
+</body>
+
+</html>
