@@ -10,6 +10,8 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { v4 as uuidv4 } from 'uuid';
 import { PrismaClient } from '@prisma/client';
+import { createClient } from '@supabase/supabase-js';
+import axios from 'axios';
 
 dotenv.config();
 
@@ -24,6 +26,20 @@ const JWT_SECRET = process.env.JWT_SECRET || 'dev_secret';
 const TOKEN_EXPIRATION_MINUTES = Number(process.env.TOKEN_EXPIRATION_MINUTES || 10);
 const ADMIN_USERNAME = process.env.ADMIN_USERNAME || 'admin';
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'Admin123!';
+
+// Supabase Configuration
+const SUPABASE_URL = process.env.SUPABASE_URL || '';
+const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY || '';
+
+// LLM API Keys
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY || '';
+const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY || '';
+const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY || '';
+
+// Initialize Supabase Admin Client (for verifying tokens)
+const supabase = SUPABASE_URL && SUPABASE_SERVICE_KEY
+  ? createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, { auth: { autoRefreshToken: false, persistSession: false } })
+  : null;
 
 const ROLE = Object.freeze({
   ADMIN: 'admin',
@@ -419,8 +435,438 @@ const createLog = async (action, targetPath, operator, details = null) => {
   }
 };
 
+// Supabase Authentication Middleware
+const supabaseAuthMiddleware = async (req, res, next) => {
+  if (!supabase) {
+    return res.status(503).json({ message: 'Supabase 认证服务未配置' });
+  }
+
+  const token = extractBearerToken(req);
+  if (!token) {
+    return res.status(401).json({ message: '未授权：请提供认证令牌' });
+  }
+
+  try {
+    // Verify the token with Supabase
+    const { data: { user }, error } = await supabase.auth.getUser(token);
+    if (error || !user) {
+      return res.status(401).json({ message: '令牌无效或已过期' });
+    }
+
+    // Sync user to local database
+    let localUser = await prisma.user.findUnique({ where: { supabaseId: user.id } });
+    if (!localUser) {
+      // Auto-create user in local database
+      const username = user.email || `user_${user.id.slice(0, 8)}`;
+      localUser = await prisma.user.create({
+        data: {
+          supabaseId: user.id,
+          email: user.email,
+          username,
+          password: '', // Not used for Supabase auth
+          role: ROLE.USER,
+          credits: 0, // Start with 0 credits
+        },
+      });
+      console.log(`新 Supabase 用户已同步: ${username}`);
+    }
+
+    req.supabaseUser = user;
+    req.user = localUser;
+    next();
+  } catch (error) {
+    console.error('Supabase auth error:', error);
+    res.status(401).json({ message: '认证失败' });
+  }
+};
+
+// Create API Log for LLM usage tracking
+const createApiLog = async (userId, endpoint, model, inputTokens, outputTokens, cost, status) => {
+  try {
+    await prisma.apiLog.create({
+      data: {
+        userId,
+        endpoint,
+        model,
+        inputTokens,
+        outputTokens,
+        cost,
+        status,
+      },
+    });
+  } catch (error) {
+    console.error('Failed to create API log:', error);
+  }
+};
+
+// LLM Provider configurations
+const LLM_PROVIDERS = {
+  'openai': {
+    baseUrl: "https://api.apiyi.com/v1",
+    getApiKey: () => OPENAI_API_KEY,
+    models: ['gpt-4.1-mini', 'gpt-4-turbo', 'gpt-4o', 'gpt-4o-mini', 'gpt-3.5-turbo'],
+  },
+  'deepseek': {
+    baseUrl: 'https://api.deepseek.com/v1',
+    getApiKey: () => DEEPSEEK_API_KEY,
+    models: ['deepseek-chat', 'deepseek-coder'],
+  },
+  'anthropic': {
+    baseUrl: 'https://api.anthropic.com/v1',
+    getApiKey: () => ANTHROPIC_API_KEY,
+    models: ['claude-3-5-sonnet-20241022', 'claude-3-opus-20240229', 'claude-3-haiku-20240307'],
+  },
+};
+
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', time: new Date().toISOString() });
+});
+
+// ========================
+// User API Routes (Supabase Auth)
+// ========================
+
+// Get current user profile
+app.get('/api/user/profile', supabaseAuthMiddleware, async (req, res) => {
+  const user = req.user;
+
+  // Get recent API usage stats
+  const last30Days = new Date();
+  last30Days.setDate(last30Days.getDate() - 30);
+
+  const [totalLogs, recentLogs] = await Promise.all([
+    prisma.apiLog.count({ where: { userId: user.id } }),
+    prisma.apiLog.findMany({
+      where: { userId: user.id, createdAt: { gte: last30Days } },
+      orderBy: { createdAt: 'desc' },
+      take: 10,
+    }),
+  ]);
+
+  res.json({
+    user: {
+      id: user.id,
+      email: user.email,
+      username: user.username,
+      credits: user.credits,
+      role: user.role,
+      createdAt: user.createdAt,
+    },
+    stats: {
+      totalApiCalls: totalLogs,
+      recentLogs: recentLogs.map(log => ({
+        id: log.id,
+        endpoint: log.endpoint,
+        model: log.model,
+        cost: log.cost,
+        status: log.status,
+        createdAt: log.createdAt,
+      })),
+    },
+  });
+});
+
+// Get available token packages
+app.get('/api/user/packages', async (req, res) => {
+  const packages = await prisma.tokenPackage.findMany({
+    where: { isActive: true },
+    orderBy: { priceYuan: 'asc' },
+  });
+  res.json({ packages });
+});
+
+// ========================
+// LLM Proxy API Routes
+// ========================
+
+// Estimate tokens (rough estimation based on characters)
+const estimateTokens = (text) => {
+  if (!text) return 0;
+  // Rough estimation: ~4 characters per token for English, ~2 for Chinese
+  const charCount = typeof text === 'string' ? text.length : JSON.stringify(text).length;
+  return Math.ceil(charCount / 3);
+};
+
+// Cost per 1000 tokens (in credits, rough estimates)
+const TOKEN_COSTS = {
+  'gpt-4': { input: 0.03, output: 0.06 },
+  'gpt-4-turbo': { input: 0.01, output: 0.03 },
+  'gpt-4o': { input: 0.005, output: 0.015 },
+  'gpt-4o-mini': { input: 0.00015, output: 0.0006 },
+  'gpt-3.5-turbo': { input: 0.0005, output: 0.0015 },
+  'deepseek-chat': { input: 0.0001, output: 0.0002 },
+  'deepseek-coder': { input: 0.0001, output: 0.0002 },
+  'claude-3-5-sonnet-20241022': { input: 0.003, output: 0.015 },
+  'claude-3-opus-20240229': { input: 0.015, output: 0.075 },
+  'claude-3-haiku-20240307': { input: 0.00025, output: 0.00125 },
+};
+
+// Get provider from model name
+const getProviderFromModel = (model) => {
+  for (const [provider, config] of Object.entries(LLM_PROVIDERS)) {
+    if (config.models.includes(model)) {
+      return { provider, ...config };
+    }
+  }
+  return null;
+};
+
+// LLM Chat Proxy Endpoint
+app.post('/api/llm/chat', supabaseAuthMiddleware, async (req, res) => {
+  const user = req.user;
+  const { model, messages, stream = true, ...otherParams } = req.body;
+
+  if (!model || !messages || !Array.isArray(messages)) {
+    return res.status(400).json({ message: '缺少必要参数: model, messages' });
+  }
+
+  // Check user credits
+  if (user.credits <= 0) {
+    return res.status(402).json({ message: '积分不足，请充值后再试' });
+  }
+
+  // Find provider
+  const providerConfig = getProviderFromModel(model);
+  if (!providerConfig) {
+    return res.status(400).json({ message: `不支持的模型: ${model}` });
+  }
+
+  const apiKey = providerConfig.getApiKey();
+  if (!apiKey) {
+    return res.status(503).json({ message: `${providerConfig.provider} API 未配置` });
+  }
+
+  // Estimate input tokens for pre-check
+  const inputText = messages.map(m => m.content || '').join(' ');
+  const estimatedInputTokens = estimateTokens(inputText);
+  const costRate = TOKEN_COSTS[model] || { input: 0.001, output: 0.002 };
+  const estimatedCost = (estimatedInputTokens / 1000) * costRate.input;
+
+  // Pre-check if user has enough credits (with some buffer)
+  if (user.credits < estimatedCost * 2) {
+    return res.status(402).json({ message: '积分不足以完成此请求' });
+  }
+
+  let totalInputTokens = estimatedInputTokens;
+  let totalOutputTokens = 0;
+  let status = 'success';
+
+  try {
+    // Handle Anthropic differently (different API format)
+    if (providerConfig.provider === 'anthropic') {
+      const anthropicMessages = messages.filter(m => m.role !== 'system');
+      const systemMessage = messages.find(m => m.role === 'system');
+
+      const requestBody = {
+        model,
+        max_tokens: otherParams.max_tokens || 4096,
+        messages: anthropicMessages,
+        stream,
+      };
+      if (systemMessage) {
+        requestBody.system = systemMessage.content;
+      }
+
+      if (stream) {
+        res.setHeader('Content-Type', 'text/event-stream');
+        res.setHeader('Cache-Control', 'no-cache');
+        res.setHeader('Connection', 'keep-alive');
+
+        const response = await axios({
+          method: 'POST',
+          url: `${providerConfig.baseUrl}/messages`,
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': apiKey,
+            'anthropic-version': '2023-06-01',
+          },
+          data: requestBody,
+          responseType: 'stream',
+        });
+
+        let outputContent = '';
+        response.data.on('data', (chunk) => {
+          const text = chunk.toString();
+          res.write(text);
+
+          // Extract text from delta for token counting
+          const lines = text.split('\n');
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              try {
+                const data = JSON.parse(line.slice(6));
+                if (data.delta?.text) {
+                  outputContent += data.delta.text;
+                }
+                if (data.usage) {
+                  totalInputTokens = data.usage.input_tokens || totalInputTokens;
+                  totalOutputTokens = data.usage.output_tokens || estimateTokens(outputContent);
+                }
+              } catch (e) { /* ignore parse errors */ }
+            }
+          }
+        });
+
+        response.data.on('end', async () => {
+          res.end();
+          totalOutputTokens = totalOutputTokens || estimateTokens(outputContent);
+          const cost = (totalInputTokens / 1000) * costRate.input + (totalOutputTokens / 1000) * costRate.output;
+
+          await prisma.user.update({
+            where: { id: user.id },
+            data: { credits: { decrement: cost } },
+          });
+
+          await createApiLog(user.id, 'anthropic', model, totalInputTokens, totalOutputTokens, cost, status);
+        });
+
+        response.data.on('error', async (error) => {
+          console.error('Stream error:', error);
+          status = 'failed';
+          res.end();
+          await createApiLog(user.id, 'anthropic', model, totalInputTokens, 0, 0, status);
+        });
+      } else {
+        // Non-streaming request
+        const response = await axios.post(
+          `${providerConfig.baseUrl}/messages`,
+          requestBody,
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              'x-api-key': apiKey,
+              'anthropic-version': '2023-06-01',
+            },
+          }
+        );
+
+        const usage = response.data.usage || {};
+        totalInputTokens = usage.input_tokens || totalInputTokens;
+        totalOutputTokens = usage.output_tokens || estimateTokens(response.data.content?.[0]?.text || '');
+        const cost = (totalInputTokens / 1000) * costRate.input + (totalOutputTokens / 1000) * costRate.output;
+
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { credits: { decrement: cost } },
+        });
+
+        await createApiLog(user.id, 'anthropic', model, totalInputTokens, totalOutputTokens, cost, status);
+
+        res.json(response.data);
+      }
+    } else {
+      // OpenAI-compatible API (OpenAI, DeepSeek)
+      const requestBody = {
+        model,
+        messages,
+        stream,
+        ...otherParams,
+      };
+
+      if (stream) {
+        res.setHeader('Content-Type', 'text/event-stream');
+        res.setHeader('Cache-Control', 'no-cache');
+        res.setHeader('Connection', 'keep-alive');
+
+        const response = await axios({
+          method: 'POST',
+          url: `${providerConfig.baseUrl}/chat/completions`,
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`,
+          },
+          data: requestBody,
+          responseType: 'stream',
+        });
+
+        let outputContent = '';
+        response.data.on('data', (chunk) => {
+          const text = chunk.toString();
+          res.write(text);
+
+          // Extract content from delta for token counting
+          const lines = text.split('\n');
+          for (const line of lines) {
+            if (line.startsWith('data: ') && line !== 'data: [DONE]') {
+              try {
+                const data = JSON.parse(line.slice(6));
+                if (data.choices?.[0]?.delta?.content) {
+                  outputContent += data.choices[0].delta.content;
+                }
+              } catch (e) { /* ignore parse errors */ }
+            }
+          }
+        });
+
+        response.data.on('end', async () => {
+          res.end();
+          totalOutputTokens = estimateTokens(outputContent);
+          const cost = (totalInputTokens / 1000) * costRate.input + (totalOutputTokens / 1000) * costRate.output;
+
+          await prisma.user.update({
+            where: { id: user.id },
+            data: { credits: { decrement: cost } },
+          });
+
+          await createApiLog(user.id, providerConfig.provider, model, totalInputTokens, totalOutputTokens, cost, status);
+        });
+
+        response.data.on('error', async (error) => {
+          console.error('Stream error:', error);
+          status = 'failed';
+          res.end();
+          await createApiLog(user.id, providerConfig.provider, model, totalInputTokens, 0, 0, status);
+        });
+      } else {
+        // Non-streaming request
+        const response = await axios.post(
+          `${providerConfig.baseUrl}/chat/completions`,
+          requestBody,
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${apiKey}`,
+            },
+          }
+        );
+
+        const usage = response.data.usage || {};
+        totalInputTokens = usage.prompt_tokens || totalInputTokens;
+        totalOutputTokens = usage.completion_tokens || estimateTokens(response.data.choices?.[0]?.message?.content || '');
+        const cost = (totalInputTokens / 1000) * costRate.input + (totalOutputTokens / 1000) * costRate.output;
+
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { credits: { decrement: cost } },
+        });
+
+        await createApiLog(user.id, providerConfig.provider, model, totalInputTokens, totalOutputTokens, cost, status);
+
+        res.json(response.data);
+      }
+    }
+  } catch (error) {
+    console.error('LLM proxy error:', error.response?.data || error.message);
+    status = 'failed';
+    await createApiLog(user.id, providerConfig?.provider || 'unknown', model, totalInputTokens, 0, 0, status);
+
+    const errorMessage = error.response?.data?.error?.message || error.message || 'LLM 请求失败';
+    res.status(error.response?.status || 500).json({ message: errorMessage });
+  }
+});
+
+// Get supported models
+app.get('/api/llm/models', (req, res) => {
+  const models = [];
+  for (const [provider, config] of Object.entries(LLM_PROVIDERS)) {
+    const apiKey = config.getApiKey();
+    if (apiKey) {
+      models.push(...config.models.map(m => ({ provider, model: m, available: true })));
+    } else {
+      models.push(...config.models.map(m => ({ provider, model: m, available: false })));
+    }
+  }
+  res.json({ models });
 });
 
 app.get('/api/projects', async (req, res) => {

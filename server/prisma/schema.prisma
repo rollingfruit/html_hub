@@ -8,14 +8,18 @@ generator client {
 }
 
 model User {
-  id        Int      @id @default(autoincrement())
-  username  String   @unique
-  password  String
-  role      String   @default("user")
-  projects  Project[]
-  requests  FileRequest[] @relation("RequestUser")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id         Int      @id @default(autoincrement())
+  username   String   @unique
+  password   String
+  role       String   @default("user")
+  supabaseId String?  @unique
+  email      String?
+  credits    Float    @default(0)
+  projects   Project[]
+  requests   FileRequest[] @relation("RequestUser")
+  apiLogs    ApiLog[]
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 }
 
 model Project {
@@ -58,4 +62,27 @@ model Log {
   operator  String
   details   String?
   createdAt DateTime @default(now())
+}
+
+model ApiLog {
+  id           Int      @id @default(autoincrement())
+  userId       Int
+  user         User     @relation(fields: [userId], references: [id])
+  endpoint     String   // e.g. "openai/gpt-4", "deepseek/chat"
+  model        String?
+  inputTokens  Int      @default(0)
+  outputTokens Int      @default(0)
+  cost         Float    @default(0)
+  status       String   // "success" | "failed"
+  createdAt    DateTime @default(now())
+}
+
+model TokenPackage {
+  id          Int      @id @default(autoincrement())
+  name        String
+  credits     Float
+  priceYuan   Float
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
 }

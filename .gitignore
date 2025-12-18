@@ -20,3 +20,4 @@ nginx/default.conf
 server/prisma/server/db/dev.db
 server/prisma/db/
 local_html_modify/记忆/TODO
+client/.env
