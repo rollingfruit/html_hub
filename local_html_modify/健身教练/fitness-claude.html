@@ -8,6 +8,9 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <!-- FFmpeg.wasm for video compression -->
+    <script src="https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/umd/index.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
@@ -442,6 +445,136 @@
         </div>
     </template>
 
+    <!-- Compression Modal -->
+    <template x-if="showCompressModal">
+        <div>
+            <div class="modal-backdrop" @click="showCompressModal = false"></div>
+            <div class="modal-content" style="min-width: 480px;">
+                <h3 class="text-xl font-semibold mb-6 flex items-center gap-2">
+                    <i data-lucide="archive" class="w-5 h-5 text-accent-secondary"></i>
+                    视频压缩为 WebP
+                </h3>
+
+                <template x-if="!isCompressing">
+                    <div>
+                        <!-- FFmpeg loading status -->
+                        <template x-if="!ffmpegLoaded">
+                            <div class="mb-4 p-3 bg-accent-warn/10 border border-accent-warn/30 rounded-lg">
+                                <p class="text-sm text-accent-warn flex items-center gap-2">
+                                    <i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i>
+                                    正在加载 FFmpeg 引擎...
+                                </p>
+                            </div>
+                        </template>
+
+                        <template x-if="ffmpegLoaded">
+                            <div class="mb-4 p-3 bg-accent-primary/10 border border-accent-primary/30 rounded-lg">
+                                <p class="text-sm text-accent-primary flex items-center gap-2">
+                                    <i data-lucide="check-circle" class="w-4 h-4"></i>
+                                    FFmpeg 引擎已就绪
+                                </p>
+                            </div>
+                        </template>
+
+                        <!-- Original file info -->
+                        <div class="mb-4 p-3 bg-surface-700 rounded-lg">
+                            <p class="text-sm text-gray-400 mb-1">原始文件</p>
+                            <p class="font-mono" x-text="formatFileSize(video.size)"></p>
+                            <p class="text-xs text-gray-500 mt-1"
+                                x-text="`${video.width}×${video.height} @ ${video.fps}fps`"></p>
+                        </div>
+
+                        <!-- Compression settings -->
+                        <div class="mb-4">
+                            <label class="block text-sm text-gray-400 mb-2">压缩质量 (越低越小)</label>
+                            <select x-model="compressSettings.quality"
+                                class="w-full bg-surface-700 border border-surface-500 rounded-lg px-4 py-3 text-white">
+                                <option value="high">高质量 (压缩约 1/5)</option>
+                                <option value="medium">中等质量 (压缩约 1/10) ★推荐</option>
+                                <option value="low">低质量 (压缩约 1/20)</option>
+                                <option value="ultra-low">极致压缩 (压缩约 1/30)</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="block text-sm text-gray-400 mb-2">输出分辨率</label>
+                            <select x-model="compressSettings.resolution"
+                                class="w-full bg-surface-700 border border-surface-500 rounded-lg px-4 py-3 text-white">
+                                <option value="original">保持原始分辨率</option>
+                                <option value="720">720p (1280×720)</option>
+                                <option value="480">480p (854×480)</option>
+                                <option value="360">360p (640×360)</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="block text-sm text-gray-400 mb-2">帧率</label>
+                            <select x-model="compressSettings.fps"
+                                class="w-full bg-surface-700 border border-surface-500 rounded-lg px-4 py-3 text-white">
+                                <option value="original">保持原始帧率</option>
+                                <option value="24">24 fps (电影)</option>
+                                <option value="15">15 fps (省空间)</option>
+                                <option value="10">10 fps (极省空间)</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-6">
+                            <label class="block text-sm text-gray-400 mb-2">时间裁剪 (可选)</label>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="text-xs text-gray-500">开始时间 (秒)</label>
+                                    <input type="number" x-model="compressSettings.startTime" min="0"
+                                        :max="video.duration" step="0.1"
+                                        class="w-full bg-surface-700 border border-surface-500 rounded-lg px-3 py-2 text-sm">
+                                </div>
+                                <div>
+                                    <label class="text-xs text-gray-500">结束时间 (秒)</label>
+                                    <input type="number" x-model="compressSettings.endTime" min="0"
+                                        :max="video.duration" step="0.1"
+                                        class="w-full bg-surface-700 border border-surface-500 rounded-lg px-3 py-2 text-sm">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Estimated size -->
+                        <div class="mb-6 p-3 bg-surface-700 rounded-lg">
+                            <div class="flex justify-between items-center">
+                                <span class="text-sm text-gray-400">预估压缩后大小</span>
+                                <span class="font-mono text-accent-primary" x-text="estimateCompressedSize()"></span>
+                            </div>
+                            <div class="flex justify-between items-center mt-1">
+                                <span class="text-xs text-gray-500">预估压缩比</span>
+                                <span class="text-xs text-accent-secondary" x-text="estimateCompressionRatio()"></span>
+                            </div>
+                        </div>
+
+                        <div class="flex gap-3">
+                            <button @click="showCompressModal = false" class="btn-secondary flex-1">取消</button>
+                            <button @click="startCompression()" class="btn-primary flex-1" :disabled="!ffmpegLoaded">
+                                <i data-lucide="zap" class="w-4 h-4 inline-block mr-1"></i>
+                                开始压缩
+                            </button>
+                        </div>
+                    </div>
+                </template>
+
+                <template x-if="isCompressing">
+                    <div class="text-center">
+                        <div class="mb-4">
+                            <i data-lucide="loader-2" class="w-12 h-12 mx-auto text-accent-secondary animate-spin"></i>
+                        </div>
+                        <p class="text-lg mb-2" x-text="compressProgress.stage"></p>
+                        <p class="text-sm text-gray-400 mb-4" x-text="compressProgress.message"></p>
+                        <div class="progress-bar">
+                            <div class="progress-fill" :style="`width: ${compressProgress.percent}%`"></div>
+                        </div>
+                        <p class="text-xs text-gray-500 mt-2" x-text="`${compressProgress.percent.toFixed(1)}%`"></p>
+                    </div>
+                </template>
+            </div>
+        </div>
+    </template>
+
     <!-- Header -->
     <header
         class="h-14 bg-surface-800 border-b border-surface-600 flex items-center justify-between px-4 sticky top-0 z-50">
@@ -460,6 +593,11 @@
         </div>
 
         <div class="flex items-center gap-2">
+            <button @click="openCompressModal()" class="btn-secondary text-sm flex items-center gap-2"
+                :disabled="!video.src">
+                <i data-lucide="archive" class="w-4 h-4"></i>
+                压缩导出 WebP
+            </button>
             <button @click="importJSON()" class="btn-secondary text-sm flex items-center gap-2">
                 <i data-lucide="upload" class="w-4 h-4"></i>
                 导入 JSON
@@ -882,6 +1020,9 @@
     <canvas x-ref="exportCanvas" class="hidden"></canvas>
 
     <script>
+        // FFmpeg instance stored outside Alpine reactive system to avoid proxy conflicts
+        let _ffmpegInstance = null;
+
         function app() {
             return {
                 // State
@@ -929,6 +1070,23 @@
                 renderSettings: {
                     showSubtitles: true,
                     showHUD: true
+                },
+
+                // FFmpeg Compression
+                ffmpegLoaded: false,
+                showCompressModal: false,
+                isCompressing: false,
+                compressSettings: {
+                    quality: 'medium',
+                    resolution: 'original',
+                    fps: 'original',
+                    startTime: 0,
+                    endTime: 0
+                },
+                compressProgress: {
+                    stage: '',
+                    message: '',
+                    percent: 0
                 },
 
                 // Current subtitle/score for overlay
@@ -1556,6 +1714,254 @@ ${JSON.stringify({
                         ctx.fillStyle = '#00ff88';
                         ctx.textAlign = 'right';
                         ctx.fillText(badge, x - 12, badgeY + fontSize / 5 + 5);
+                    }
+                },
+
+                // FFmpeg Compression Methods
+                async loadFFmpeg() {
+                    if (this.ffmpegLoaded) return;
+
+                    try {
+                        const { FFmpeg } = FFmpegWASM;
+                        const { toBlobURL } = FFmpegUtil;
+
+                        _ffmpegInstance = new FFmpeg();
+
+                        const self = this;
+                        _ffmpegInstance.on('log', ({ message }) => {
+                            console.log('[FFmpeg]', message);
+                        });
+
+                        _ffmpegInstance.on('progress', ({ progress, time }) => {
+                            self.compressProgress.percent = Math.min(progress * 100, 99);
+                            self.compressProgress.message = `处理时间: ${(time / 1000000).toFixed(1)}s`;
+                        });
+
+                        const ffmpegBaseURL = 'https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/esm';
+                        const coreBaseURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm';
+
+                        self.compressProgress.stage = '下载 Worker 脚本...';
+                        self.compressProgress.percent = 5;
+                        self.compressProgress.message = '首次加载需要下载约 32MB，请耐心等待...';
+
+                        // Worker script must also be converted to blob URL
+                        const workerURL = await toBlobURL(`${ffmpegBaseURL}/worker.js`, 'text/javascript');
+
+                        self.compressProgress.stage = '下载 FFmpeg 核心模块...';
+                        self.compressProgress.percent = 15;
+                        const coreURL = await toBlobURL(`${coreBaseURL}/ffmpeg-core.js`, 'text/javascript');
+
+                        self.compressProgress.stage = '下载 WebAssembly 模块 (~30MB)...';
+                        self.compressProgress.percent = 30;
+                        const wasmURL = await toBlobURL(`${coreBaseURL}/ffmpeg-core.wasm`, 'application/wasm');
+
+                        self.compressProgress.stage = '初始化 FFmpeg 引擎...';
+                        self.compressProgress.percent = 80;
+
+                        // Load FFmpeg with all blob URLs
+                        await _ffmpegInstance.load({
+                            classWorkerURL: workerURL,
+                            coreURL,
+                            wasmURL
+                        });
+
+                        this.ffmpegLoaded = true;
+                        self.compressProgress.percent = 100;
+                        self.compressProgress.stage = '就绪';
+                        this.$nextTick(() => lucide.createIcons());
+                    } catch (error) {
+                        console.error('Failed to load FFmpeg:', error);
+                        this.showToast('FFmpeg 加载失败: ' + error.message, 'error');
+                    }
+                },
+
+                async openCompressModal() {
+                    this.showCompressModal = true;
+                    this.compressSettings.startTime = 0;
+                    this.compressSettings.endTime = this.video.duration;
+                    this.$nextTick(() => lucide.createIcons());
+
+                    // Start loading FFmpeg in background
+                    if (!this.ffmpegLoaded) {
+                        this.loadFFmpeg();
+                    }
+                },
+
+                estimateCompressedSize() {
+                    if (!this.video.size) return '计算中...';
+
+                    const qualityFactors = {
+                        'high': 0.2,
+                        'medium': 0.1,
+                        'low': 0.05,
+                        'ultra-low': 0.033
+                    };
+
+                    const resolutionFactors = {
+                        'original': 1,
+                        '720': this.video.height > 720 ? (720 / this.video.height) ** 2 : 1,
+                        '480': this.video.height > 480 ? (480 / this.video.height) ** 2 : 1,
+                        '360': this.video.height > 360 ? (360 / this.video.height) ** 2 : 1
+                    };
+
+                    const fpsFactors = {
+                        'original': 1,
+                        '24': Math.min(24 / this.video.fps, 1),
+                        '15': Math.min(15 / this.video.fps, 1),
+                        '10': Math.min(10 / this.video.fps, 1)
+                    };
+
+                    const duration = (this.compressSettings.endTime || this.video.duration) - (this.compressSettings.startTime || 0);
+                    const durationFactor = duration / this.video.duration;
+
+                    const estimatedSize = this.video.size
+                        * qualityFactors[this.compressSettings.quality]
+                        * resolutionFactors[this.compressSettings.resolution]
+                        * fpsFactors[this.compressSettings.fps]
+                        * durationFactor;
+
+                    return this.formatFileSize(Math.max(estimatedSize, 1024));
+                },
+
+                estimateCompressionRatio() {
+                    if (!this.video.size) return '计算中...';
+
+                    const qualityFactors = {
+                        'high': 0.2,
+                        'medium': 0.1,
+                        'low': 0.05,
+                        'ultra-low': 0.033
+                    };
+
+                    const resolutionFactors = {
+                        'original': 1,
+                        '720': this.video.height > 720 ? (720 / this.video.height) ** 2 : 1,
+                        '480': this.video.height > 480 ? (480 / this.video.height) ** 2 : 1,
+                        '360': this.video.height > 360 ? (360 / this.video.height) ** 2 : 1
+                    };
+
+                    const fpsFactors = {
+                        'original': 1,
+                        '24': Math.min(24 / this.video.fps, 1),
+                        '15': Math.min(15 / this.video.fps, 1),
+                        '10': Math.min(10 / this.video.fps, 1)
+                    };
+
+                    const ratio = 1 / (qualityFactors[this.compressSettings.quality]
+                        * resolutionFactors[this.compressSettings.resolution]
+                        * fpsFactors[this.compressSettings.fps]);
+
+                    return `约 1/${Math.round(ratio)}`;
+                },
+
+                async startCompression() {
+                    if (!this.ffmpegLoaded || !this.video.file) {
+                        this.showToast('请先等待 FFmpeg 加载完成', 'error');
+                        return;
+                    }
+
+                    this.isCompressing = true;
+                    this.compressProgress = { stage: '准备文件...', message: '', percent: 0 };
+                    this.$nextTick(() => lucide.createIcons());
+
+                    try {
+                        const { fetchFile } = FFmpegUtil;
+
+                        // Write input file to FFmpeg virtual filesystem
+                        this.compressProgress.stage = '加载视频文件...';
+                        const inputData = await fetchFile(this.video.file);
+                        await _ffmpegInstance.writeFile('input.mp4', inputData);
+
+                        // Build FFmpeg command arguments
+                        const args = ['-i', 'input.mp4'];
+
+                        // Time trimming
+                        const startTime = parseFloat(this.compressSettings.startTime) || 0;
+                        const endTime = parseFloat(this.compressSettings.endTime) || this.video.duration;
+
+                        if (startTime > 0) {
+                            args.push('-ss', startTime.toString());
+                        }
+                        if (endTime < this.video.duration) {
+                            args.push('-t', (endTime - startTime).toString());
+                        }
+
+                        // Resolution scaling
+                        let scaleFilter = '';
+                        if (this.compressSettings.resolution !== 'original') {
+                            const targetHeight = parseInt(this.compressSettings.resolution);
+                            scaleFilter = `scale=-1:${targetHeight}`;
+                        }
+
+                        // FPS filter
+                        let fpsFilter = '';
+                        if (this.compressSettings.fps !== 'original') {
+                            fpsFilter = `fps=${this.compressSettings.fps}`;
+                        }
+
+                        // Combine filters
+                        const filters = [scaleFilter, fpsFilter].filter(f => f).join(',');
+                        if (filters) {
+                            args.push('-vf', filters);
+                        }
+
+                        // Quality settings for WebP
+                        const qualityMap = {
+                            'high': { q: 75, preset: 'default' },
+                            'medium': { q: 50, preset: 'default' },
+                            'low': { q: 30, preset: 'picture' },
+                            'ultra-low': { q: 15, preset: 'icon' }
+                        };
+
+                        const quality = qualityMap[this.compressSettings.quality];
+
+                        // WebP specific options
+                        args.push(
+                            '-c:v', 'libwebp',
+                            '-lossless', '0',
+                            '-quality', quality.q.toString(),
+                            '-preset', quality.preset,
+                            '-compression_level', '6',
+                            '-loop', '0',
+                            '-an', // Remove audio for WebP
+                            '-y',
+                            'output.webp'
+                        );
+
+                        this.compressProgress.stage = '压缩中...';
+                        console.log('FFmpeg command:', args.join(' '));
+
+                        // Execute FFmpeg
+                        await _ffmpegInstance.exec(args);
+
+                        // Read output file
+                        this.compressProgress.stage = '生成文件...';
+                        this.compressProgress.percent = 100;
+
+                        const data = await _ffmpegInstance.readFile('output.webp');
+
+                        // Create download
+                        const blob = new Blob([data.buffer], { type: 'image/webp' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = 'compressed-video.webp';
+                        a.click();
+                        URL.revokeObjectURL(url);
+
+                        // Cleanup
+                        await _ffmpegInstance.deleteFile('input.mp4');
+                        await _ffmpegInstance.deleteFile('output.webp');
+
+                        const compressionRatio = (this.video.size / blob.size).toFixed(1);
+                        this.showToast(`压缩完成! ${this.formatFileSize(blob.size)} (压缩比 1/${compressionRatio})`);
+                        this.showCompressModal = false;
+
+                    } catch (error) {
+                        console.error('Compression failed:', error);
+                        this.showToast('压缩失败: ' + error.message, 'error');
+                    } finally {
+                        this.isCompressing = false;
                     }
                 }
             };
