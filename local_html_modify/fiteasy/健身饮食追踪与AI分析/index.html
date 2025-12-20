@@ -8,7 +8,7 @@
   <meta name="theme-color" content="#6366f1">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <title>FitLife - 健身饮食记录</title>
+  <title>FitBreezy - 健身饮食记录</title>
   <link rel="manifest" href="manifest.json">
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
   <link
@@ -156,6 +156,79 @@
       box-shadow: 0 4px 20px rgba(99, 102, 241, .15)
     }
 
+    /* Multi-step ReAct container */
+    .step-container {
+      position: relative;
+      padding-left: 20px;
+    }
+
+    .step-container::before {
+      content: '';
+      position: absolute;
+      left: 6px;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      border-left: 2px dashed #c7d2fe;
+    }
+
+    .step-bubble {
+      position: relative;
+      background: white;
+      border-radius: 12px;
+      padding: 12px;
+      margin-bottom: 8px;
+      box-shadow: 0 2px 8px rgba(99, 102, 241, .1);
+      transition: all 0.3s ease;
+    }
+
+    .step-bubble::before {
+      content: '';
+      position: absolute;
+      left: -16px;
+      top: 16px;
+      width: 8px;
+      height: 8px;
+      background: #c7d2fe;
+      border-radius: 50%;
+    }
+
+    .step-bubble.collapsed {
+      padding: 8px 12px;
+      cursor: pointer;
+      opacity: 0.8;
+    }
+
+    .step-bubble.collapsed:hover {
+      opacity: 1;
+      background: #f8fafc;
+    }
+
+    .step-bubble.current {
+      border-left: 3px solid var(--primary);
+    }
+
+    .step-bubble.current::before {
+      background: var(--primary);
+    }
+
+    .step-summary {
+      font-size: 12px;
+      color: #64748b;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .step-icon {
+      font-size: 16px;
+      min-width: 20px;
+      text-align: center;
+    }
+
     .timeline-line {
       position: absolute;
       left: 50%;
@@ -272,6 +345,71 @@
       color: #9ca3af;
       transition: color .2s
     }
+
+    /* Compact input style */
+    .compact-input {
+      padding: 6px 10px;
+      font-size: 13px;
+    }
+
+    /* Dual-handle macro slider */
+    .macro-slider-container {
+      position: relative;
+      height: 28px;
+      margin: 8px 0;
+    }
+
+    .macro-slider-track {
+      position: absolute;
+      top: 50%;
+      left: 0;
+      right: 0;
+      height: 12px;
+      transform: translateY(-50%);
+      border-radius: 6px;
+      overflow: hidden;
+      display: flex;
+    }
+
+    .macro-segment {
+      height: 100%;
+      transition: width 0.15s;
+    }
+
+    .macro-segment.protein {
+      background: #10b981;
+    }
+
+    .macro-segment.carbs {
+      background: #f59e0b;
+    }
+
+    .macro-segment.fat {
+      background: #3b82f6;
+    }
+
+    .macro-slider-handle {
+      position: absolute;
+      top: 50%;
+      width: 18px;
+      height: 18px;
+      background: white;
+      border: 2px solid #6366f1;
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      cursor: ew-resize;
+      z-index: 10;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+      transition: transform 0.1s;
+    }
+
+    .macro-slider-handle:hover {
+      transform: translate(-50%, -50%) scale(1.15);
+    }
+
+    .macro-slider-handle:active {
+      transform: translate(-50%, -50%) scale(1.2);
+    }
   </style>
 </head>
 
@@ -280,7 +418,7 @@
     <header class="sticky top-0 z-50 glass border-b border-white/20" style="padding-top:var(--safe-top)">
       <div class="flex items-center justify-between px-4 py-3">
         <div>
-          <h1 class="text-xl font-bold gradient-text">FitLife</h1>
+          <h1 class="text-xl font-bold gradient-text">FitBreezy</h1>
           <p id="currentDate" class="text-xs text-gray-500"></p>
         </div>
         <button id="goalToggle"
@@ -458,23 +596,83 @@
               class="flex-1 px-4 py-2 rounded-xl border border-gray-200 outline-none text-sm"><button id="addNutrient"
               class="px-4 py-2 bg-emerald-500 text-white rounded-xl text-sm font-medium">添加</button></div>
         </div>
-        <div class="bg-white rounded-2xl p-4 shadow-sm mb-4">
-          <h3 class="font-medium mb-4 flex items-center gap-2"><svg class="w-5 h-5 text-pink-500" fill="none"
+        <div class="bg-white rounded-2xl p-3 shadow-sm mb-4">
+          <h3 class="font-medium mb-2 flex items-center gap-2 text-sm"><svg class="w-4 h-4 text-pink-500" fill="none"
               stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
             </svg>每日目标</h3>
-          <div class="grid grid-cols-2 gap-3">
-            <div><label class="text-xs text-gray-500">热量 (kcal)</label><input type="number" id="targetCalories"
-                class="w-full px-3 py-2 rounded-lg border text-sm" placeholder="2200"></div>
-            <div><label class="text-xs text-gray-500">蛋白质 (g)</label><input type="number" id="targetProtein"
-                class="w-full px-3 py-2 rounded-lg border text-sm" placeholder="150"></div>
-            <div><label class="text-xs text-gray-500">碳水 (g)</label><input type="number" id="targetCarbs"
-                class="w-full px-3 py-2 rounded-lg border text-sm" placeholder="250"></div>
-            <div><label class="text-xs text-gray-500">脂肪 (g)</label><input type="number" id="targetFat"
-                class="w-full px-3 py-2 rounded-lg border text-sm" placeholder="70"></div>
+          <!-- 个人信息输入 - 更紧凑 -->
+          <div class="grid grid-cols-5 gap-1.5 mb-2">
+            <div><label class="text-[10px] text-gray-400">身高cm</label><input type="number" id="userHeight"
+                class="w-full compact-input rounded border text-center" placeholder="170"></div>
+            <div><label class="text-[10px] text-gray-400">体重kg</label><input type="number" id="userWeight"
+                class="w-full compact-input rounded border text-center" placeholder="65"></div>
+            <div><label class="text-[10px] text-gray-400">年龄</label><input type="number" id="userAge"
+                class="w-full compact-input rounded border text-center" placeholder="25"></div>
+            <div><label class="text-[10px] text-gray-400">性别</label><select id="userGender"
+                class="w-full compact-input rounded border">
+                <option value="male">男</option>
+                <option value="female">女</option>
+              </select></div>
+            <div><label class="text-[10px] text-gray-400">活动量</label><select id="activityLevel"
+                class="w-full compact-input rounded border text-xs">
+                <option value="1.2">久坐</option>
+                <option value="1.375">轻度</option>
+                <option value="1.55" selected>中度</option>
+                <option value="1.725">重度</option>
+              </select></div>
           </div>
-          <button id="saveTargets"
-            class="w-full py-2 mt-3 bg-pink-500 text-white rounded-xl text-sm font-medium">保存目标</button>
+          <button id="calculateTargetsBtn"
+            class="w-full py-1.5 mb-2 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-lg text-xs font-medium">⚡️
+            智能计算</button>
+          <!-- 热量输入 -->
+          <div class="flex items-center gap-2 mb-2 bg-gray-50 rounded-lg p-2">
+            <span class="text-xs text-gray-500 whitespace-nowrap">热量</span>
+            <input type="number" id="targetCalories"
+              class="flex-1 px-2 py-1 rounded border text-sm font-medium text-center" placeholder="2200">
+            <span class="text-xs text-gray-400">kcal</span>
+          </div>
+          <!-- 宏量滑杆 -->
+          <div class="mb-2">
+            <div class="flex justify-between text-[10px] text-gray-500 mb-1">
+              <span class="flex items-center gap-1"><span class="w-2 h-2 rounded bg-emerald-500"></span>蛋白 <span
+                  id="proteinPercent" class="font-medium text-emerald-600">27%</span></span>
+              <span class="flex items-center gap-1"><span class="w-2 h-2 rounded bg-amber-500"></span>碳水 <span
+                  id="carbsPercent" class="font-medium text-amber-600">45%</span></span>
+              <span class="flex items-center gap-1"><span class="w-2 h-2 rounded bg-blue-500"></span>脂肪 <span
+                  id="fatPercent" class="font-medium text-blue-600">28%</span></span>
+            </div>
+            <div id="macroSlider" class="macro-slider-container">
+              <div class="macro-slider-track">
+                <div id="segmentProtein" class="macro-segment protein" style="width:27%"></div>
+                <div id="segmentCarbs" class="macro-segment carbs" style="width:45%"></div>
+                <div id="segmentFat" class="macro-segment fat" style="width:28%"></div>
+              </div>
+              <div id="handleProtein" class="macro-slider-handle" style="left:27%"></div>
+              <div id="handleCarbs" class="macro-slider-handle" style="left:72%"></div>
+            </div>
+          </div>
+          <!-- 宏量数值 - 4列紧凑 -->
+          <div class="grid grid-cols-4 gap-1.5 text-center mb-2">
+            <div class="bg-emerald-50 rounded-lg py-1.5">
+              <input type="number" id="targetProtein"
+                class="w-full bg-transparent text-sm font-bold text-emerald-600 text-center outline-none"
+                placeholder="150">
+              <div class="text-[10px] text-gray-400">蛋白g</div>
+            </div>
+            <div class="bg-amber-50 rounded-lg py-1.5">
+              <input type="number" id="targetCarbs"
+                class="w-full bg-transparent text-sm font-bold text-amber-600 text-center outline-none"
+                placeholder="250">
+              <div class="text-[10px] text-gray-400">碳水g</div>
+            </div>
+            <div class="bg-blue-50 rounded-lg py-1.5">
+              <input type="number" id="targetFat"
+                class="w-full bg-transparent text-sm font-bold text-blue-600 text-center outline-none" placeholder="70">
+              <div class="text-[10px] text-gray-400">脂肪g</div>
+            </div>
+            <button id="saveTargets" class="bg-pink-500 text-white rounded-lg text-xs font-medium">保存</button>
+          </div>
         </div>
         <div class="bg-white rounded-2xl p-4 shadow-sm mb-4">
           <h3 class="font-medium mb-4 flex items-center gap-2"><svg class="w-5 h-5 text-amber-500" fill="none"
@@ -499,7 +697,7 @@
         </div>
         <div class="bg-white rounded-2xl p-4 shadow-sm">
           <h3 class="font-medium mb-2">关于</h3>
-          <p class="text-sm text-gray-500">FitLife v1.0.0</p>
+          <p class="text-sm text-gray-500">FitBreezy v1.0.0</p>
           <p class="text-xs text-gray-400 mt-1">AI驱动的健身饮食记录助手</p>
         </div>
       </section>
@@ -564,14 +762,26 @@
               </svg>
             </div>
             <div>
-              <h3 class="font-semibold">FitLife AI</h3>
+              <h3 class="font-semibold">FitBreezy AI</h3>
               <p class="text-xs text-gray-500">你的智能健身助手</p>
             </div>
           </div>
-          <button id="closeChatModal" class="p-2 hover:bg-gray-100 rounded-full"><svg class="w-6 h-6" fill="none"
-              stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-            </svg></button>
+          <div class="flex items-center gap-2">
+            <div class="flex items-center bg-gray-100 rounded-2xl p-1">
+              <button id="modeFast"
+                class="px-2 py-1 rounded-xl text-xs font-medium transition-all bg-white shadow text-indigo-600">
+                ⚡快速
+              </button>
+              <button id="modeDeep"
+                class="px-2 py-1 rounded-xl text-xs font-medium text-gray-500 transition-all hover:text-indigo-600">
+                🧠深度
+              </button>
+            </div>
+            <button id="closeChatModal" class="p-2 hover:bg-gray-100 rounded-full"><svg class="w-6 h-6" fill="none"
+                stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg></button>
+          </div>
         </div>
         <div id="chatMessages" class="p-4 space-y-4 min-h-[300px] max-h-[60vh] overflow-y-auto">
           <div class="chat-bubble ai p-4">
@@ -585,14 +795,24 @@
           </div>
         </div>
         <div class="sticky bottom-0 bg-white border-t p-4" style="padding-bottom:calc(16px + var(--safe-bottom));">
-          <div class="flex gap-2"><input type="text" id="chatInput" placeholder="输入你的问题..."
-              class="flex-1 px-4 py-3 rounded-2xl border border-gray-200 focus:border-indigo-500 outline-none"><button
-              id="sendChat" class="px-4 py-3 rounded-2xl text-white font-medium"
-              style="background:var(--bg-gradient);"><svg class="w-5 h-5" fill="none" stroke="currentColor"
-                viewBox="0 0 24 24">
+          <div class="flex gap-2 items-center">
+            <button id="resetChat"
+              class="p-3 rounded-2xl text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors" title="重置对话">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+            </button>
+            <input type="text" id="chatInput" placeholder="输入你的问题..."
+              class="flex-1 px-4 py-3 rounded-2xl border border-gray-200 focus:border-indigo-500 outline-none">
+            <button id="sendChat" class="px-4 py-3 rounded-2xl text-white font-medium"
+              style="background:var(--bg-gradient);">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                   d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-              </svg></button></div>
+              </svg>
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -749,11 +969,11 @@
   <script
     src="https://cdn.jsdelivr.net/npm/browser-image-compression@2.0.2/dist/browser-image-compression.min.js"></script>
   <script>
-    const db = new Dexie('FitLifeDB');
+    const db = new Dexie('FitBreezyDB');
     db.version(1).stores({ trainings: '++id,date,targetMuscle,totalVolume', meals: '++id,date,mealType,totalCalories', bodyProgress: '++id,date,weight', config: 'key' });
 
-    const state = { currentPage: 'home', currentMonth: new Date(), goal: 'bulk', selectedMealType: null, parsedTraining: null, parsedMeal: null, currentTrainingImage: null, currentMealImage: null, currentBodyImage: null, chatHistory: [] };
-    const defaultConfig = { api1: { url: 'https://b.apiyi.com/v1', key: '', model: 'gpt-4.1-mini' }, api2: { url: 'https://b.apiyi.com/v1', key: '', model: 'gpt-4.1-mini' }, trackedNutrients: ['蛋白质', '维生素D', '鱼油Omega-3', '辅酶Q10'], nutritionTargets: { calories: 2200, protein: 150, carbs: 250, fat: 70 } };
+    const state = { currentPage: 'home', currentMonth: new Date(), goal: 'bulk', selectedMealType: null, parsedTraining: null, parsedMeal: null, currentTrainingImage: null, currentMealImage: null, currentBodyImage: null, chatHistory: [], aiMode: 'fast' };
+    const defaultConfig = { api1: { url: 'https://b.apiyi.com/v1', key: '', model: 'gpt-4.1-mini' }, api2: { url: 'https://b.apiyi.com/v1', key: '', model: 'gpt-4.1-mini' }, trackedNutrients: ['蛋白质', '维生素D', '鱼油Omega-3', '辅酶Q10'], nutritionTargets: { calories: 2200, protein: 150, carbs: 250, fat: 70 }, userProfile: { height: null, weight: null, age: null, gender: 'male', activityLevel: 1.55 } };
 
     const formatDate = (date, fmt = 'YYYY-MM-DD') => { const d = new Date(date), y = d.getFullYear(), m = String(d.getMonth() + 1).padStart(2, '0'), day = String(d.getDate()).padStart(2, '0'); if (fmt === 'YYYY-MM-DD') return `${y}-${m}-${day}`; if (fmt === 'MM-DD') return `${m}-${day}`; if (fmt === 'display') return `${m}月${day}日`; if (fmt === 'month') return `${y}年${m}月`; return `${y}-${m}-${day}`; };
     const getWeekDates = () => { const today = new Date(), dow = today.getDay() || 7, mon = new Date(today); mon.setDate(today.getDate() - dow + 1); return Array.from({ length: 7 }, (_, i) => { const d = new Date(mon); d.setDate(mon.getDate() + i); return formatDate(d); }); };
@@ -812,151 +1032,168 @@
         if (p.metric === 'totalVolume') { const tr = await db.trainings.where('date').between(range.start, range.end).toArray(); return { totalVolume: tr.reduce((s, t) => s + (t.totalVolume || 0), 0), sessions: tr.length }; }
         return {};
       },
-      predictGoal: async p => { const recs = await db.bodyProgress.orderBy('date').reverse().limit(10).toArray(); if (recs.length < 2) return { prediction: '数据不足' }; const oldest = recs[recs.length - 1], newest = recs[0]; const days = (new Date(newest.date) - new Date(oldest.date)) / 86400000; const wDiff = newest.weight - oldest.weight; const weeklyChange = (wDiff / days) * 7; const current = p.currentWeight || newest.weight; const toGo = current - p.targetWeight; if (weeklyChange >= 0 && toGo > 0) return { prediction: '当前趋势是增重，需调整计划' }; const weeks = Math.abs(toGo / weeklyChange); const target = new Date(); target.setDate(target.getDate() + weeks * 7); return { currentWeight: current, targetWeight: p.targetWeight, weeklyChange: weeklyChange.toFixed(2), weeksNeeded: Math.round(weeks), predictedDate: formatDate(target, 'display') }; }
+      predictGoal: async p => { const recs = await db.bodyProgress.orderBy('date').reverse().limit(10).toArray(); if (recs.length < 2) return { prediction: '数据不足' }; const oldest = recs[recs.length - 1], newest = recs[0]; const days = (new Date(newest.date) - new Date(oldest.date)) / 86400000; const wDiff = newest.weight - oldest.weight; const weeklyChange = (wDiff / days) * 7; const current = p.currentWeight || newest.weight; const toGo = current - p.targetWeight; if (weeklyChange >= 0 && toGo > 0) return { prediction: '当前趋势是增重，需调整计划' }; const weeks = Math.abs(toGo / weeklyChange); const target = new Date(); target.setDate(target.getDate() + weeks * 7); return { currentWeight: current, targetWeight: p.targetWeight, weeklyChange: weeklyChange.toFixed(2), weeksNeeded: Math.round(weeks), predictedDate: formatDate(target, 'display') }; },
+      getUserTargets: async () => { const cfg = await getConfig(); return { nutritionTargets: cfg.nutritionTargets, userProfile: cfg.userProfile || null, currentGoal: state.goal }; },
+      getTrackedNutrients: async () => { const cfg = await getConfig(); return { trackedNutrients: cfg.trackedNutrients, description: '用户特别关注的微量营养素/补剂' }; }
     };
 
     const runAgent = async question => {
-      const sys = `你是FitLife AI健身助手。可用工具：getTrainingRecords(dateRange?,muscle?,limit?)获取训练,getMealRecords(dateRange?,mealType?,limit?)获取饮食,getBodyProgress(dateRange?,limit?)获取身体变化,calculateStats(metric,period)计算统计,predictGoal(targetWeight,currentWeight?)预测目标。用ReAct格式：思考:[分析]\\n工具:[tool]\\n参数:{...}\\n---\\n回答:[结果]。今天是${formatDate(new Date())}`;
-      const msgs = [{ role: 'system', content: sys }, ...state.chatHistory.map(m => ({ role: m.role, content: m.content })), { role: 'user', content: question }];
-      const response = await callAI(msgs);
+      const isDeep = state.aiMode === 'deep';
+      const maxTurns = isDeep ? 5 : 2;
+
+      // Build system prompt based on mode
+      let sysPrompt = `你是FitBreezy AI健身助手。今天是${formatDate(new Date())}。`;
+
+      if (isDeep) {
+        sysPrompt += `
+当前为【深度分析模式】。用户询问健康/健身问题时，你必须全面分析。
+
+重要规则：
+1. 不要重复调用同一个工具
+2. 每次收到工具结果后，记住这些数据
+3. 收集完必要数据后（通常2-4个工具），立即给出综合建议
+4. 即使数据不完整，也要基于已有数据给出有用的建议
+5. 提供饮食建议前，必须先调用 getUserTargets 获取用户目标
+6. 如涉及补剂/微量营养素建议，需调用 getTrackedNutrients 查看用户关注点
+
+可用工具：
+- getUserTargets(): 获取用户设置的每日热量/蛋白质/碳水/脂肪目标及身体数据
+- getTrackedNutrients(): 获取用户关注的微量营养素列表
+- getBodyProgress(limit): 查体重记录
+- calculateStats(metric:'avgCalories'|'avgProtein'|'totalVolume', period:'week'): 统计
+- getTrainingRecords(limit): 查训练记录
+- getMealRecords(limit): 查饮食详情
+- predictGoal(targetWeight, currentWeight): 预测
+
+ReAct格式(每步必须包含图标):
+图标: [选一个表情: 体重用⚖️ 饮食用🍽️ 训练用💪 统计用📊 目标用🎯 分析用🔍 营养用💊]
+思考: [当前分析]
+工具: [工具名]
+参数: {参数}
+---
+回答: [综合建议]`;
+      } else {
+        sysPrompt += `
+当前为【快速回复模式】。请简短直接地回答。仅在必要时调用最相关的1个工具。
+可用工具：getUserTargets, getTrackedNutrients, getTrainingRecords, getMealRecords, getBodyProgress, calculateStats, predictGoal
+格式：思考:[分析] 工具:[tool] 参数:{...} --- 回答:[结果]`;
+      }
+
+      // Initialize messages with chat history
+      let messages = [
+        { role: 'system', content: sysPrompt },
+        ...state.chatHistory.map(m => ({ role: m.role, content: m.content })),
+        { role: 'user', content: question }
+      ];
+
+      const fixJsonString = (str) => str.replace(/([{,]\s*)(\w+)\s*:/g, '$1"$2":').replace(/'/g, '"');
+
+      const extractJson = (text, startIdx) => {
+        const jsonStart = text.indexOf('{', startIdx);
+        if (jsonStart === -1) return null;
+        let braceCount = 0, jsonEnd = jsonStart;
+        for (let i = jsonStart; i < text.length; i++) {
+          if (text[i] === '{') braceCount++;
+          else if (text[i] === '}') braceCount--;
+          if (braceCount === 0) { jsonEnd = i + 1; break; }
+        }
+        return text.slice(jsonStart, jsonEnd);
+      };
+
       return {
         stream: async function* () {
-          const reader = response.body.getReader(), decoder = new TextDecoder(); let buf = '', full = '';
-          while (true) {
-            const { done, value } = await reader.read(); if (done) break; buf += decoder.decode(value, { stream: true });
-            const lines = buf.split('\n'); buf = lines.pop() || '';
-            for (const line of lines) {
-              const trimmed = line.trim();
-              if (!trimmed || trimmed === 'data: [DONE]') continue;
-              if (trimmed.startsWith('data: ')) {
-                const jsonStr = trimmed.slice(6);
-                if (!jsonStr || jsonStr === '[DONE]') continue;
-                try {
-                  const parsed = JSON.parse(jsonStr);
-                  const c = parsed.choices?.[0]?.delta?.content || '';
-                  if (c) { full += c; yield { type: 'content', content: c, full }; }
-                } catch (e) {
-                  // Incomplete JSON chunk, might need to buffer - skip this line
-                  console.debug('SSE parse skip:', jsonStr.slice(0, 50));
-                }
-              }
-            }
-          }
-          // Process any remaining buffer
-          if (buf.trim() && buf.trim().startsWith('data: ') && buf.trim() !== 'data: [DONE]') {
-            try {
-              const jsonStr = buf.trim().slice(6);
-              if (jsonStr && jsonStr !== '[DONE]') {
-                const parsed = JSON.parse(jsonStr);
-                const c = parsed.choices?.[0]?.delta?.content || '';
-                if (c) { full += c; yield { type: 'content', content: c, full }; }
-              }
-            } catch (e) { console.debug('Final buffer parse skip'); }
-          }
+          const decoder = new TextDecoder();
+          let turn = 0;
 
-          // DEBUG: Print full LLM output
-          console.log('=== LLM Full Output ===');
-          console.log(full);
-          console.log('=== End LLM Output ===');
+          while (turn < maxTurns) {
+            turn++;
+            console.log(`--- Turn ${turn}/${maxTurns} (${state.aiMode} mode) ---`);
 
-          // Extract tool call with better JSON handling for nested objects
-          const toolNameMatch = full.match(/工具[:：]\s*(\w+)/);
-          console.log('Tool name match:', toolNameMatch);
+            // Call LLM
+            const response = await callAI(messages);
+            const reader = response.body.getReader();
+            let buf = '', fullContent = '';
 
-          if (toolNameMatch && agentTools[toolNameMatch[1]]) {
-            try {
-              const toolName = toolNameMatch[1];
-              // Find the start of JSON after "参数:"
-              const paramStart = full.search(/参数[:：]/);
-              console.log('Param start index:', paramStart);
-
-              if (paramStart !== -1) {
-                const jsonStart = full.indexOf('{', paramStart);
-                console.log('JSON start index:', jsonStart);
-
-                if (jsonStart !== -1) {
-                  // Extract balanced JSON by counting braces
-                  let braceCount = 0, jsonEnd = jsonStart;
-                  for (let i = jsonStart; i < full.length; i++) {
-                    if (full[i] === '{') braceCount++;
-                    else if (full[i] === '}') braceCount--;
-                    if (braceCount === 0) { jsonEnd = i + 1; break; }
-                  }
-                  const jsonStr = full.slice(jsonStart, jsonEnd);
-                  console.log('Extracted JSON string:', jsonStr);
-
-                  // Fix JavaScript object literal to valid JSON (add quotes to property names)
-                  const fixJsonString = (str) => {
-                    // Replace unquoted property names with quoted ones
-                    // Match property names that are not already quoted
-                    return str.replace(/([{,]\s*)(\w+)\s*:/g, '$1"$2":');
-                  };
-
-                  const fixedJson = fixJsonString(jsonStr);
-                  console.log('Fixed JSON string:', fixedJson);
-
-                  // Try to parse JSON
-                  const params = JSON.parse(fixedJson);
-                  console.log('Parsed params:', params);
-
-                  console.log('>>> Yielding tool_call for:', toolName);
-                  yield { type: 'tool_call', tool: toolName, params };
-
-                  console.log('>>> Executing tool:', toolName, 'with params:', params);
-                  const result = await agentTools[toolName](params);
-                  console.log('>>> Tool result:', result);
-
-                  console.log('>>> Yielding tool_result');
-                  yield { type: 'tool_result', tool: toolName, result };
-
-                  // *** Second LLM call to get final answer based on tool result ***
-                  console.log('>>> Making second LLM call for final answer');
-                  const resultSummary = JSON.stringify(result, null, 2).slice(0, 1500);
-                  const followUpMsgs = [
-                    ...msgs,
-                    { role: 'assistant', content: full },
-                    { role: 'user', content: `工具 ${toolName} 返回结果：\n${resultSummary}\n\n请根据以上数据直接回答。不要再调用工具。` }
-                  ];
-
-                  yield { type: 'generating_answer' };
-                  const followUpResp = await callAI(followUpMsgs);
-                  const reader2 = followUpResp.body.getReader();
-                  let buf2 = '', finalAnswer = '';
-
-                  while (true) {
-                    const { done, value } = await reader2.read();
-                    if (done) break;
-                    buf2 += decoder.decode(value, { stream: true });
-                    const lines2 = buf2.split('\n');
-                    buf2 = lines2.pop() || '';
-                    for (const line2 of lines2) {
-                      const trimmed2 = line2.trim();
-                      if (!trimmed2 || trimmed2 === 'data: [DONE]') continue;
-                      if (trimmed2.startsWith('data: ')) {
-                        try {
-                          const parsed2 = JSON.parse(trimmed2.slice(6));
-                          const c2 = parsed2.choices?.[0]?.delta?.content || '';
-                          if (c2) {
-                            finalAnswer += c2;
-                            yield { type: 'final_content', content: c2, full: finalAnswer };
-                          }
-                        } catch (e) { }
-                      }
+            // Stream response
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) break;
+              buf += decoder.decode(value, { stream: true });
+              const lines = buf.split('\n');
+              buf = lines.pop() || '';
+              for (const line of lines) {
+                const trimmed = line.trim();
+                if (!trimmed || trimmed === 'data: [DONE]') continue;
+                if (trimmed.startsWith('data: ')) {
+                  try {
+                    const parsed = JSON.parse(trimmed.slice(6));
+                    const c = parsed.choices?.[0]?.delta?.content || '';
+                    if (c) {
+                      fullContent += c;
+                      yield { type: 'content', content: c, full: fullContent, turn };
                     }
-                  }
-
-                  console.log('>>> Final answer:', finalAnswer);
-                  yield { type: 'done', full: finalAnswer };
-                  return; // Exit early, we're done
+                  } catch (e) { }
                 }
               }
-            } catch (e) {
-              console.error('Tool execution error:', e);
-              console.error('Full text for debugging:', full);
             }
+
+            console.log('LLM Output (Turn ' + turn + '):', fullContent);
+
+            // Check for tool call
+            const toolMatch = fullContent.match(/工具[:：]\s*(\w+)/);
+            const paramIdx = fullContent.search(/参数[:：]/);
+
+            if (toolMatch && agentTools[toolMatch[1]] && paramIdx !== -1) {
+              const toolName = toolMatch[1];
+              const jsonStr = extractJson(fullContent, paramIdx);
+
+              if (jsonStr) {
+                let params = {};
+                try {
+                  params = JSON.parse(fixJsonString(jsonStr));
+                } catch (e) {
+                  console.error('JSON parse error:', e);
+                }
+
+                console.log(`>>> Tool call: ${toolName}`, params);
+                yield { type: 'tool_call', tool: toolName, params, turn };
+
+                // Execute tool
+                let result;
+                try {
+                  result = await agentTools[toolName](params);
+                } catch (e) {
+                  result = { error: e.message };
+                }
+
+                console.log('>>> Tool result:', result);
+                yield { type: 'tool_result', tool: toolName, result, turn };
+
+                // Add to message history for next turn
+                messages.push({ role: 'assistant', content: fullContent });
+                const resultSummary = JSON.stringify(result, null, 2).slice(0, 2500);
+                messages.push({
+                  role: 'user',
+                  content: `工具 ${toolName} 返回:\n${resultSummary}\n\n请记住这个结果。如果已有足够信息可以回答用户，直接输出"回答:"给出综合建议；否则继续调用下一个不同的工具。注意：不要重复调用同一工具。`
+                });
+
+                // Continue loop for next tool call
+                continue;
+              }
+            }
+
+            // No tool call detected - this is the final answer
+            // Check if we need to extract the "回答:" part
+            const answerMatch = fullContent.match(/回答[:：]\s*([\s\S]*?)$/);
+            const finalText = answerMatch ? answerMatch[1].trim() : fullContent;
+
+            yield { type: 'done', full: finalText };
+            return;
           }
-          console.log('>>> Yielding done event');
-          yield { type: 'done', full };
+
+          // Max turns reached
+          yield { type: 'final_content', content: '\n(已达到最大分析步数)', full: '' };
+          yield { type: 'done', full: '分析已完成，但可能需要更多信息才能给出完整建议。' };
         }
       };
     };
@@ -1032,11 +1269,144 @@
       document.getElementById('apiUrl2').value = cfg.api2.url; document.getElementById('apiKey2').value = cfg.api2.key; document.getElementById('apiModel2').value = cfg.api2.model;
       document.getElementById('targetCalories').value = cfg.nutritionTargets.calories; document.getElementById('targetProtein').value = cfg.nutritionTargets.protein; document.getElementById('targetCarbs').value = cfg.nutritionTargets.carbs; document.getElementById('targetFat').value = cfg.nutritionTargets.fat;
       renderNutrientTags(cfg.trackedNutrients);
+      // Load user profile
+      if (cfg.userProfile) {
+        if (cfg.userProfile.height) document.getElementById('userHeight').value = cfg.userProfile.height;
+        if (cfg.userProfile.weight) document.getElementById('userWeight').value = cfg.userProfile.weight;
+        if (cfg.userProfile.age) document.getElementById('userAge').value = cfg.userProfile.age;
+        document.getElementById('userGender').value = cfg.userProfile.gender || 'male';
+        document.getElementById('activityLevel').value = cfg.userProfile.activityLevel || 1.55;
+      }
+      // Initialize pie chart
+      const t = cfg.nutritionTargets;
+      updateMacroPieChart(t.protein * 4, t.carbs * 4, t.fat * 9, t.calories);
     };
 
     const renderNutrientTags = nutrients => { document.getElementById('nutrientTags').innerHTML = nutrients.map((n, i) => `<span class="inline-flex items-center gap-1 px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-sm">${n}<button onclick="removeNutrient(${i})" class="ml-1 hover:text-emerald-900">×</button></span>`).join(''); };
     const removeNutrient = async i => { const cfg = await getConfig(); cfg.trackedNutrients.splice(i, 1); await saveConfig(cfg); renderNutrientTags(cfg.trackedNutrients); };
     const addNutrientHandler = async () => { const input = document.getElementById('newNutrient'), name = input.value.trim(); if (!name) return; const cfg = await getConfig(); if (!cfg.trackedNutrients.includes(name)) { cfg.trackedNutrients.push(name); await saveConfig(cfg); renderNutrientTags(cfg.trackedNutrients); } input.value = ''; };
+
+    const updateMacroPieChart = (protCal, carbCal, fatCal, total) => {
+      if (!total || total <= 0) return;
+      const protPct = Math.round(protCal / total * 100);
+      const carbPct = Math.round(carbCal / total * 100);
+      const fatPct = Math.max(0, 100 - protPct - carbPct);
+      // Update slider segments
+      const segProt = document.getElementById('segmentProtein');
+      const segCarbs = document.getElementById('segmentCarbs');
+      const segFat = document.getElementById('segmentFat');
+      if (segProt) segProt.style.width = protPct + '%';
+      if (segCarbs) segCarbs.style.width = carbPct + '%';
+      if (segFat) segFat.style.width = fatPct + '%';
+      // Update handles
+      const handleProt = document.getElementById('handleProtein');
+      const handleCarbs = document.getElementById('handleCarbs');
+      if (handleProt) handleProt.style.left = protPct + '%';
+      if (handleCarbs) handleCarbs.style.left = (protPct + carbPct) + '%';
+      // Update labels
+      const protEl = document.getElementById('proteinPercent'); if (protEl) protEl.textContent = protPct + '%';
+      const carbEl = document.getElementById('carbsPercent'); if (carbEl) carbEl.textContent = carbPct + '%';
+      const fatEl = document.getElementById('fatPercent'); if (fatEl) fatEl.textContent = fatPct + '%';
+    };
+
+    const initMacroSlider = () => {
+      const slider = document.getElementById('macroSlider');
+      if (!slider) return;
+      const handleProt = document.getElementById('handleProtein');
+      const handleCarbs = document.getElementById('handleCarbs');
+      let activeHandle = null;
+
+      const getSliderPercent = (e) => {
+        const rect = slider.getBoundingClientRect();
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        return Math.max(5, Math.min(95, ((clientX - rect.left) / rect.width) * 100));
+      };
+
+      const updateFromSlider = (protPct, carbEndPct) => {
+        const carbPct = carbEndPct - protPct;
+        const fatPct = 100 - carbEndPct;
+        // Update segments
+        document.getElementById('segmentProtein').style.width = protPct + '%';
+        document.getElementById('segmentCarbs').style.width = carbPct + '%';
+        document.getElementById('segmentFat').style.width = fatPct + '%';
+        // Update handles
+        handleProt.style.left = protPct + '%';
+        handleCarbs.style.left = carbEndPct + '%';
+        // Update labels
+        document.getElementById('proteinPercent').textContent = Math.round(protPct) + '%';
+        document.getElementById('carbsPercent').textContent = Math.round(carbPct) + '%';
+        document.getElementById('fatPercent').textContent = Math.round(fatPct) + '%';
+        // Recalculate grams based on calories
+        const calories = parseInt(document.getElementById('targetCalories').value) || 2200;
+        const protein = Math.round((protPct / 100) * calories / 4);
+        const carbs = Math.round((carbPct / 100) * calories / 4);
+        const fat = Math.round((fatPct / 100) * calories / 9);
+        document.getElementById('targetProtein').value = protein;
+        document.getElementById('targetCarbs').value = carbs;
+        document.getElementById('targetFat').value = fat;
+      };
+
+      const getCurrentPositions = () => {
+        const protPct = parseFloat(handleProt.style.left) || 27;
+        const carbEndPct = parseFloat(handleCarbs.style.left) || 72;
+        return { protPct, carbEndPct };
+      };
+
+      const onMove = (e) => {
+        if (!activeHandle) return;
+        e.preventDefault();
+        const percent = getSliderPercent(e);
+        const { protPct, carbEndPct } = getCurrentPositions();
+        if (activeHandle === handleProt) {
+          updateFromSlider(Math.min(percent, carbEndPct - 10), carbEndPct);
+        } else {
+          updateFromSlider(protPct, Math.max(percent, protPct + 10));
+        }
+      };
+
+      const onEnd = () => { activeHandle = null; };
+
+      handleProt.addEventListener('mousedown', () => activeHandle = handleProt);
+      handleCarbs.addEventListener('mousedown', () => activeHandle = handleCarbs);
+      handleProt.addEventListener('touchstart', () => activeHandle = handleProt);
+      handleCarbs.addEventListener('touchstart', () => activeHandle = handleCarbs);
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('touchmove', onMove, { passive: false });
+      document.addEventListener('mouseup', onEnd);
+      document.addEventListener('touchend', onEnd);
+    };
+
+    const calculateTargets = () => {
+      const height = parseFloat(document.getElementById('userHeight').value);
+      const weight = parseFloat(document.getElementById('userWeight').value);
+      const age = parseInt(document.getElementById('userAge').value);
+      const gender = document.getElementById('userGender').value;
+      const activity = parseFloat(document.getElementById('activityLevel').value);
+      if (!height || !weight || !age) { showToast('请填写完整的个人信息', 'error'); return; }
+      // Mifflin-St Jeor formula
+      let bmr = 10 * weight + 6.25 * height - 5 * age;
+      bmr = gender === 'male' ? bmr + 5 : bmr - 161;
+      // TDEE = BMR × activity factor
+      let tdee = Math.round(bmr * activity);
+      // Adjust based on goal
+      if (state.goal === 'bulk') tdee += 300;
+      else tdee -= 400;
+      // Macro distribution
+      const protein = Math.round(weight * 1.8);
+      const proteinCal = protein * 4;
+      const fatCal = Math.round(tdee * 0.25);
+      const fat = Math.round(fatCal / 9);
+      const carbsCal = tdee - proteinCal - fatCal;
+      const carbs = Math.round(carbsCal / 4);
+      // Fill in inputs
+      document.getElementById('targetCalories').value = tdee;
+      document.getElementById('targetProtein').value = protein;
+      document.getElementById('targetCarbs').value = carbs;
+      document.getElementById('targetFat').value = fat;
+      // Update pie chart
+      updateMacroPieChart(proteinCal, carbsCal, fatCal, tdee);
+      showToast(`已计算：BMR ${Math.round(bmr)} kcal, TDEE ${tdee} kcal`, 'success');
+    };
 
     const switchPage = name => {
       state.currentPage = name; document.querySelectorAll('.page').forEach(p => p.classList.remove('active')); document.getElementById(`page-${name}`).classList.add('active');
@@ -1123,7 +1493,7 @@
         for (const t of data.trainings) if (t.thumbnail) { const b64 = t.thumbnail.split(',')[1]; imgFolder.file(`training_${t.date}_${idx++}.jpg`, b64, { base64: true }); }
         for (const m of data.meals) if (m.thumbnail) { const b64 = m.thumbnail.split(',')[1]; imgFolder.file(`meal_${m.date}_${m.mealType}_${idx++}.jpg`, b64, { base64: true }); }
         for (const b of data.bodyProgress) if (b.thumbnail) { const b64 = b.thumbnail.split(',')[1]; imgFolder.file(`body_${b.date}_${idx++}.jpg`, b64, { base64: true }); }
-        const blob = await zip.generateAsync({ type: 'blob' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `fitlife_backup_${formatDate(new Date())}.zip`; a.click(); URL.revokeObjectURL(url); showToast('导出成功', 'success');
+        const blob = await zip.generateAsync({ type: 'blob' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `FitBreezy_backup_${formatDate(new Date())}.zip`; a.click(); URL.revokeObjectURL(url); showToast('导出成功', 'success');
       } catch (e) { console.error(e); showToast('导出失败: ' + e.message, 'error'); }
     };
 
@@ -1147,36 +1517,201 @@
     };
 
     const sendChatMessage = async () => {
-      const input = document.getElementById('chatInput'), msg = input.value.trim(); if (!msg) return; input.value = '';
-      const chatMsgs = document.getElementById('chatMessages'); chatMsgs.innerHTML += `<div class="chat-bubble user p-4"><p>${msg}</p></div>`;
-      const aiId = 'ai-' + Date.now(); chatMsgs.innerHTML += `<div id="${aiId}" class="chat-bubble ai p-4"><div class="flex items-center gap-2"><div class="loader"></div><span class="text-gray-500">思考中...</span></div></div>`; chatMsgs.scrollTop = chatMsgs.scrollHeight;
+      const input = document.getElementById('chatInput'), msg = input.value.trim();
+      if (!msg) return;
+      input.value = '';
+
+      const chatMsgs = document.getElementById('chatMessages');
+      chatMsgs.innerHTML += `<div class="chat-bubble user p-4"><p>${msg}</p></div>`;
+
+      // Create container for multi-step display
+      const containerId = 'steps-' + Date.now();
+      const isDeepMode = state.aiMode === 'deep';
+
+      if (isDeepMode) {
+        chatMsgs.innerHTML += `<div id="${containerId}" class="step-container max-w-[85%]"></div>`;
+      } else {
+        chatMsgs.innerHTML += `<div id="${containerId}" class="chat-bubble ai p-4"><div class="flex items-center gap-2"><div class="loader"></div><span class="text-gray-500">思考中...</span></div></div>`;
+      }
+      chatMsgs.scrollTop = chatMsgs.scrollHeight;
+
       state.chatHistory.push({ role: 'user', content: msg });
+
       try {
-        const agent = await runAgent(msg); const aiBubble = document.getElementById(aiId); let html = '';
+        const agent = await runAgent(msg);
+        const container = document.getElementById(containerId);
+        let currentStepId = null;
+        let stepCount = 0;
+        const stepData = []; // Store step info for collapsing
+        const usedIcons = new Set(); // Track used icons to avoid duplicates
+
+        // Tool name to icon mapping
+        const toolIconMap = {
+          'getBodyProgress': '⚖️',
+          'calculateStats': '📊',
+          'getTrainingRecords': '💪',
+          'getMealRecords': '🍽️',
+          'predictGoal': '🎯'
+        };
+        // Fallback icons when primary icons are used
+        const fallbackIcons = ['🔍', '📈', '🏃', '💡', '📝', '🧮', '📋', '🎚️', '⏱️', '✅'];
+
+        // Store stepData in a global map so event delegation can access it
+        if (!window.stepDataMap) window.stepDataMap = {};
+        window.stepDataMap[containerId] = stepData;
+
+        // Setup event delegation on container for step clicks
+        container.addEventListener('click', function (e) {
+          const stepBubble = e.target.closest('.step-bubble.collapsed');
+          if (!stepBubble) {
+            // Check if clicking on expanded step to collapse
+            const expandedStep = e.target.closest('.step-bubble:not(.current)');
+            if (expandedStep && !expandedStep.classList.contains('collapsed')) {
+              const stepId = expandedStep.id;
+              const data = stepData.find(s => s.id === stepId);
+              if (data) {
+                console.log('[Step Click] Collapsing step:', stepId);
+                expandedStep.classList.add('collapsed');
+                expandedStep.innerHTML = `<div class="step-summary"><span class="step-icon">${data.stepIcon}</span> ${data.thinkingSummary || '分析中'}</div>`;
+              }
+            }
+            return;
+          }
+
+          const stepId = stepBubble.id;
+          const data = stepData.find(s => s.id === stepId);
+          console.log('[Step Click] Clicked:', stepId, 'Data:', data);
+
+          if (data) {
+            stepBubble.classList.remove('collapsed');
+            stepBubble.innerHTML = data.fullHtml;
+          }
+        });
+
         for await (const chunk of agent.stream()) {
-          if (chunk.type === 'content') {
-            const c = chunk.full; const thinkMatch = c.match(/思考:\s*([^\n]+)/g); const answerMatch = c.match(/回答:\s*([\s\S]*?)$/);
-            html = '<div class="space-y-2">';
-            if (thinkMatch) html += `<div class="text-xs text-gray-400 flex items-center gap-1"><span>💭</span><span>${thinkMatch[thinkMatch.length - 1].replace('思考:', '').trim()}</span></div>`;
-            if (answerMatch) html += `<p class="mt-2">${answerMatch[1].trim().replace(/\n/g, '<br>')}</p>`;
-            else if (!thinkMatch) html += `<p>${c.replace(/\n/g, '<br>')}</p>`;
-            html += '</div>'; aiBubble.innerHTML = html;
-          } else if (chunk.type === 'tool_call') {
-            aiBubble.innerHTML = `<div class="space-y-2">${html}<div class="text-xs bg-indigo-50 rounded-lg p-2"><div class="flex items-center gap-1 text-indigo-600"><div class="loader" style="width:12px;height:12px;border-width:2px;"></div><span>正在执行 ${chunk.tool}...</span></div></div></div>`;
-          } else if (chunk.type === 'tool_result') {
-            const resultStr = JSON.stringify(chunk.result, null, 2);
-            html = `<div class="space-y-2">${html}<div class="text-xs bg-green-50 rounded-lg p-2 text-green-700"><div class="font-medium">✅ ${chunk.tool} 执行完成</div><pre class="mt-1 overflow-x-auto text-xs">${resultStr.slice(0, 200)}${resultStr.length > 200 ? '...' : ''}</pre></div></div>`;
-            aiBubble.innerHTML = html;
-          } else if (chunk.type === 'generating_answer') {
-            aiBubble.innerHTML = `${html}<div class="mt-3 flex items-center gap-2"><div class="loader" style="width:12px;height:12px;border-width:2px;"></div><span class="text-sm text-gray-500">正在生成回答...</span></div>`;
-          } else if (chunk.type === 'final_content') {
-            aiBubble.innerHTML = `${html}<p class="mt-3">${chunk.full.replace(/\n/g, '<br>')}</p>`;
-          } else if (chunk.type === 'done') {
-            state.chatHistory.push({ role: 'assistant', content: chunk.full });
+          const turn = chunk.turn || 1;
+
+          // Handle multi-step mode
+          if (isDeepMode) {
+            // Create new step bubble for each turn
+            if (turn > stepCount) {
+              // Use placeholder icon first, will be updated when tool is called
+              const placeholderIcon = fallbackIcons[turn - 1] || '🔍';
+
+              // Collapse previous step if exists
+              if (stepCount > 0 && stepData[stepCount - 1]) {
+                const prevStep = document.getElementById(stepData[stepCount - 1].id);
+                const prevData = stepData[stepCount - 1];
+                if (prevStep) {
+                  prevStep.classList.add('collapsed');
+                  prevStep.classList.remove('current');
+                  const collapsedSummary = prevData.thinkingSummary || '分析中';
+                  prevStep.innerHTML = `<div class="step-summary"><span class="step-icon">${prevData.stepIcon}</span> ${collapsedSummary}</div>`;
+                  // Click handler now managed by event delegation
+                }
+              }
+
+              stepCount = turn;
+              currentStepId = `step-${containerId}-${turn}`;
+              container.innerHTML += `<div id="${currentStepId}" class="step-bubble current"><div class="flex items-center gap-2"><span class="step-icon">${placeholderIcon}</span><div class="loader" style="width:12px;height:12px;border-width:2px;"></div><span class="text-gray-500 text-sm">分析中...</span></div></div>`;
+              stepData.push({ id: currentStepId, stepIcon: placeholderIcon, thinkingSummary: '', toolName: '', fullHtml: '' });
+            }
+
+            const stepEl = document.getElementById(currentStepId);
+            if (!stepEl) continue;
+
+            if (chunk.type === 'content') {
+              const c = chunk.full;
+              // Parse icon from LLM output (e.g. "图标: ⚖️")
+              const iconMatch = c.match(/图标[:：]\s*([\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]+)/u);
+              if (iconMatch) {
+                stepData[turn - 1].stepIcon = iconMatch[1].trim();
+                console.log('[Icon Parsed]', iconMatch[1]);
+              }
+              const thinkMatch = c.match(/思考[:：]\s*([^\n]+)/);
+              const stepIcon = stepData[turn - 1].stepIcon;
+              let html = '<div class="space-y-2">';
+              if (thinkMatch) {
+                const thinkText = thinkMatch[1].trim();
+                html += `<div class="text-xs text-gray-600 flex items-center gap-2"><span class="step-icon">${stepIcon}</span><span>${thinkText}</span></div>`;
+                // Store thinking for collapsed summary (truncate to 40 chars)
+                stepData[turn - 1].thinkingSummary = thinkText.length > 40 ? thinkText.slice(0, 40) + '...' : thinkText;
+              }
+              html += '</div>';
+              stepEl.innerHTML = html;
+              stepData[turn - 1].fullHtml = html;
+            } else if (chunk.type === 'tool_call') {
+              const thinkText = stepData[turn - 1].thinkingSummary || '分析中';
+              stepData[turn - 1].toolName = chunk.tool;
+
+              // Auto-select icon based on tool name with deduplication
+              let selectedIcon = toolIconMap[chunk.tool];
+              if (!selectedIcon || usedIcons.has(selectedIcon)) {
+                // Find first unused fallback icon
+                for (const icon of fallbackIcons) {
+                  if (!usedIcons.has(icon)) {
+                    selectedIcon = icon;
+                    break;
+                  }
+                }
+              }
+              // Mark this icon as used
+              if (selectedIcon) usedIcons.add(selectedIcon);
+              stepData[turn - 1].stepIcon = selectedIcon || '🔍';
+
+              const html = `<div class="space-y-2"><div class="text-xs text-gray-600 flex items-center gap-2"><span class="step-icon">${stepData[turn - 1].stepIcon}</span><span>${thinkText}</span></div><div class="text-xs bg-indigo-50 rounded-lg p-2 mt-2"><div class="flex items-center gap-1 text-indigo-600"><div class="loader" style="width:10px;height:10px;border-width:2px;"></div><span>调用 ${chunk.tool}...</span></div></div></div>`;
+              stepEl.innerHTML = html;
+              stepData[turn - 1].fullHtml = html;
+            } else if (chunk.type === 'tool_result') {
+              const resultStr = JSON.stringify(chunk.result, null, 2);
+              const thinkText = stepData[turn - 1].thinkingSummary || '分析中';
+              const stepIcon = stepData[turn - 1].stepIcon;
+              const html = `<div class="space-y-2"><div class="text-xs text-gray-600 flex items-center gap-2"><span class="step-icon">${stepIcon}</span><span>${thinkText}</span></div><div class="text-xs bg-green-50 rounded-lg p-2 mt-2 text-green-700"><div class="font-medium">OK ${chunk.tool}</div><pre class="mt-1 overflow-x-auto text-xs max-h-20 overflow-y-auto">${resultStr.slice(0, 150)}${resultStr.length > 150 ? '...' : ''}</pre></div></div>`;
+              stepEl.innerHTML = html;
+              stepData[turn - 1].fullHtml = html;
+            } else if (chunk.type === 'done') {
+              // Final answer - collapse last step
+              const lastData = stepData[turn - 1];
+              if (lastData) {
+                stepEl.classList.remove('current');
+                stepEl.classList.add('collapsed');
+                const summary = lastData.thinkingSummary || '分析完成';
+                stepEl.innerHTML = `<div class="step-summary"><span class="step-icon">${lastData.stepIcon}</span> ${summary}</div>`;
+                // Click handler managed by event delegation
+              }
+
+              // Add final answer as main bubble
+              const finalHtml = `<div class="step-bubble current" style="background:linear-gradient(135deg,#f0f9ff 0%,#e0f2fe 100%);border-left:3px solid #0ea5e9;"><div class="font-medium text-sm text-sky-700 mb-2">📋 综合分析结果</div><div class="text-sm">${chunk.full.replace(/\n/g, '<br>')}</div></div>`;
+              container.innerHTML += finalHtml;
+              state.chatHistory.push({ role: 'assistant', content: chunk.full });
+            }
+          } else {
+            // Simple mode - single bubble
+            if (chunk.type === 'content') {
+              const c = chunk.full;
+              const thinkMatch = c.match(/思考[:：]\s*([^\n]+)/g);
+              const answerMatch = c.match(/回答[:：]\s*([\s\S]*?)$/);
+              let html = '<div class="space-y-2">';
+              if (thinkMatch) html += `<div class="text-xs text-gray-400 flex items-center gap-1"><span class="text-indigo-400">*</span><span>${thinkMatch[thinkMatch.length - 1].replace(/思考[:：]/, '').trim()}</span></div>`;
+              if (answerMatch) html += `<p class="mt-2">${answerMatch[1].trim().replace(/\n/g, '<br>')}</p>`;
+              else if (!thinkMatch) html += `<p>${c.replace(/\n/g, '<br>')}</p>`;
+              html += '</div>';
+              container.innerHTML = html;
+            } else if (chunk.type === 'tool_call') {
+              container.innerHTML = `<div class="text-xs bg-indigo-50 rounded-lg p-2"><div class="flex items-center gap-1 text-indigo-600"><div class="loader" style="width:12px;height:12px;border-width:2px;"></div><span>调用 ${chunk.tool}...</span></div></div>`;
+            } else if (chunk.type === 'tool_result') {
+              container.innerHTML = `<div class="text-xs bg-green-50 rounded-lg p-2 text-green-700"><div class="font-medium">OK ${chunk.tool}</div></div><div class="mt-2 flex items-center gap-2"><div class="loader" style="width:12px;height:12px;border-width:2px;"></div><span class="text-sm text-gray-500">生成回答中...</span></div>`;
+            } else if (chunk.type === 'done') {
+              container.innerHTML = `<p>${chunk.full.replace(/\n/g, '<br>')}</p>`;
+              state.chatHistory.push({ role: 'assistant', content: chunk.full });
+            }
           }
           chatMsgs.scrollTop = chatMsgs.scrollHeight;
         }
-      } catch (e) { console.error(e); document.getElementById(aiId).innerHTML = `<p class="text-red-500">抱歉，出错了: ${e.message}</p><p class="text-sm text-gray-500 mt-1">请检查API配置</p>`; }
+      } catch (e) {
+        console.error(e);
+        document.getElementById(containerId).innerHTML = `<p class="text-red-500">抱歉，出错了: ${e.message}</p><p class="text-sm text-gray-500 mt-1">请检查API配置</p>`;
+      }
     };
 
     const viewTraining = id => { console.log('View training:', id); };
@@ -1196,6 +1731,27 @@
       document.getElementById('closeChatModal').addEventListener('click', () => closeModal('chatModal'));
       document.getElementById('sendChat').addEventListener('click', sendChatMessage);
       document.getElementById('chatInput').addEventListener('keypress', e => { if (e.key === 'Enter') sendChatMessage(); });
+      document.getElementById('resetChat').addEventListener('click', () => {
+        state.chatHistory = [];
+        const chatMsgs = document.getElementById('chatMessages');
+        chatMsgs.innerHTML = `<div class="chat-bubble ai p-4"><p>👋 你好！我是你的智能健身助手。</p><p class="mt-2 text-sm text-gray-600">你可以问我：</p><ul class="mt-1 text-sm text-gray-600 space-y-1"><li>• 最近的饮食状态如何？</li><li>• 最近4次训练容量分析</li><li>• 怎样才能瘦到60kg？</li></ul></div>`;
+        showToast('对话已重置', 'info');
+      });
+
+      // Mode toggle buttons
+      const btnFast = document.getElementById('modeFast');
+      const btnDeep = document.getElementById('modeDeep');
+      const updateModeUI = () => {
+        if (state.aiMode === 'fast') {
+          btnFast.className = 'px-3 py-2 rounded-xl text-xs font-medium transition-all bg-white shadow text-indigo-600';
+          btnDeep.className = 'px-3 py-2 rounded-xl text-xs font-medium text-gray-500 transition-all hover:text-indigo-600';
+        } else {
+          btnDeep.className = 'px-3 py-2 rounded-xl text-xs font-medium transition-all bg-white shadow text-indigo-600';
+          btnFast.className = 'px-3 py-2 rounded-xl text-xs font-medium text-gray-500 transition-all hover:text-indigo-600';
+        }
+      };
+      btnFast.addEventListener('click', () => { state.aiMode = 'fast'; updateModeUI(); showToast('已切换到快速模式', 'info'); });
+      btnDeep.addEventListener('click', () => { state.aiMode = 'deep'; updateModeUI(); showToast('已切换到深度分析模式', 'info'); });
       const tDrop = document.getElementById('trainingDropzone'), tInput = document.getElementById('trainingImageInput');
       tDrop.addEventListener('click', () => tInput.click()); tDrop.addEventListener('dragover', e => { e.preventDefault(); tDrop.classList.add('border-indigo-500', 'bg-indigo-50'); }); tDrop.addEventListener('dragleave', () => tDrop.classList.remove('border-indigo-500', 'bg-indigo-50')); tDrop.addEventListener('drop', e => { e.preventDefault(); tDrop.classList.remove('border-indigo-500', 'bg-indigo-50'); const f = e.dataTransfer.files[0]; if (f?.type.startsWith('image/')) handleTrainingImage(f); }); tInput.addEventListener('change', e => { const f = e.target.files[0]; if (f) handleTrainingImage(f); });
       const mDrop = document.getElementById('mealDropzone'), mInput = document.getElementById('mealImageInput');
@@ -1207,12 +1763,21 @@
       document.getElementById('saveMeal').addEventListener('click', saveMealRecord);
       document.getElementById('saveBodyPhoto').addEventListener('click', saveBodyPhotoRecord);
       document.getElementById('saveApiConfig').addEventListener('click', async () => { const cfg = await getConfig(); cfg.api1 = { url: document.getElementById('apiUrl1').value, key: document.getElementById('apiKey1').value, model: document.getElementById('apiModel1').value }; cfg.api2 = { url: document.getElementById('apiUrl2').value, key: document.getElementById('apiKey2').value, model: document.getElementById('apiModel2').value }; await saveConfig(cfg); showToast('配置已保存', 'success'); });
-      document.getElementById('saveTargets').addEventListener('click', async () => { const cfg = await getConfig(); cfg.nutritionTargets = { calories: parseInt(document.getElementById('targetCalories').value) || 2200, protein: parseInt(document.getElementById('targetProtein').value) || 150, carbs: parseInt(document.getElementById('targetCarbs').value) || 250, fat: parseInt(document.getElementById('targetFat').value) || 70 }; await saveConfig(cfg); showToast('目标已保存', 'success'); });
+      document.getElementById('saveTargets').addEventListener('click', async () => {
+        const cfg = await getConfig();
+        cfg.nutritionTargets = { calories: parseInt(document.getElementById('targetCalories').value) || 2200, protein: parseInt(document.getElementById('targetProtein').value) || 150, carbs: parseInt(document.getElementById('targetCarbs').value) || 250, fat: parseInt(document.getElementById('targetFat').value) || 70 };
+        cfg.userProfile = { height: parseFloat(document.getElementById('userHeight').value) || null, weight: parseFloat(document.getElementById('userWeight').value) || null, age: parseInt(document.getElementById('userAge').value) || null, gender: document.getElementById('userGender').value, activityLevel: parseFloat(document.getElementById('activityLevel').value) };
+        await saveConfig(cfg);
+        updateMacroPieChart(cfg.nutritionTargets.protein * 4, cfg.nutritionTargets.carbs * 4, cfg.nutritionTargets.fat * 9, cfg.nutritionTargets.calories);
+        showToast('目标已保存', 'success');
+      });
+      document.getElementById('calculateTargetsBtn').addEventListener('click', calculateTargets);
       document.getElementById('addNutrient').addEventListener('click', addNutrientHandler); document.getElementById('newNutrient').addEventListener('keypress', e => { if (e.key === 'Enter') addNutrientHandler(); });
       document.getElementById('exportData').addEventListener('click', exportData);
       const impFile = document.getElementById('importFile'); document.getElementById('importFull').addEventListener('click', () => { impFile.dataset.mode = 'full'; impFile.click(); }); document.getElementById('importIncr').addEventListener('click', () => { impFile.dataset.mode = 'incremental'; impFile.click(); }); impFile.addEventListener('change', e => { const f = e.target.files[0]; if (f) { importData(f, impFile.dataset.mode); e.target.value = ''; } });
       document.getElementById('clearData').addEventListener('click', clearAllData);
       switchPage('home');
+      initMacroSlider();
       if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(console.error);
     };
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
