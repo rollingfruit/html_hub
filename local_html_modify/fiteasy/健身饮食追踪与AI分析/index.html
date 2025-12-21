@@ -410,6 +410,81 @@
     .macro-slider-handle:active {
       transform: translate(-50%, -50%) scale(1.2);
     }
+
+    /* Quick Edit Agent styles */
+    .item-selectable {
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .item-selectable:hover {
+      transform: scale(1.02);
+      box-shadow: 0 4px 12px rgba(99, 102, 241, 0.15);
+    }
+
+    .item-selected {
+      border: 2px solid #6366f1 !important;
+      background-color: #eef2ff !important;
+      position: relative;
+    }
+
+    .item-selected::after {
+      content: '✓';
+      position: absolute;
+      top: -8px;
+      right: -8px;
+      background: #6366f1;
+      color: white;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .diff-old {
+      opacity: 0.6;
+      border: 2px dashed #9ca3af !important;
+      background: #f3f4f6 !important;
+      filter: grayscale(0.5);
+    }
+
+    .diff-new {
+      border: 2px solid #10b981 !important;
+      background: #ecfdf5 !important;
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.15);
+    }
+
+    .quick-edit-panel {
+      transform: translateY(100%);
+      transition: transform 0.3s ease-out;
+    }
+
+    .quick-edit-panel.show {
+      transform: translateY(0);
+    }
+
+    @keyframes bounceIn {
+      0% {
+        transform: scale(0);
+        opacity: 0;
+      }
+
+      50% {
+        transform: scale(1.1);
+      }
+
+      100% {
+        transform: scale(1);
+        opacity: 1;
+      }
+    }
+
+    .animate-bounce-in {
+      animation: bounceIn 0.3s ease-out;
+    }
   </style>
 </head>
 
@@ -858,6 +933,11 @@
               </div>
             </div>
             <div id="exerciseList" class="space-y-2 mb-4 max-h-64 overflow-y-auto"></div>
+            <!-- Training Quick Edit Mascot -->
+            <button id="trainingModalAiBtn"
+              class="hidden w-full py-2 mb-3 rounded-xl bg-gradient-to-r from-indigo-100 to-purple-100 text-indigo-600 text-sm font-medium flex items-center justify-center gap-2 transition-all hover:shadow-md animate-bounce-in">
+              <span class="text-lg">✨</span>AI 快速微调
+            </button>
           </div>
           <div id="trainingLoading" class="hidden text-center py-8">
             <div class="loader mx-auto mb-3"></div>
@@ -921,6 +1001,11 @@
               </div>
             </div>
             <div id="foodList" class="space-y-3 mb-4 max-h-64 overflow-y-auto"></div>
+            <!-- Meal Quick Edit Mascot -->
+            <button id="mealModalAiBtn"
+              class="hidden w-full py-2 mb-3 rounded-xl bg-gradient-to-r from-pink-100 to-rose-100 text-pink-600 text-sm font-medium flex items-center justify-center gap-2 transition-all hover:shadow-md animate-bounce-in">
+              <span class="text-lg">✨</span>AI 快速微调
+            </button>
           </div>
           <div id="mealLoading" class="hidden text-center py-8">
             <div class="loader mx-auto mb-3"></div>
@@ -962,7 +1047,76 @@
         </div>
       </div>
     </div>
+    <!-- Quick Edit Panel (Shared) -->
+    <div id="quickEditPanel"
+      class="fixed inset-x-0 bottom-0 z-[1001] bg-white rounded-t-3xl shadow-[0_-5px_20px_rgba(0,0,0,0.15)] quick-edit-panel"
+      style="padding-bottom:var(--safe-bottom);">
+      <div class="p-4">
+        <div class="flex justify-between items-center mb-3">
+          <h4 class="font-semibold text-gray-700 text-sm flex items-center gap-2">
+            <span class="text-lg">✨</span>AI 快速微调
+          </h4>
+          <button id="closeEditPanel" class="text-gray-400 p-1 hover:bg-gray-100 rounded-full">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <!-- Selection hint -->
+        <div id="editSelectionHint" class="text-xs text-gray-500 mb-2 flex items-center gap-1">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <span>点击上方项目选中（可多选），然后输入修改指令</span>
+        </div>
+
+        <!-- Diff container -->
+        <div id="editDiffContainer"
+          class="hidden mb-3 max-h-48 overflow-y-auto bg-gray-50 rounded-xl p-3 text-xs space-y-2">
+        </div>
+
+        <!-- Input area -->
+        <div class="flex gap-2 items-center">
+          <input type="text" id="editInput" placeholder="例: 牛肉改成200g / 删除鸡蛋 / 拆分成两份"
+            class="flex-1 bg-gray-100 border-0 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+          <button id="submitEdit"
+            class="bg-gradient-to-r from-indigo-500 to-purple-500 text-white p-3 rounded-xl shadow-md disabled:opacity-50 transition-transform hover:scale-105 active:scale-95">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
+          </button>
+        </div>
+
+        <!-- Loading indicator -->
+        <div id="editLoading" class="hidden flex items-center justify-center gap-2 py-2 mt-2">
+          <div class="loader" style="width:16px;height:16px;border-width:2px;"></div>
+          <span class="text-sm text-gray-500">AI 正在处理...</span>
+        </div>
+
+        <!-- Confirm/Retry buttons -->
+        <div id="editActions" class="hidden grid grid-cols-2 gap-3 mt-3">
+          <button id="retryEdit"
+            class="py-2.5 rounded-xl bg-gray-200 text-gray-600 text-sm font-medium flex items-center justify-center gap-1 transition-all hover:bg-gray-300">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            重试
+          </button>
+          <button id="confirmEdit"
+            class="py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-sm font-medium flex items-center justify-center gap-1 shadow-lg shadow-emerald-200 transition-all hover:shadow-xl">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+            </svg>
+            确认替换
+          </button>
+        </div>
+      </div>
+    </div>
     <div id="toast" class="toast"></div>
+
   </div>
   <script src="https://cdn.jsdelivr.net/npm/dexie@3.2.4/dist/dexie.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
@@ -973,6 +1127,8 @@
     db.version(1).stores({ trainings: '++id,date,targetMuscle,totalVolume', meals: '++id,date,mealType,totalCalories', bodyProgress: '++id,date,weight', config: 'key' });
 
     const state = { currentPage: 'home', currentMonth: new Date(), goal: 'bulk', selectedMealType: null, parsedTraining: null, parsedMeal: null, currentTrainingImage: null, currentMealImage: null, currentBodyImage: null, chatHistory: [], aiMode: 'fast' };
+    // Quick Edit Agent state
+    const editState = { isActive: false, context: null, selectedIndices: [], tempResult: null, lastInstruction: '' };
     const defaultConfig = { api1: { url: 'https://b.apiyi.com/v1', key: '', model: 'gpt-4.1-mini' }, api2: { url: 'https://b.apiyi.com/v1', key: '', model: 'gpt-4.1-mini' }, trackedNutrients: ['蛋白质', '维生素D', '鱼油Omega-3', '辅酶Q10'], nutritionTargets: { calories: 2200, protein: 150, carbs: 250, fat: 70 }, userProfile: { height: null, weight: null, age: null, gender: 'male', activityLevel: 1.55 } };
 
     const formatDate = (date, fmt = 'YYYY-MM-DD') => { const d = new Date(date), y = d.getFullYear(), m = String(d.getMonth() + 1).padStart(2, '0'), day = String(d.getDate()).padStart(2, '0'); if (fmt === 'YYYY-MM-DD') return `${y}-${m}-${day}`; if (fmt === 'MM-DD') return `${m}-${day}`; if (fmt === 'display') return `${m}月${day}日`; if (fmt === 'month') return `${y}年${m}月`; return `${y}-${m}-${day}`; };
@@ -1431,8 +1587,10 @@ ReAct格式(每步必须包含图标):
         let totalVol = 0; result.exercises?.forEach(ex => ex.sets?.forEach(s => totalVol += (s.weight || 0) * (s.reps || 0))); result.totalVolume = totalVol;
         document.getElementById('parsedTrainingDate').textContent = formatDate(result.date, 'display'); document.getElementById('parsedTrainingMuscle').textContent = result.targetMuscle;
         document.getElementById('parsedDuration').textContent = result.duration || '-'; document.getElementById('parsedVolume').textContent = `${(totalVol / 1000).toFixed(1)}t`; document.getElementById('parsedCalories').textContent = `${result.caloriesBurned || 0}kcal`;
-        document.getElementById('exerciseList').innerHTML = result.exercises?.map(ex => { const exVol = ex.sets?.reduce((s, set) => s + (set.weight || 0) * (set.reps || 0), 0) || 0; return `<div class="bg-white rounded-xl p-3 border"><div class="flex items-center justify-between mb-2"><span class="font-medium text-sm">${ex.name}</span><span class="text-xs text-gray-500">${(exVol / 1000).toFixed(1)}t</span></div><div class="flex flex-wrap gap-1">${ex.sets?.map(s => `<span class="px-2 py-0.5 bg-gray-100 rounded text-xs">${s.weight}kg×${s.reps}</span>`).join('') || ''}</div></div>`; }).join('') || '';
+        document.getElementById('exerciseList').innerHTML = result.exercises?.map((ex, i) => { const exVol = ex.sets?.reduce((s, set) => s + (set.weight || 0) * (set.reps || 0), 0) || 0; return `<div class="bg-white rounded-xl p-3 border item-selectable" data-exercise-index="${i}" onclick="handleExerciseItemClick(${i})"><div class="flex items-center justify-between mb-2"><span class="font-medium text-sm">${ex.name}</span><span class="text-xs text-gray-500">${(exVol / 1000).toFixed(1)}t</span></div><div class="flex flex-wrap gap-1">${ex.sets?.map(s => `<span class="px-2 py-0.5 bg-gray-100 rounded text-xs">${s.weight}kg×${s.reps}</span>`).join('') || ''}</div></div>`; }).join('') || '';
         document.getElementById('trainingLoading').classList.add('hidden'); document.getElementById('trainingParseResult').classList.remove('hidden'); document.getElementById('saveTraining').disabled = false;
+        // Show quick edit mascot button
+        document.getElementById('trainingModalAiBtn').classList.remove('hidden');
       } catch (e) { console.error(e); showToast('识别失败: ' + e.message, 'error'); document.getElementById('trainingLoading').classList.add('hidden'); }
     };
 
@@ -1445,12 +1603,14 @@ ReAct格式(每步必须包含图标):
       try {
         const cfg = await getConfig(), result = await parseMeal(base64, cfg.trackedNutrients); state.parsedMeal = result; renderParsedMeal(result);
         document.getElementById('mealLoading').classList.add('hidden'); document.getElementById('mealParseResult').classList.remove('hidden'); document.getElementById('saveMeal').disabled = false;
+        // Show quick edit mascot button
+        document.getElementById('mealModalAiBtn').classList.remove('hidden');
       } catch (e) { console.error(e); showToast('识别失败: ' + e.message, 'error'); document.getElementById('mealLoading').classList.add('hidden'); }
     };
 
     const renderParsedMeal = result => {
       const sum = result.summary || {}; document.getElementById('mealTotalCalories').textContent = `${sum.totalCalories || 0} 千卡`; document.getElementById('mealTotalProtein').textContent = `${sum.totalProtein || 0}g`; document.getElementById('mealTotalCarbs').textContent = `${sum.totalCarbs || 0}g`; document.getElementById('mealTotalFat').textContent = `${sum.totalFat || 0}g`;
-      document.getElementById('foodList').innerHTML = result.foods?.map((f, i) => `<div class="bg-white rounded-xl p-4 border" data-food-index="${i}"><div class="flex items-center justify-between mb-3"><span class="font-medium">${f.name}</span><span class="text-sm text-pink-600 font-bold">${f.calories} kcal</span></div><div class="mb-3"><div class="flex items-center justify-between mb-1"><span class="text-sm text-gray-500">克数</span><span class="text-sm font-medium food-grams">${f.grams}g</span></div><input type="range" class="food-slider w-full" min="${Math.max(0, f.grams - 100)}" max="${f.grams + 100}" value="${f.grams}" step="5" style="--progress:${((f.grams - Math.max(0, f.grams - 100)) / 200) * 100}%" oninput="adjustFoodGrams(${i},this.value)"></div><div class="grid grid-cols-3 gap-2 text-center text-xs"><div class="bg-emerald-50 rounded-lg p-1"><div class="font-medium text-emerald-600 food-protein">${f.protein}g</div><div class="text-gray-500">蛋白</div></div><div class="bg-amber-50 rounded-lg p-1"><div class="font-medium text-amber-600 food-carbs">${f.carbs}g</div><div class="text-gray-500">碳水</div></div><div class="bg-blue-50 rounded-lg p-1"><div class="font-medium text-blue-600 food-fat">${f.fat}g</div><div class="text-gray-500">脂肪</div></div></div></div>`).join('') || '';
+      document.getElementById('foodList').innerHTML = result.foods?.map((f, i) => `<div class="bg-white rounded-xl p-4 border item-selectable ${editState.selectedIndices.includes(i) ? 'item-selected' : ''}" data-food-index="${i}" onclick="handleFoodItemClick(${i})"><div class="flex items-center justify-between mb-3"><span class="font-medium">${f.name}</span><span class="text-sm text-pink-600 font-bold">${f.calories} kcal</span></div><div class="mb-3"><div class="flex items-center justify-between mb-1"><span class="text-sm text-gray-500">克数</span><span class="text-sm font-medium food-grams">${f.grams}g</span></div><input type="range" class="food-slider w-full" min="${Math.max(0, f.grams - 100)}" max="${f.grams + 100}" value="${f.grams}" step="5" style="--progress:${((f.grams - Math.max(0, f.grams - 100)) / 200) * 100}%" oninput="adjustFoodGrams(${i},this.value)" onclick="event.stopPropagation()"></div><div class="grid grid-cols-3 gap-2 text-center text-xs"><div class="bg-emerald-50 rounded-lg p-1"><div class="font-medium text-emerald-600 food-protein">${f.protein}g</div><div class="text-gray-500">蛋白</div></div><div class="bg-amber-50 rounded-lg p-1"><div class="font-medium text-amber-600 food-carbs">${f.carbs}g</div><div class="text-gray-500">碳水</div></div><div class="bg-blue-50 rounded-lg p-1"><div class="font-medium text-blue-600 food-fat">${f.fat}g</div><div class="text-gray-500">脂肪</div></div></div></div>`).join('') || '';
     };
 
     const adjustFoodGrams = (i, newGrams) => {
@@ -1464,7 +1624,216 @@ ReAct格式(每步必须包含图标):
 
     const selectMealType = type => { state.selectedMealType = type; document.querySelectorAll('.meal-type-btn').forEach(b => { b.classList.toggle('border-pink-500', b.dataset.type === type); b.classList.toggle('bg-pink-50', b.dataset.type === type); b.classList.toggle('border-gray-200', b.dataset.type !== type); }); };
 
+    // ========== Quick Edit Agent Functions ==========
+    const handleFoodItemClick = (index) => {
+      if (!editState.isActive) return; // Only handle clicks in edit mode
+      const idx = editState.selectedIndices.indexOf(index);
+      if (idx === -1) { editState.selectedIndices.push(index); }
+      else { editState.selectedIndices.splice(idx, 1); }
+      // Re-render to show selection
+      renderParsedMeal(state.parsedMeal);
+      updateSelectionHint();
+    };
+
+    const handleExerciseItemClick = (index) => {
+      if (!editState.isActive) return;
+      const el = document.querySelector(`[data-exercise-index="${index}"]`);
+      if (!el) return;
+      const idx = editState.selectedIndices.indexOf(index);
+      if (idx === -1) {
+        editState.selectedIndices.push(index);
+        el.classList.add('item-selected');
+      } else {
+        editState.selectedIndices.splice(idx, 1);
+        el.classList.remove('item-selected');
+      }
+      updateSelectionHint();
+    };
+
+    const updateSelectionHint = () => {
+      const count = editState.selectedIndices.length;
+      const hint = document.getElementById('editSelectionHint');
+      if (count > 0) {
+        hint.innerHTML = `<span class="text-indigo-600 font-medium">已选中 ${count} 项</span><span class="text-gray-400 ml-2">输入指令后点击发送</span>`;
+      } else {
+        hint.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg><span>点击上方项目选中（可多选），然后输入修改指令</span>`;
+      }
+    };
+
+    const openQuickEditPanel = (context) => {
+      editState.isActive = true;
+      editState.context = context;
+      editState.selectedIndices = [];
+      editState.tempResult = null;
+      // Show panel
+      document.getElementById('quickEditPanel').classList.add('show');
+      document.getElementById('editDiffContainer').classList.add('hidden');
+      document.getElementById('editActions').classList.add('hidden');
+      document.getElementById('editLoading').classList.add('hidden');
+      document.getElementById('editInput').value = '';
+      updateSelectionHint();
+      // Refresh lists to show selectable state
+      if (context === 'meal') renderParsedMeal(state.parsedMeal);
+      showToast('点击食物项选中后输入修改指令', 'info');
+    };
+
+    const closeQuickEditPanel = () => {
+      editState.isActive = false;
+      editState.selectedIndices = [];
+      editState.tempResult = null;
+      document.getElementById('quickEditPanel').classList.remove('show');
+      // Refresh to remove selection state
+      if (editState.context === 'meal' && state.parsedMeal) renderParsedMeal(state.parsedMeal);
+      else if (editState.context === 'training' && state.parsedTraining) {
+        document.querySelectorAll('[data-exercise-index]').forEach(el => el.classList.remove('item-selected'));
+      }
+      editState.context = null;
+    };
+
+    const runQuickEdit = async () => {
+      const instruction = document.getElementById('editInput').value.trim();
+      if (!instruction) { showToast('请输入修改指令', 'error'); return; }
+      if (editState.selectedIndices.length === 0) { showToast('请先选中要修改的项目', 'error'); return; }
+
+      editState.lastInstruction = instruction;
+      const sourceData = editState.context === 'meal' ? state.parsedMeal.foods : state.parsedTraining.exercises;
+      const selectedItems = editState.selectedIndices.map(i => sourceData[i]);
+
+      // Show loading
+      document.getElementById('editLoading').classList.remove('hidden');
+      document.getElementById('editDiffContainer').classList.add('hidden');
+      document.getElementById('editActions').classList.add('hidden');
+
+      const itemType = editState.context === 'meal' ? '食物' : '训练动作';
+      const prompt = `你是一个数据修正助手。请根据用户指令修改${itemType}数据。
+
+当前${itemType}数据:
+${JSON.stringify(selectedItems, null, 2)}
+
+用户指令: "${instruction}"
+
+请根据指令修改数据。规则：
+1. 如果是修改，返回修改后的JSON数组
+2. 如果是删除，返回空数组 []
+3. 如果是拆分，返回多个项的数组
+4. 保持数据结构不变，只修改相关字段
+${editState.context === 'meal' ? '5. 食物数据包含: name, grams, calories, protein, carbs, fat 字段' : '5. 训练数据包含: name, sets (包含 weight, reps) 字段'}
+
+只返回纯JSON数组，不要任何解释或markdown格式。`;
+
+      try {
+        const response = await callAI([{ role: 'user', content: prompt }]);
+        let result = '';
+        await streamAI(response, (_, full) => result = full);
+
+        // Extract JSON from response
+        const jsonMatch = result.match(/\[[\s\S]*\]/);
+        if (!jsonMatch) throw new Error('未能解析AI返回结果');
+
+        editState.tempResult = JSON.parse(jsonMatch[0]);
+        document.getElementById('editLoading').classList.add('hidden');
+        renderDiffView(selectedItems, editState.tempResult);
+      } catch (e) {
+        console.error(e);
+        showToast('AI处理失败: ' + e.message, 'error');
+        document.getElementById('editLoading').classList.add('hidden');
+      }
+    };
+
+    const renderDiffView = (oldItems, newItems) => {
+      const container = document.getElementById('editDiffContainer');
+      const isMeal = editState.context === 'meal';
+
+      let html = '<div class="font-medium text-gray-600 mb-2">修改对比</div>';
+
+      // Old items (gray)
+      html += '<div class="space-y-1">';
+      oldItems.forEach(item => {
+        if (isMeal) {
+          html += `<div class="bg-gray-100 rounded-lg p-2 diff-old"><span class="text-gray-500 line-through">${item.name}</span> <span class="text-gray-400">${item.grams}g · ${item.calories}kcal</span></div>`;
+        } else {
+          const vol = item.sets?.reduce((s, set) => s + (set.weight || 0) * (set.reps || 0), 0) || 0;
+          html += `<div class="bg-gray-100 rounded-lg p-2 diff-old"><span class="text-gray-500 line-through">${item.name}</span> <span class="text-gray-400">${(vol / 1000).toFixed(1)}t</span></div>`;
+        }
+      });
+      html += '</div>';
+
+      // Arrow
+      html += '<div class="text-center py-1 text-indigo-500 font-bold">↓</div>';
+
+      // New items (green) or delete message
+      html += '<div class="space-y-1">';
+      if (newItems.length === 0) {
+        html += '<div class="bg-red-50 rounded-lg p-2 text-red-600 text-center">🗑️ 将删除选中项</div>';
+      } else {
+        newItems.forEach(item => {
+          if (isMeal) {
+            html += `<div class="bg-green-50 rounded-lg p-2 diff-new"><span class="font-medium text-green-700">${item.name}</span> <span class="text-green-600">${item.grams}g · ${item.calories}kcal</span></div>`;
+          } else {
+            const vol = item.sets?.reduce((s, set) => s + (set.weight || 0) * (set.reps || 0), 0) || 0;
+            html += `<div class="bg-green-50 rounded-lg p-2 diff-new"><span class="font-medium text-green-700">${item.name}</span> <span class="text-green-600">${(vol / 1000).toFixed(1)}t</span></div>`;
+          }
+        });
+      }
+      html += '</div>';
+
+      container.innerHTML = html;
+      container.classList.remove('hidden');
+      document.getElementById('editActions').classList.remove('hidden');
+    };
+
+    const confirmQuickEdit = () => {
+      if (!editState.tempResult) return;
+
+      const sourceData = editState.context === 'meal' ? state.parsedMeal.foods : state.parsedTraining.exercises;
+      // Sort indices descending for safe removal
+      const sortedIndices = [...editState.selectedIndices].sort((a, b) => b - a);
+
+      // Remove old items
+      sortedIndices.forEach(i => sourceData.splice(i, 1));
+
+      // Insert new items at the first removed position (smallest index)
+      const insertAt = Math.min(...editState.selectedIndices);
+      sourceData.splice(insertAt, 0, ...editState.tempResult);
+
+      // Recalculate summary if meal
+      if (editState.context === 'meal') {
+        const sum = sourceData.reduce((a, f) => ({
+          totalCalories: a.totalCalories + (f.calories || 0),
+          totalProtein: a.totalProtein + (f.protein || 0),
+          totalCarbs: a.totalCarbs + (f.carbs || 0),
+          totalFat: a.totalFat + (f.fat || 0)
+        }), { totalCalories: 0, totalProtein: 0, totalCarbs: 0, totalFat: 0 });
+        state.parsedMeal.summary = sum;
+        renderParsedMeal(state.parsedMeal);
+      } else {
+        // Recalculate training volume
+        let totalVol = 0;
+        sourceData.forEach(ex => ex.sets?.forEach(s => totalVol += (s.weight || 0) * (s.reps || 0)));
+        state.parsedTraining.totalVolume = totalVol;
+        document.getElementById('parsedVolume').textContent = `${(totalVol / 1000).toFixed(1)}t`;
+        // Re-render exercise list
+        document.getElementById('exerciseList').innerHTML = sourceData.map((ex, i) => {
+          const exVol = ex.sets?.reduce((s, set) => s + (set.weight || 0) * (set.reps || 0), 0) || 0;
+          return `<div class="bg-white rounded-xl p-3 border item-selectable" data-exercise-index="${i}" onclick="handleExerciseItemClick(${i})"><div class="flex items-center justify-between mb-2"><span class="font-medium text-sm">${ex.name}</span><span class="text-xs text-gray-500">${(exVol / 1000).toFixed(1)}t</span></div><div class="flex flex-wrap gap-1">${ex.sets?.map(s => `<span class="px-2 py-0.5 bg-gray-100 rounded text-xs">${s.weight}kg×${s.reps}</span>`).join('') || ''}</div></div>`;
+        }).join('') || '';
+      }
+
+      showToast('已更新数据', 'success');
+      closeQuickEditPanel();
+    };
+
+    const retryQuickEdit = () => {
+      editState.tempResult = null;
+      document.getElementById('editDiffContainer').classList.add('hidden');
+      document.getElementById('editActions').classList.add('hidden');
+      document.getElementById('editInput').value = editState.lastInstruction;
+      document.getElementById('editInput').focus();
+    };
+    // ========== End Quick Edit Agent Functions ==========
+
     const saveTrainingRecord = async () => {
+
       if (!state.parsedTraining || !state.currentTrainingImage) return;
       const rec = { date: state.parsedTraining.date || formatDate(new Date()), targetMuscle: state.parsedTraining.targetMuscle, duration: state.parsedTraining.duration, caloriesBurned: state.parsedTraining.caloriesBurned, totalVolume: state.parsedTraining.totalVolume, exercises: state.parsedTraining.exercises, thumbnail: state.currentTrainingImage.thumbnail, createdAt: new Date().toISOString() };
       await db.trainings.add(rec); showToast('训练记录已保存', 'success'); closeModal('trainingModal');
@@ -1776,6 +2145,23 @@ ReAct格式(每步必须包含图标):
       document.getElementById('exportData').addEventListener('click', exportData);
       const impFile = document.getElementById('importFile'); document.getElementById('importFull').addEventListener('click', () => { impFile.dataset.mode = 'full'; impFile.click(); }); document.getElementById('importIncr').addEventListener('click', () => { impFile.dataset.mode = 'incremental'; impFile.click(); }); impFile.addEventListener('change', e => { const f = e.target.files[0]; if (f) { importData(f, impFile.dataset.mode); e.target.value = ''; } });
       document.getElementById('clearData').addEventListener('click', clearAllData);
+
+      // Quick Edit Agent event handlers
+      document.getElementById('mealModalAiBtn').addEventListener('click', () => openQuickEditPanel('meal'));
+      document.getElementById('trainingModalAiBtn').addEventListener('click', () => openQuickEditPanel('training'));
+      document.getElementById('closeEditPanel').addEventListener('click', closeQuickEditPanel);
+      document.getElementById('submitEdit').addEventListener('click', runQuickEdit);
+      document.getElementById('confirmEdit').addEventListener('click', confirmQuickEdit);
+      document.getElementById('retryEdit').addEventListener('click', retryQuickEdit);
+      document.getElementById('editInput').addEventListener('keypress', e => { if (e.key === 'Enter') runQuickEdit(); });
+      // Reset mascot buttons when modals close
+      document.querySelectorAll('.close-modal').forEach(b => b.addEventListener('click', function () {
+        const modal = this.closest('.modal-overlay');
+        if (modal?.id === 'mealModal') document.getElementById('mealModalAiBtn').classList.add('hidden');
+        if (modal?.id === 'trainingModal') document.getElementById('trainingModalAiBtn').classList.add('hidden');
+        closeQuickEditPanel();
+      }));
+
       switchPage('home');
       initMacroSlider();
       if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(console.error);
