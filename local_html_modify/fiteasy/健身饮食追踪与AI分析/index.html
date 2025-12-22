@@ -9,7 +9,8 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>FitBreezy - 健身饮食记录</title>
-  <link rel="manifest" href="manifest.json">
+  <link rel="manifest"
+    href="data:application/json;base64,ewogICJuYW1lIjogIkZpdExpZmUgLSDlgaXouqvppJHpo5/orrDlvZUiLAogICJzaG9ydF9uYW1lIjogIkZpdExpZmUiLAogICJkZXNjcmlwdGlvbiI6ICJBSeentOWKqOeahOWBpeWuq+mlruWwj+S5puW9liIsCiAgInN0YXJ0X3VybCI6ICIvIiwKICAiZGlzcGxheSI6ICJzdGFuZGFsb25lIiwKICAiYmFja2dyb3VuZF9jb2xvciI6ICIjZjhmYWZjIiwKICAidGhlbWVfY29sb3IiOiAiIzYzNjZmMSIsCiAgIm9yaWVudGF0aW9uIjogInBvcnRyYWl0IiwKICAiaWNvbnMiOiBbCiAgICB7CiAgICAgICJzcmMiOiAiZGF0YTppbWFnZS9zdmcreG1sLDxzdmcgeG1sbnM9J2h0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnJyB2aWV3Qm94PScwIDAgNTEyIDUxMic+PHJlY3QgZmlsbD0nJTIzNjM2NmYxJyB3aWR0aD0nNTEyJyBoZWlnaHQ9JzUxMicgcng9JzEwMCcvPjx0ZXh0IHg9JzI1Nicgc3k9JzM0MCcgZm9udC1zaXplPScyODAnIHRleHQtYW5jaG9yPSdtaWRkbGUnIGZpbGw9J3doaXRlJz7wn5iq8J+KoTwvdGV4dD48L3N2Zz4iLAogICAgICAic2l6ZXMiOiAiNTEyeDUxMiIsCiAgICAgICJ0eXBlIjogImltYWdlL3N2Zyt4bWwiLAogICAgICAicHVycG9zZSI6ICJhbnkgbWFza2FibGUiCiAgICB9CiAgXSwKICAiY2F0ZWdvcmllcyI6IFsiaGVhbHRoIiwgImZpdG5lc3MiLCAibGlmZXN0eWxlIl0sCiAgImxhbmciOiAiemgtQ04iCn0=">
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
   <link
     href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap"
@@ -215,12 +216,10 @@
     .step-summary {
       font-size: 12px;
       color: #64748b;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
       display: flex;
-      align-items: center;
+      align-items: flex-start;
       gap: 8px;
+      line-height: 1.4;
     }
 
     .step-icon {
@@ -283,6 +282,48 @@
     .toast.info {
       background: #6366f1;
       color: white
+    }
+
+    /* Thinking dots animation */
+    .thinking-dots {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 8px 16px;
+      margin-left: 20px;
+    }
+
+    .thinking-dots span {
+      width: 6px;
+      height: 6px;
+      background: #a5b4fc;
+      border-radius: 50%;
+      animation: bounce 1.4s ease-in-out infinite;
+    }
+
+    .thinking-dots span:nth-child(1) {
+      animation-delay: 0s;
+    }
+
+    .thinking-dots span:nth-child(2) {
+      animation-delay: 0.2s;
+    }
+
+    .thinking-dots span:nth-child(3) {
+      animation-delay: 0.4s;
+    }
+
+    @keyframes bounce {
+
+      0%,
+      80%,
+      100% {
+        transform: translateY(0);
+      }
+
+      40% {
+        transform: translateY(-8px);
+      }
     }
 
     .modal-overlay {
@@ -485,6 +526,74 @@
     .animate-bounce-in {
       animation: bounceIn 0.3s ease-out;
     }
+
+    /* Batch upload button */
+    .batch-btn {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+      cursor: pointer;
+    }
+
+    .batch-btn:hover {
+      transform: scale(1.1);
+    }
+
+    .batch-btn:active {
+      transform: scale(0.95);
+    }
+
+    /* Batch progress container */
+    .batch-progress {
+      background: linear-gradient(135deg, #f8fafc 0%, #eef2ff 100%);
+      border-radius: 12px;
+      padding: 12px;
+      margin-bottom: 12px;
+    }
+
+    .batch-item {
+      background: white;
+      border-radius: 8px;
+      padding: 10px;
+      margin-bottom: 8px;
+      border-left: 3px solid #c7d2fe;
+      transition: all 0.3s;
+    }
+
+    .batch-item.processing {
+      border-left-color: #6366f1;
+      animation: pulse 1.5s infinite;
+    }
+
+    .batch-item.success {
+      border-left-color: #10b981;
+    }
+
+    .batch-item.error {
+      border-left-color: #ef4444;
+    }
+
+    @keyframes pulse {
+
+      0%,
+      100% {
+        opacity: 1;
+      }
+
+      50% {
+        opacity: 0.7;
+      }
+    }
+
+    .batch-separator {
+      height: 1px;
+      background: linear-gradient(to right, transparent, #c7d2fe, transparent);
+      margin: 16px 0;
+    }
   </style>
 </head>
 
@@ -560,22 +669,40 @@
       <section id="page-training" class="page p-4">
         <div class="flex items-center justify-between mb-6">
           <h2 class="text-lg font-semibold">训练记录</h2>
-          <button id="addTraining"
-            class="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-xl text-sm font-medium shadow-lg shadow-indigo-200"><svg
-              class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-            </svg>添加记录</button>
+          <div class="flex items-center gap-2">
+            <button id="addTraining"
+              class="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-xl text-sm font-medium shadow-lg shadow-indigo-200"><svg
+                class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+              </svg>添加记录</button>
+            <button id="batchTraining" class="batch-btn bg-indigo-100 text-indigo-600 hover:bg-indigo-200" title="批量添加">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+            </button>
+            <input type="file" id="batchTrainingInput" accept="image/*" multiple class="hidden">
+          </div>
         </div>
         <div id="trainingList" class="space-y-4"></div>
       </section>
       <section id="page-nutrition" class="page p-4">
         <div class="flex items-center justify-between mb-6">
           <h2 class="text-lg font-semibold">饮食记录</h2>
-          <button id="addMeal"
-            class="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-xl text-sm font-medium shadow-lg shadow-pink-200"><svg
-              class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-            </svg>记录饮食</button>
+          <div class="flex items-center gap-2">
+            <button id="addMeal"
+              class="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-xl text-sm font-medium shadow-lg shadow-pink-200"><svg
+                class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+              </svg>记录饮食</button>
+            <button id="batchMeal" class="batch-btn bg-pink-100 text-pink-600 hover:bg-pink-200" title="批量添加">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+            </button>
+            <input type="file" id="batchMealInput" accept="image/*" multiple class="hidden">
+          </div>
         </div>
         <div class="bg-gradient-to-br from-pink-50 to-rose-50 rounded-2xl p-4 mb-6">
           <div class="flex items-center justify-between mb-3"><span class="font-medium">今日营养摄入</span><span
@@ -645,16 +772,20 @@
                 class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-indigo-500 outline-none text-sm"><input
                 type="password" id="apiKey1" placeholder="API Key"
                 class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-indigo-500 outline-none text-sm mt-2"><input
-                type="text" id="apiModel1" placeholder="Model Name"
-                class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-indigo-500 outline-none text-sm mt-2">
+                type="text" id="apiModel1" placeholder="默认模型"
+                class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-indigo-500 outline-none text-sm mt-2"><input
+                type="text" id="apiModels1" placeholder="可用模型列表 (英文逗号分隔)"
+                class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-indigo-500 outline-none text-sm mt-2 text-xs">
             </div>
             <div><label class="block text-sm text-gray-600 mb-1">备用 API</label><input type="text" id="apiUrl2"
                 placeholder="API Base URL (备用)"
                 class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-indigo-500 outline-none text-sm"><input
                 type="password" id="apiKey2" placeholder="API Key (备用)"
                 class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-indigo-500 outline-none text-sm mt-2"><input
-                type="text" id="apiModel2" placeholder="Model Name (备用)"
-                class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-indigo-500 outline-none text-sm mt-2">
+                type="text" id="apiModel2" placeholder="默认模型 (备用)"
+                class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-indigo-500 outline-none text-sm mt-2"><input
+                type="text" id="apiModels2" placeholder="可用模型列表 (英文逗号分隔)"
+                class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-indigo-500 outline-none text-sm mt-2 text-xs">
             </div>
             <button id="saveApiConfig"
               class="w-full py-2.5 bg-indigo-500 text-white rounded-xl font-medium">保存配置</button>
@@ -836,23 +967,39 @@
                 <path d="M14 26 Q20 30 26 26" stroke="#6366f1" stroke-width="2" fill="none" stroke-linecap="round" />
               </svg>
             </div>
-            <div>
-              <h3 class="font-semibold">FitBreezy AI</h3>
-              <p class="text-xs text-gray-500">你的智能健身助手</p>
+            <div class="min-w-0">
+              <h3 class="font-semibold text-sm truncate">FitBreezy</h3>
+              <p class="text-[10px] text-gray-500 truncate">智能健身助手</p>
             </div>
           </div>
-          <div class="flex items-center gap-2">
-            <div class="flex items-center bg-gray-100 rounded-2xl p-1">
+          <!-- Model Selector -->
+          <div class="relative flex-shrink-0">
+            <button id="modelSelectorBtn"
+              class="px-2 py-1 border border-dashed border-gray-300 rounded-lg text-[10px] text-gray-600 hover:border-indigo-400 hover:text-indigo-600 transition-all flex items-center gap-1 max-w-[90px]">
+              <span id="currentModelDisplay" class="truncate">gemini-3-flash</span>
+              <svg class="w-2.5 h-2.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+            <div id="modelDropdown"
+              class="hidden absolute top-full right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-50 min-w-[180px] max-h-48 overflow-y-auto">
+              <div id="modelList" class="py-1"></div>
+            </div>
+          </div>
+          <div class="flex items-center gap-1 flex-shrink-0">
+            <div class="flex items-center bg-gray-100 rounded-xl p-0.5">
               <button id="modeFast"
-                class="px-2 py-1 rounded-xl text-xs font-medium transition-all bg-white shadow text-indigo-600">
-                ⚡快速
+                class="mode-btn px-2 py-1 rounded-lg text-[10px] font-medium transition-all bg-white shadow text-indigo-600"
+                data-mode="fast">
+                ⚡<span class="mode-text">快速</span>
               </button>
               <button id="modeDeep"
-                class="px-2 py-1 rounded-xl text-xs font-medium text-gray-500 transition-all hover:text-indigo-600">
-                🧠深度
+                class="mode-btn p-1 rounded-lg text-[10px] font-medium text-gray-400 transition-all hover:text-indigo-600"
+                data-mode="deep">
+                🧠<span class="mode-text hidden"></span>
               </button>
             </div>
-            <button id="closeChatModal" class="p-2 hover:bg-gray-100 rounded-full"><svg class="w-6 h-6" fill="none"
+            <button id="closeChatModal" class="p-1.5 hover:bg-gray-100 rounded-full"><svg class="w-5 h-5" fill="none"
                 stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
               </svg></button>
@@ -939,9 +1086,14 @@
               <span class="text-lg">✨</span>AI 快速微调
             </button>
           </div>
-          <div id="trainingLoading" class="hidden text-center py-8">
-            <div class="loader mx-auto mb-3"></div>
-            <p class="text-gray-600">AI 正在识别训练数据...</p>
+          <div id="trainingLoading" class="hidden text-center py-4">
+            <div class="flex items-center justify-center gap-2 mb-3">
+              <div class="loader"></div>
+              <p class="text-gray-600">AI 正在识别训练数据...</p>
+            </div>
+            <div id="trainingStreamText"
+              class="text-left text-xs text-gray-500 bg-gray-50 rounded-xl p-3 max-h-32 overflow-y-auto font-mono whitespace-pre-wrap break-all">
+            </div>
           </div>
           <button id="saveTraining"
             class="w-full py-3 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-xl font-medium disabled:opacity-50"
@@ -961,7 +1113,7 @@
           <div class="mb-4"><label class="block text-sm font-medium text-gray-700 mb-2">拍照或上传食物照片</label>
             <div id="mealDropzone"
               class="border-2 border-dashed border-gray-300 rounded-2xl p-8 text-center cursor-pointer hover:border-pink-500 transition">
-              <input type="file" id="mealImageInput" accept="image/*" capture="environment" class="hidden"><svg
+              <input type="file" id="mealImageInput" accept="image/*" class="hidden"><svg
                 class="w-12 h-12 mx-auto text-gray-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                   d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
@@ -972,7 +1124,15 @@
             </div>
             <div id="mealImagePreview" class="hidden mt-4"><img id="mealPreviewImg" class="img-preview"></div>
           </div>
-          <div class="mb-4"><label class="block text-sm font-medium text-gray-700 mb-2">餐次</label>
+          <div class="mb-4">
+            <div class="flex items-center justify-between mb-2">
+              <label class="block text-sm font-medium text-gray-700">餐次</label>
+              <div class="flex items-center gap-1">
+                <span class="text-xs text-gray-500">日期:</span>
+                <input type="date" id="mealDatePicker"
+                  class="text-xs border border-gray-200 rounded-lg px-2 py-1 focus:border-pink-500 outline-none">
+              </div>
+            </div>
             <div class="grid grid-cols-4 gap-2"><button
                 class="meal-type-btn px-3 py-2 rounded-xl border-2 border-gray-200 text-sm" data-type="breakfast">☀️
                 早餐</button><button class="meal-type-btn px-3 py-2 rounded-xl border-2 border-gray-200 text-sm"
@@ -1007,9 +1167,14 @@
               <span class="text-lg">✨</span>AI 快速微调
             </button>
           </div>
-          <div id="mealLoading" class="hidden text-center py-8">
-            <div class="loader mx-auto mb-3"></div>
-            <p class="text-gray-600">AI 正在识别食物...</p>
+          <div id="mealLoading" class="hidden text-center py-4">
+            <div class="flex items-center justify-center gap-2 mb-3">
+              <div class="loader"></div>
+              <p class="text-gray-600">AI 正在识别食物...</p>
+            </div>
+            <div id="mealStreamText"
+              class="text-left text-xs text-gray-500 bg-gray-50 rounded-xl p-3 max-h-32 overflow-y-auto font-mono whitespace-pre-wrap break-all">
+            </div>
           </div>
           <button id="saveMeal"
             class="w-full py-3 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-xl font-medium disabled:opacity-50"
@@ -1115,6 +1280,77 @@
         </div>
       </div>
     </div>
+    <!-- Batch Training Modal -->
+    <div id="batchTrainingModal" class="modal-overlay">
+      <div class="modal-content slide-up" style="max-height:90vh;">
+        <div class="sticky top-0 bg-white border-b px-4 py-3 flex items-center justify-between z-10">
+          <h3 class="font-semibold">批量添加训练记录</h3>
+          <button class="close-modal p-2 hover:bg-gray-100 rounded-full"><svg class="w-6 h-6" fill="none"
+              stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg></button>
+        </div>
+        <div class="p-4">
+          <div id="batchTrainingProgress" class="batch-progress">
+            <div class="flex items-center gap-2 mb-2">
+              <span class="text-sm font-medium text-gray-700">处理进度</span>
+              <span id="batchTrainingCount"
+                class="text-xs px-2 py-0.5 bg-indigo-100 text-indigo-600 rounded-full">0/0</span>
+            </div>
+            <div id="batchTrainingItems" class="space-y-2 max-h-24 overflow-y-auto"></div>
+          </div>
+          <div id="batchTrainingResults" class="space-y-4 max-h-[50vh] overflow-y-auto"></div>
+          <button id="saveBatchTraining"
+            class="w-full py-3 mt-4 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-xl font-medium disabled:opacity-50"
+            disabled>保存所有记录</button>
+        </div>
+      </div>
+    </div>
+    <!-- Batch Meal Modal -->
+    <div id="batchMealModal" class="modal-overlay">
+      <div class="modal-content slide-up" style="max-height:90vh;">
+        <div class="sticky top-0 bg-white border-b px-4 py-3 flex items-center justify-between z-10">
+          <h3 class="font-semibold">批量添加饮食记录</h3>
+          <button class="close-modal p-2 hover:bg-gray-100 rounded-full"><svg class="w-6 h-6" fill="none"
+              stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg></button>
+        </div>
+        <div class="p-4">
+          <div class="mb-4">
+            <div class="flex items-center justify-between mb-2">
+              <label class="block text-sm font-medium text-gray-700">餐次</label>
+              <div class="flex items-center gap-1">
+                <span class="text-xs text-gray-500">日期:</span>
+                <input type="date" id="batchMealDatePicker"
+                  class="text-xs border border-gray-200 rounded-lg px-2 py-1 focus:border-pink-500 outline-none">
+              </div>
+            </div>
+            <div class="grid grid-cols-4 gap-2">
+              <button class="batch-meal-type-btn px-3 py-2 rounded-xl border-2 border-gray-200 text-sm"
+                data-type="breakfast">☀️ 早餐</button>
+              <button class="batch-meal-type-btn px-3 py-2 rounded-xl border-2 border-gray-200 text-sm"
+                data-type="lunch">🌤️ 午餐</button>
+              <button class="batch-meal-type-btn px-3 py-2 rounded-xl border-2 border-gray-200 text-sm"
+                data-type="dinner">🌙 晚餐</button>
+              <button class="batch-meal-type-btn px-3 py-2 rounded-xl border-2 border-gray-200 text-sm"
+                data-type="snack">🍪 加餐</button>
+            </div>
+          </div>
+          <div id="batchMealProgress" class="batch-progress">
+            <div class="flex items-center gap-2 mb-2">
+              <span class="text-sm font-medium text-gray-700">处理进度</span>
+              <span id="batchMealCount" class="text-xs px-2 py-0.5 bg-pink-100 text-pink-600 rounded-full">0/0</span>
+            </div>
+            <div id="batchMealItems" class="space-y-2 max-h-24 overflow-y-auto"></div>
+          </div>
+          <div id="batchMealResults" class="space-y-4 max-h-[40vh] overflow-y-auto"></div>
+          <button id="saveBatchMeal"
+            class="w-full py-3 mt-4 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-xl font-medium disabled:opacity-50"
+            disabled>保存所有记录</button>
+        </div>
+      </div>
+    </div>
     <div id="toast" class="toast"></div>
 
   </div>
@@ -1126,10 +1362,267 @@
     const db = new Dexie('FitBreezyDB');
     db.version(1).stores({ trainings: '++id,date,targetMuscle,totalVolume', meals: '++id,date,mealType,totalCalories', bodyProgress: '++id,date,weight', config: 'key' });
 
-    const state = { currentPage: 'home', currentMonth: new Date(), goal: 'bulk', selectedMealType: null, parsedTraining: null, parsedMeal: null, currentTrainingImage: null, currentMealImage: null, currentBodyImage: null, chatHistory: [], aiMode: 'fast' };
+    const state = { currentPage: 'home', currentMonth: new Date(), goal: 'bulk', selectedMealType: null, parsedTraining: null, parsedMeal: null, currentTrainingImage: null, currentMealImage: null, currentBodyImage: null, chatHistory: [], aiMode: 'fast', selectedModel: null };
     // Quick Edit Agent state
     const editState = { isActive: false, context: null, selectedIndices: [], tempResult: null, lastInstruction: '' };
-    const defaultConfig = { api1: { url: 'https://b.apiyi.com/v1', key: '', model: 'gpt-4.1-mini' }, api2: { url: 'https://b.apiyi.com/v1', key: '', model: 'gpt-4.1-mini' }, trackedNutrients: ['蛋白质', '维生素D', '鱼油Omega-3', '辅酶Q10'], nutritionTargets: { calories: 2200, protein: 150, carbs: 250, fat: 70 }, userProfile: { height: null, weight: null, age: null, gender: 'male', activityLevel: 1.55 } };
+    // Batch upload state
+    const batchState = {
+      trainingResults: [], // { file, thumbnail, parsed, status: 'pending'|'processing'|'success'|'error', image: { compressed, thumbnail } }
+      mealResults: [],     // { file, thumbnail, parsed, status, image }
+      selectedBatchMealType: null
+    };
+    const defaultConfig = { api1: { url: 'https://b.apiyi.com/v1', key: '', model: 'gemini-3-flash-preview', models: [] }, api2: { url: 'https://b.apiyi.com/v1', key: '', model: 'gemini-3-flash-preview', models: [] }, trackedNutrients: ['蛋白质', '维生素D', '鱼油Omega-3', '辅酶Q10'], nutritionTargets: { calories: 2200, protein: 150, carbs: 250, fat: 70 }, userProfile: { height: null, weight: null, age: null, gender: 'male', activityLevel: 1.55 } };
+
+    // ========== Batch Upload Functions ==========
+    const selectBatchMealType = (type) => {
+      batchState.selectedBatchMealType = type;
+      document.querySelectorAll('.batch-meal-type-btn').forEach(b => {
+        b.classList.toggle('border-pink-500', b.dataset.type === type);
+        b.classList.toggle('bg-pink-50', b.dataset.type === type);
+        b.classList.toggle('border-gray-200', b.dataset.type !== type);
+      });
+    };
+
+    const handleBatchTraining = async (files) => {
+      if (!files.length) return;
+      batchState.trainingResults = [];
+      openModal('batchTrainingModal');
+      const itemsContainer = document.getElementById('batchTrainingItems');
+      const resultsContainer = document.getElementById('batchTrainingResults');
+      const countEl = document.getElementById('batchTrainingCount');
+      resultsContainer.innerHTML = '';
+      itemsContainer.innerHTML = '';
+
+      // Initialize items
+      for (let i = 0; i < files.length; i++) {
+        const thumb = await createThumbnail(files[i], 50);
+        batchState.trainingResults.push({ file: files[i], thumbnail: thumb, parsed: null, status: 'pending', image: null });
+        itemsContainer.innerHTML += `<div id="batch-train-item-${i}" class="batch-item flex items-center gap-2">
+          <img src="${thumb}" class="w-8 h-8 rounded object-cover"/>
+          <span class="text-xs text-gray-600 flex-1 truncate">${files[i].name}</span>
+          <span id="batch-train-status-${i}" class="text-xs text-gray-400">待处理</span>
+        </div>`;
+      }
+      countEl.textContent = `0/${files.length}`;
+
+      // Process sequentially
+      for (let i = 0; i < files.length; i++) {
+        const item = batchState.trainingResults[i];
+        document.getElementById(`batch-train-item-${i}`).classList.add('processing');
+        document.getElementById(`batch-train-status-${i}`).textContent = '分析中...';
+        document.getElementById(`batch-train-status-${i}`).className = 'text-xs text-indigo-600';
+
+        try {
+          const [compressed, thumbnail, base64] = await Promise.all([
+            compressImage(item.file),
+            createThumbnail(item.file),
+            imageToBase64(item.file)
+          ]);
+          item.image = { compressed, thumbnail, base64 };
+
+          const result = await parseTraining(base64, null);
+          let totalVol = 0;
+          result.exercises?.forEach(ex => ex.sets?.forEach(s => totalVol += (s.weight || 0) * (s.reps || 0)));
+          result.totalVolume = totalVol;
+          item.parsed = result;
+          item.status = 'success';
+
+          document.getElementById(`batch-train-item-${i}`).classList.remove('processing');
+          document.getElementById(`batch-train-item-${i}`).classList.add('success');
+          document.getElementById(`batch-train-status-${i}`).textContent = '✓ 完成';
+          document.getElementById(`batch-train-status-${i}`).className = 'text-xs text-emerald-600';
+
+          // Append result with separator
+          if (i > 0) resultsContainer.innerHTML += `<div class="batch-separator"></div>`;
+          resultsContainer.innerHTML += renderBatchTrainingResult(item, i);
+          resultsContainer.scrollTop = resultsContainer.scrollHeight;
+        } catch (e) {
+          item.status = 'error';
+          item.error = e.message;
+          document.getElementById(`batch-train-item-${i}`).classList.remove('processing');
+          document.getElementById(`batch-train-item-${i}`).classList.add('error');
+          document.getElementById(`batch-train-status-${i}`).textContent = '✗ 失败';
+          document.getElementById(`batch-train-status-${i}`).className = 'text-xs text-red-500';
+
+          if (i > 0) resultsContainer.innerHTML += `<div class="batch-separator"></div>`;
+          resultsContainer.innerHTML += `<div class="bg-red-50 rounded-xl p-3 text-red-600 text-sm">图片 ${i + 1} 识别失败: ${e.message}</div>`;
+        }
+        countEl.textContent = `${i + 1}/${files.length}`;
+      }
+
+      // Enable save button if any success
+      if (batchState.trainingResults.some(r => r.status === 'success')) {
+        document.getElementById('saveBatchTraining').disabled = false;
+      }
+    };
+
+    const renderBatchTrainingResult = (item, index) => {
+      const r = item.parsed;
+      return `<div class="bg-indigo-50 rounded-xl p-3" data-batch-train-index="${index}">
+        <div class="flex items-center gap-2 mb-2">
+          <img src="${item.thumbnail}" class="w-10 h-10 rounded object-cover"/>
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-2">
+              <span class="text-sm font-medium">${formatDate(r.date, 'display')}</span>
+              <span class="px-2 py-0.5 bg-indigo-200 text-indigo-700 rounded-full text-xs">${r.targetMuscle || '未知'}</span>
+            </div>
+            <div class="text-xs text-gray-500">${r.duration || '-'} · ${(r.totalVolume / 1000).toFixed(1)}t · ${r.caloriesBurned || 0}kcal</div>
+          </div>
+        </div>
+        <div class="text-xs text-gray-600 max-h-20 overflow-y-auto">
+          ${r.exercises?.map(ex => `<div class="bg-white rounded px-2 py-1 mb-1">${ex.name}: ${ex.sets?.length || 0}组</div>`).join('') || '无动作数据'}
+        </div>
+      </div>`;
+    };
+
+    const handleBatchMeal = async (files) => {
+      if (!files.length) return;
+      batchState.mealResults = [];
+      if (!batchState.selectedBatchMealType) selectBatchMealType(getMealTypeByTime());
+      document.getElementById('batchMealDatePicker').value = formatDate(new Date());
+      openModal('batchMealModal');
+
+      const itemsContainer = document.getElementById('batchMealItems');
+      const resultsContainer = document.getElementById('batchMealResults');
+      const countEl = document.getElementById('batchMealCount');
+      resultsContainer.innerHTML = '';
+      itemsContainer.innerHTML = '';
+
+      // Initialize items
+      for (let i = 0; i < files.length; i++) {
+        const thumb = await createThumbnail(files[i], 50);
+        batchState.mealResults.push({ file: files[i], thumbnail: thumb, parsed: null, status: 'pending', image: null });
+        itemsContainer.innerHTML += `<div id="batch-meal-item-${i}" class="batch-item flex items-center gap-2">
+          <img src="${thumb}" class="w-8 h-8 rounded object-cover"/>
+          <span class="text-xs text-gray-600 flex-1 truncate">${files[i].name}</span>
+          <span id="batch-meal-status-${i}" class="text-xs text-gray-400">待处理</span>
+        </div>`;
+      }
+      countEl.textContent = `0/${files.length}`;
+
+      const cfg = await getConfig();
+
+      // Process sequentially  
+      for (let i = 0; i < files.length; i++) {
+        const item = batchState.mealResults[i];
+        document.getElementById(`batch-meal-item-${i}`).classList.add('processing');
+        document.getElementById(`batch-meal-status-${i}`).textContent = '分析中...';
+        document.getElementById(`batch-meal-status-${i}`).className = 'text-xs text-pink-600';
+
+        try {
+          const [compressed, thumbnail, base64] = await Promise.all([
+            compressImage(item.file),
+            createThumbnail(item.file),
+            imageToBase64(item.file)
+          ]);
+          item.image = { compressed, thumbnail, base64 };
+
+          const result = await parseMeal(base64, cfg.trackedNutrients, null);
+          item.parsed = result;
+          item.status = 'success';
+
+          document.getElementById(`batch-meal-item-${i}`).classList.remove('processing');
+          document.getElementById(`batch-meal-item-${i}`).classList.add('success');
+          document.getElementById(`batch-meal-status-${i}`).textContent = '✓ 完成';
+          document.getElementById(`batch-meal-status-${i}`).className = 'text-xs text-emerald-600';
+
+          // Append result with separator
+          if (i > 0) resultsContainer.innerHTML += `<div class="batch-separator"></div>`;
+          resultsContainer.innerHTML += renderBatchMealResult(item, i);
+          resultsContainer.scrollTop = resultsContainer.scrollHeight;
+        } catch (e) {
+          item.status = 'error';
+          item.error = e.message;
+          document.getElementById(`batch-meal-item-${i}`).classList.remove('processing');
+          document.getElementById(`batch-meal-item-${i}`).classList.add('error');
+          document.getElementById(`batch-meal-status-${i}`).textContent = '✗ 失败';
+          document.getElementById(`batch-meal-status-${i}`).className = 'text-xs text-red-500';
+
+          if (i > 0) resultsContainer.innerHTML += `<div class="batch-separator"></div>`;
+          resultsContainer.innerHTML += `<div class="bg-red-50 rounded-xl p-3 text-red-600 text-sm">图片 ${i + 1} 识别失败: ${e.message}</div>`;
+        }
+        countEl.textContent = `${i + 1}/${files.length}`;
+      }
+
+      // Enable save button if any success
+      if (batchState.mealResults.some(r => r.status === 'success')) {
+        document.getElementById('saveBatchMeal').disabled = false;
+      }
+    };
+
+    const renderBatchMealResult = (item, index) => {
+      const r = item.parsed;
+      const sum = r.summary || {};
+      return `<div class="bg-pink-50 rounded-xl p-3" data-batch-meal-index="${index}">
+        <div class="flex items-center gap-2 mb-2">
+          <img src="${item.thumbnail}" class="w-10 h-10 rounded object-cover"/>
+          <div class="flex-1 min-w-0">
+            <div class="font-medium text-sm text-pink-600">${Math.round(sum.totalCalories) || 0} 千卡</div>
+            <div class="text-xs text-gray-500">蛋白${Math.round(sum.totalProtein) || 0}g · 碳水${Math.round(sum.totalCarbs) || 0}g · 脂肪${Math.round(sum.totalFat) || 0}g</div>
+          </div>
+        </div>
+        <div class="text-xs text-gray-600 max-h-20 overflow-y-auto">
+          ${r.foods?.map(f => `<div class="bg-white rounded px-2 py-1 mb-1">${f.name} ${f.grams}g · ${f.calories}kcal</div>`).join('') || '无食物数据'}
+        </div>
+      </div>`;
+    };
+
+    const saveBatchTraining = async () => {
+      const successItems = batchState.trainingResults.filter(r => r.status === 'success');
+      if (!successItems.length) return;
+
+      let saved = 0;
+      for (const item of successItems) {
+        try {
+          await db.trainings.add({
+            date: item.parsed.date,
+            targetMuscle: item.parsed.targetMuscle,
+            duration: item.parsed.duration,
+            caloriesBurned: item.parsed.caloriesBurned,
+            totalVolume: item.parsed.totalVolume,
+            exercises: item.parsed.exercises,
+            thumbnail: item.image.thumbnail
+          });
+          saved++;
+        } catch (e) { console.error('保存训练失败:', e); }
+      }
+      showToast(`已保存 ${saved} 条训练记录`, 'success');
+      closeModal('batchTrainingModal');
+      batchState.trainingResults = [];
+      document.getElementById('saveBatchTraining').disabled = true;
+      renderTrainingList();
+    };
+
+    const saveBatchMeal = async () => {
+      const successItems = batchState.mealResults.filter(r => r.status === 'success');
+      if (!successItems.length) return;
+
+      const mealDate = document.getElementById('batchMealDatePicker').value || formatDate(new Date());
+      const mealType = batchState.selectedBatchMealType || getMealTypeByTime();
+
+      let saved = 0;
+      for (const item of successItems) {
+        const sum = item.parsed.summary || {};
+        try {
+          await db.meals.add({
+            date: mealDate,
+            mealType: mealType,
+            foods: item.parsed.foods,
+            totalCalories: sum.totalCalories || 0,
+            totalProtein: sum.totalProtein || 0,
+            totalCarbs: sum.totalCarbs || 0,
+            totalFat: sum.totalFat || 0,
+            thumbnail: item.image.thumbnail
+          });
+          saved++;
+        } catch (e) { console.error('保存饮食失败:', e); }
+      }
+      showToast(`已保存 ${saved} 条饮食记录`, 'success');
+      closeModal('batchMealModal');
+      batchState.mealResults = [];
+      document.getElementById('saveBatchMeal').disabled = true;
+      renderMealList();
+    };
 
     const formatDate = (date, fmt = 'YYYY-MM-DD') => { const d = new Date(date), y = d.getFullYear(), m = String(d.getMonth() + 1).padStart(2, '0'), day = String(d.getDate()).padStart(2, '0'); if (fmt === 'YYYY-MM-DD') return `${y}-${m}-${day}`; if (fmt === 'MM-DD') return `${m}-${day}`; if (fmt === 'display') return `${m}月${day}日`; if (fmt === 'month') return `${y}年${m}月`; return `${y}-${m}-${day}`; };
     const getWeekDates = () => { const today = new Date(), dow = today.getDay() || 7, mon = new Date(today); mon.setDate(today.getDate() - dow + 1); return Array.from({ length: 7 }, (_, i) => { const d = new Date(mon); d.setDate(mon.getDate() + i); return formatDate(d); }); };
@@ -1147,9 +1640,10 @@
 
     const callAI = async (messages, retry = true) => {
       const cfg = await getConfig();
+      const modelToUse = state.selectedModel || cfg.api1.model;
       const tryAPI = async api => {
         if (!api.key) throw new Error('API Key 未配置');
-        const r = await fetch(`${api.url}/chat/completions`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${api.key}` }, body: JSON.stringify({ model: api.model, messages, max_tokens: 4096, stream: true }) });
+        const r = await fetch(`${api.url}/chat/completions`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${api.key}` }, body: JSON.stringify({ model: modelToUse, messages, max_tokens: 4096, stream: true }) });
         if (!r.ok) throw new Error(`API Error: ${r.status}`);
         return r;
       };
@@ -1165,16 +1659,30 @@
       return full;
     };
 
-    const parseTraining = async base64 => {
+    const parseTraining = async (base64, onStream) => {
       const prompt = `请识别这张"训记"APP的训练截图。重要：只关注**加粗黑色文字**（实际训练数据），忽略浅色灰色文字（模板）。请以JSON格式返回（无其他文字）：{"date":"YYYY-MM-DD","targetMuscle":"背/胸/肩/腿","duration":"1h18m","caloriesBurned":278,"totalVolume":10490,"exercises":[{"name":"动作名","sets":[{"weight":100,"reps":12}]}]}`;
       const r = await callAI([{ role: 'user', content: [{ type: 'text', text: prompt }, { type: 'image_url', image_url: { url: base64 } }] }]);
-      let result = ''; await streamAI(r, (_, f) => result = f); const m = result.match(/\{[\s\S]*\}/); if (m) return JSON.parse(m[0]); throw new Error('无法解析训练数据');
+      let result = '';
+      await streamAI(r, (chunk, full) => {
+        result = full;
+        if (onStream) onStream(chunk, full);
+      });
+      const m = result.match(/\{[\s\S]*\}/);
+      if (m) return JSON.parse(m[0]);
+      throw new Error('无法解析训练数据');
     };
 
-    const parseMeal = async (base64, nutrients) => {
+    const parseMeal = async (base64, nutrients, onStream) => {
       const prompt = `请识别这张食物照片，分析食物和营养。以JSON格式返回：{"foods":[{"name":"食物名","grams":100,"calories":150,"protein":10,"carbs":20,"fat":5,"customNutrients":{"维生素D":"0.5μg"}}],"summary":{"totalCalories":500,"totalProtein":30,"totalCarbs":60,"totalFat":15}}。用户关注营养素：${nutrients.join('、')}`;
       const r = await callAI([{ role: 'user', content: [{ type: 'text', text: prompt }, { type: 'image_url', image_url: { url: base64 } }] }]);
-      let result = ''; await streamAI(r, (_, f) => result = f); const m = result.match(/\{[\s\S]*\}/); if (m) return JSON.parse(m[0]); throw new Error('无法识别食物');
+      let result = '';
+      await streamAI(r, (chunk, full) => {
+        result = full;
+        if (onStream) onStream(chunk, full);
+      });
+      const m = result.match(/\{[\s\S]*\}/);
+      if (m) return JSON.parse(m[0]);
+      throw new Error('无法识别食物');
     };
 
     const agentTools = {
@@ -1422,10 +1930,11 @@ ReAct格式(每步必须包含图标):
     const renderSettings = async () => {
       const cfg = await getConfig();
       document.getElementById('apiUrl1').value = cfg.api1.url; document.getElementById('apiKey1').value = cfg.api1.key; document.getElementById('apiModel1').value = cfg.api1.model;
+      document.getElementById('apiModels1').value = (cfg.api1.models || []).join(', ');
       document.getElementById('apiUrl2').value = cfg.api2.url; document.getElementById('apiKey2').value = cfg.api2.key; document.getElementById('apiModel2').value = cfg.api2.model;
+      document.getElementById('apiModels2').value = (cfg.api2.models || []).join(', ');
       document.getElementById('targetCalories').value = cfg.nutritionTargets.calories; document.getElementById('targetProtein').value = cfg.nutritionTargets.protein; document.getElementById('targetCarbs').value = cfg.nutritionTargets.carbs; document.getElementById('targetFat').value = cfg.nutritionTargets.fat;
       renderNutrientTags(cfg.trackedNutrients);
-      // Load user profile
       if (cfg.userProfile) {
         if (cfg.userProfile.height) document.getElementById('userHeight').value = cfg.userProfile.height;
         if (cfg.userProfile.weight) document.getElementById('userWeight').value = cfg.userProfile.weight;
@@ -1433,14 +1942,66 @@ ReAct格式(每步必须包含图标):
         document.getElementById('userGender').value = cfg.userProfile.gender || 'male';
         document.getElementById('activityLevel').value = cfg.userProfile.activityLevel || 1.55;
       }
-      // Initialize pie chart
       const t = cfg.nutritionTargets;
       updateMacroPieChart(t.protein * 4, t.carbs * 4, t.fat * 9, t.calories);
+      // Set initial selected model
+      if (!state.selectedModel) state.selectedModel = cfg.api1.model;
+      updateModelDisplay();
     };
 
     const renderNutrientTags = nutrients => { document.getElementById('nutrientTags').innerHTML = nutrients.map((n, i) => `<span class="inline-flex items-center gap-1 px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-sm">${n}<button onclick="removeNutrient(${i})" class="ml-1 hover:text-emerald-900">×</button></span>`).join(''); };
     const removeNutrient = async i => { const cfg = await getConfig(); cfg.trackedNutrients.splice(i, 1); await saveConfig(cfg); renderNutrientTags(cfg.trackedNutrients); };
     const addNutrientHandler = async () => { const input = document.getElementById('newNutrient'), name = input.value.trim(); if (!name) return; const cfg = await getConfig(); if (!cfg.trackedNutrients.includes(name)) { cfg.trackedNutrients.push(name); await saveConfig(cfg); renderNutrientTags(cfg.trackedNutrients); } input.value = ''; };
+
+    // Model selector functions
+    const updateModelDisplay = () => {
+      const display = document.getElementById('currentModelDisplay');
+      if (display && state.selectedModel) {
+        // Truncate long model names
+        const name = state.selectedModel.length > 16 ? state.selectedModel.slice(0, 14) + '...' : state.selectedModel;
+        display.textContent = name;
+      }
+    };
+
+    const populateModelList = async () => {
+      const cfg = await getConfig();
+      const allModels = new Set();
+      // Add default models
+      if (cfg.api1.model) allModels.add(cfg.api1.model);
+      if (cfg.api2.model) allModels.add(cfg.api2.model);
+      // Add configured model lists
+      (cfg.api1.models || []).forEach(m => allModels.add(m));
+      (cfg.api2.models || []).forEach(m => allModels.add(m));
+
+      const listEl = document.getElementById('modelList');
+      if (allModels.size === 0) {
+        listEl.innerHTML = '<div class="px-3 py-2 text-xs text-gray-400">请在设置中配置模型</div>';
+        return;
+      }
+
+      listEl.innerHTML = [...allModels].map(m => `
+        <button onclick="selectModel('${m}')" class="w-full text-left px-3 py-2 text-xs hover:bg-indigo-50 transition-colors ${state.selectedModel === m ? 'bg-indigo-100 text-indigo-700 font-medium' : 'text-gray-700'}">
+          ${state.selectedModel === m ? '✓ ' : ''}${m}
+        </button>
+      `).join('');
+    };
+
+    const selectModel = (model) => {
+      state.selectedModel = model;
+      updateModelDisplay();
+      document.getElementById('modelDropdown').classList.add('hidden');
+      showToast(`已切换到 ${model}`, 'info');
+    };
+
+    const toggleModelDropdown = async () => {
+      const dropdown = document.getElementById('modelDropdown');
+      if (dropdown.classList.contains('hidden')) {
+        await populateModelList();
+        dropdown.classList.remove('hidden');
+      } else {
+        dropdown.classList.add('hidden');
+      }
+    };
 
     const updateMacroPieChart = (protCal, carbCal, fatCal, total) => {
       if (!total || total <= 0) return;
@@ -1578,39 +2139,121 @@ ReAct格式(每步必须包含图标):
     const closeModal = id => { document.getElementById(id).classList.remove('show'); document.body.style.overflow = ''; };
 
     const handleTrainingImage = async file => {
-      const compressed = await compressImage(file), thumbnail = await createThumbnail(file), base64 = await imageToBase64(compressed);
+      // Show original image immediately
+      const originalUrl = URL.createObjectURL(file);
+      document.getElementById('trainingImagePreview').classList.remove('hidden');
+      document.getElementById('trainingPreviewImg').src = originalUrl;
+      document.getElementById('trainingLoading').classList.remove('hidden');
+      document.getElementById('trainingParseResult').classList.add('hidden');
+      document.getElementById('trainingStreamText').textContent = '';
+
+      // Compress in background while showing loading
+      const [compressed, thumbnail, base64] = await Promise.all([
+        compressImage(file),
+        createThumbnail(file),
+        imageToBase64(file) // Use original for AI parsing
+      ]);
       state.currentTrainingImage = { compressed, thumbnail, base64 };
-      document.getElementById('trainingImagePreview').classList.remove('hidden'); document.getElementById('trainingPreviewImg').src = base64;
-      document.getElementById('trainingLoading').classList.remove('hidden'); document.getElementById('trainingParseResult').classList.add('hidden');
+      URL.revokeObjectURL(originalUrl);
+
       try {
-        const result = await parseTraining(base64); state.parsedTraining = result;
-        let totalVol = 0; result.exercises?.forEach(ex => ex.sets?.forEach(s => totalVol += (s.weight || 0) * (s.reps || 0))); result.totalVolume = totalVol;
-        document.getElementById('parsedTrainingDate').textContent = formatDate(result.date, 'display'); document.getElementById('parsedTrainingMuscle').textContent = result.targetMuscle;
-        document.getElementById('parsedDuration').textContent = result.duration || '-'; document.getElementById('parsedVolume').textContent = `${(totalVol / 1000).toFixed(1)}t`; document.getElementById('parsedCalories').textContent = `${result.caloriesBurned || 0}kcal`;
-        document.getElementById('exerciseList').innerHTML = result.exercises?.map((ex, i) => { const exVol = ex.sets?.reduce((s, set) => s + (set.weight || 0) * (set.reps || 0), 0) || 0; return `<div class="bg-white rounded-xl p-3 border item-selectable" data-exercise-index="${i}" onclick="handleExerciseItemClick(${i})"><div class="flex items-center justify-between mb-2"><span class="font-medium text-sm">${ex.name}</span><span class="text-xs text-gray-500">${(exVol / 1000).toFixed(1)}t</span></div><div class="flex flex-wrap gap-1">${ex.sets?.map(s => `<span class="px-2 py-0.5 bg-gray-100 rounded text-xs">${s.weight}kg×${s.reps}</span>`).join('') || ''}</div></div>`; }).join('') || '';
-        document.getElementById('trainingLoading').classList.add('hidden'); document.getElementById('trainingParseResult').classList.remove('hidden'); document.getElementById('saveTraining').disabled = false;
-        // Show quick edit mascot button
+        const streamEl = document.getElementById('trainingStreamText');
+        const result = await parseTraining(base64, (chunk, full) => {
+          streamEl.textContent = full;
+          streamEl.scrollTop = streamEl.scrollHeight;
+        });
+        state.parsedTraining = result;
+        let totalVol = 0;
+        result.exercises?.forEach(ex => ex.sets?.forEach(s => totalVol += (s.weight || 0) * (s.reps || 0)));
+        result.totalVolume = totalVol;
+        document.getElementById('parsedTrainingDate').textContent = formatDate(result.date, 'display');
+        document.getElementById('parsedTrainingMuscle').textContent = result.targetMuscle;
+        document.getElementById('parsedDuration').textContent = result.duration || '-';
+        document.getElementById('parsedVolume').textContent = `${(totalVol / 1000).toFixed(1)}t`;
+        document.getElementById('parsedCalories').textContent = `${result.caloriesBurned || 0}kcal`;
+        renderExerciseList();
+        document.getElementById('trainingLoading').classList.add('hidden');
+        document.getElementById('trainingParseResult').classList.remove('hidden');
+        document.getElementById('saveTraining').disabled = false;
         document.getElementById('trainingModalAiBtn').classList.remove('hidden');
-      } catch (e) { console.error(e); showToast('识别失败: ' + e.message, 'error'); document.getElementById('trainingLoading').classList.add('hidden'); }
+      } catch (e) {
+        console.error(e);
+        showToast('识别失败: ' + e.message, 'error');
+        document.getElementById('trainingLoading').classList.add('hidden');
+      }
     };
 
     const handleMealImage = async file => {
-      const compressed = await compressImage(file), thumbnail = await createThumbnail(file), base64 = await imageToBase64(compressed);
-      state.currentMealImage = { compressed, thumbnail, base64 };
-      document.getElementById('mealImagePreview').classList.remove('hidden'); document.getElementById('mealPreviewImg').src = base64;
-      document.getElementById('mealLoading').classList.remove('hidden'); document.getElementById('mealParseResult').classList.add('hidden');
+      // Show original image immediately
+      const originalUrl = URL.createObjectURL(file);
+      document.getElementById('mealImagePreview').classList.remove('hidden');
+      document.getElementById('mealPreviewImg').src = originalUrl;
+      document.getElementById('mealLoading').classList.remove('hidden');
+      document.getElementById('mealParseResult').classList.add('hidden');
+      document.getElementById('mealStreamText').textContent = '';
+      document.getElementById('mealDatePicker').value = formatDate(new Date());
       selectMealType(getMealTypeByTime());
+
+      // Compress in background while AI parsing
+      const [compressed, thumbnail, base64] = await Promise.all([
+        compressImage(file),
+        createThumbnail(file),
+        imageToBase64(file) // Use original for AI parsing
+      ]);
+      state.currentMealImage = { compressed, thumbnail, base64 };
+      URL.revokeObjectURL(originalUrl);
+
       try {
-        const cfg = await getConfig(), result = await parseMeal(base64, cfg.trackedNutrients); state.parsedMeal = result; renderParsedMeal(result);
-        document.getElementById('mealLoading').classList.add('hidden'); document.getElementById('mealParseResult').classList.remove('hidden'); document.getElementById('saveMeal').disabled = false;
-        // Show quick edit mascot button
+        const cfg = await getConfig();
+        const streamEl = document.getElementById('mealStreamText');
+        const result = await parseMeal(base64, cfg.trackedNutrients, (chunk, full) => {
+          streamEl.textContent = full;
+          streamEl.scrollTop = streamEl.scrollHeight;
+        });
+        state.parsedMeal = result;
+        renderParsedMeal(result);
+        document.getElementById('mealLoading').classList.add('hidden');
+        document.getElementById('mealParseResult').classList.remove('hidden');
+        document.getElementById('saveMeal').disabled = false;
         document.getElementById('mealModalAiBtn').classList.remove('hidden');
-      } catch (e) { console.error(e); showToast('识别失败: ' + e.message, 'error'); document.getElementById('mealLoading').classList.add('hidden'); }
+      } catch (e) {
+        console.error(e);
+        showToast('识别失败: ' + e.message, 'error');
+        document.getElementById('mealLoading').classList.add('hidden');
+      }
     };
 
     const renderParsedMeal = result => {
-      const sum = result.summary || {}; document.getElementById('mealTotalCalories').textContent = `${sum.totalCalories || 0} 千卡`; document.getElementById('mealTotalProtein').textContent = `${sum.totalProtein || 0}g`; document.getElementById('mealTotalCarbs').textContent = `${sum.totalCarbs || 0}g`; document.getElementById('mealTotalFat').textContent = `${sum.totalFat || 0}g`;
-      document.getElementById('foodList').innerHTML = result.foods?.map((f, i) => `<div class="bg-white rounded-xl p-4 border item-selectable ${editState.selectedIndices.includes(i) ? 'item-selected' : ''}" data-food-index="${i}" onclick="handleFoodItemClick(${i})"><div class="flex items-center justify-between mb-3"><span class="font-medium">${f.name}</span><span class="text-sm text-pink-600 font-bold">${f.calories} kcal</span></div><div class="mb-3"><div class="flex items-center justify-between mb-1"><span class="text-sm text-gray-500">克数</span><span class="text-sm font-medium food-grams">${f.grams}g</span></div><input type="range" class="food-slider w-full" min="${Math.max(0, f.grams - 100)}" max="${f.grams + 100}" value="${f.grams}" step="5" style="--progress:${((f.grams - Math.max(0, f.grams - 100)) / 200) * 100}%" oninput="adjustFoodGrams(${i},this.value)" onclick="event.stopPropagation()"></div><div class="grid grid-cols-3 gap-2 text-center text-xs"><div class="bg-emerald-50 rounded-lg p-1"><div class="font-medium text-emerald-600 food-protein">${f.protein}g</div><div class="text-gray-500">蛋白</div></div><div class="bg-amber-50 rounded-lg p-1"><div class="font-medium text-amber-600 food-carbs">${f.carbs}g</div><div class="text-gray-500">碳水</div></div><div class="bg-blue-50 rounded-lg p-1"><div class="font-medium text-blue-600 food-fat">${f.fat}g</div><div class="text-gray-500">脂肪</div></div></div></div>`).join('') || '';
+      const sum = result.summary || {};
+      document.getElementById('mealTotalCalories').textContent = `${Math.round(sum.totalCalories) || 0} 千卡`;
+      document.getElementById('mealTotalProtein').textContent = `${Math.round(sum.totalProtein) || 0}g`;
+      document.getElementById('mealTotalCarbs').textContent = `${Math.round(sum.totalCarbs) || 0}g`;
+      document.getElementById('mealTotalFat').textContent = `${Math.round(sum.totalFat) || 0}g`;
+      document.getElementById('foodList').innerHTML = result.foods?.map((f, i) => `
+        <div class="bg-white rounded-xl p-4 border item-selectable ${editState.selectedIndices.includes(i) ? 'item-selected' : ''}" data-food-index="${i}" onclick="handleFoodItemClick(${i})">
+          <div class="flex items-center justify-between mb-3">
+            <input type="text" class="font-medium bg-transparent border-none outline-none flex-1 min-w-0" value="${f.name}" onclick="event.stopPropagation()" onchange="editFoodName(${i}, this.value)">
+            <div class="flex items-center gap-2 ml-2">
+              <span class="text-sm text-pink-600 font-bold whitespace-nowrap">${f.calories} kcal</span>
+              <button onclick="event.stopPropagation(); deleteFood(${i})" class="p-1 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors" title="删除">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+              </button>
+            </div>
+          </div>
+          <div class="mb-3">
+            <div class="flex items-center justify-between mb-1">
+              <span class="text-sm text-gray-500">克数</span>
+              <span class="text-sm font-medium food-grams">${f.grams}g</span>
+            </div>
+            <input type="range" class="food-slider w-full" min="${Math.max(0, f.grams - 100)}" max="${f.grams + 100}" value="${f.grams}" step="5" style="--progress:${((f.grams - Math.max(0, f.grams - 100)) / 200) * 100}%" oninput="adjustFoodGrams(${i},this.value)" onclick="event.stopPropagation()">
+          </div>
+          <div class="grid grid-cols-3 gap-2 text-center text-xs">
+            <div class="bg-emerald-50 rounded-lg p-1"><div class="font-medium text-emerald-600 food-protein">${f.protein}g</div><div class="text-gray-500">蛋白</div></div>
+            <div class="bg-amber-50 rounded-lg p-1"><div class="font-medium text-amber-600 food-carbs">${f.carbs}g</div><div class="text-gray-500">碳水</div></div>
+            <div class="bg-blue-50 rounded-lg p-1"><div class="font-medium text-blue-600 food-fat">${f.fat}g</div><div class="text-gray-500">脂肪</div></div>
+          </div>
+        </div>
+      `).join('') || '';
     };
 
     const adjustFoodGrams = (i, newGrams) => {
@@ -1619,10 +2262,68 @@ ReAct格式(每步必须包含图标):
       f.originalCalories = f.originalCalories || f.calories / ratio; f.originalProtein = f.originalProtein || f.protein / ratio; f.originalCarbs = f.originalCarbs || f.carbs / ratio; f.originalFat = f.originalFat || f.fat / ratio;
       const c = document.querySelector(`[data-food-index="${i}"]`); if (c) { c.querySelector('.food-grams').textContent = `${f.grams}g`; c.querySelector('.food-protein').textContent = `${f.protein}g`; c.querySelector('.food-carbs').textContent = `${f.carbs}g`; c.querySelector('.food-fat').textContent = `${f.fat}g`; const sl = c.querySelector('.food-slider'), min = parseInt(sl.min), max = parseInt(sl.max); sl.style.setProperty('--progress', `${((newGrams - min) / (max - min)) * 100}%`); }
       const sum = state.parsedMeal.foods.reduce((a, fd) => ({ totalCalories: a.totalCalories + fd.calories, totalProtein: a.totalProtein + fd.protein, totalCarbs: a.totalCarbs + fd.carbs, totalFat: a.totalFat + fd.fat }), { totalCalories: 0, totalProtein: 0, totalCarbs: 0, totalFat: 0 }); state.parsedMeal.summary = sum;
-      document.getElementById('mealTotalCalories').textContent = `${sum.totalCalories} 千卡`; document.getElementById('mealTotalProtein').textContent = `${sum.totalProtein}g`; document.getElementById('mealTotalCarbs').textContent = `${sum.totalCarbs}g`; document.getElementById('mealTotalFat').textContent = `${sum.totalFat}g`;
+      document.getElementById('mealTotalCalories').textContent = `${Math.round(sum.totalCalories)} 千卡`; document.getElementById('mealTotalProtein').textContent = `${Math.round(sum.totalProtein)}g`; document.getElementById('mealTotalCarbs').textContent = `${Math.round(sum.totalCarbs)}g`; document.getElementById('mealTotalFat').textContent = `${Math.round(sum.totalFat)}g`;
     };
 
     const selectMealType = type => { state.selectedMealType = type; document.querySelectorAll('.meal-type-btn').forEach(b => { b.classList.toggle('border-pink-500', b.dataset.type === type); b.classList.toggle('bg-pink-50', b.dataset.type === type); b.classList.toggle('border-gray-200', b.dataset.type !== type); }); };
+
+    // Manual edit functions for food items
+    const editFoodName = (i, newName) => {
+      if (!state.parsedMeal?.foods?.[i]) return;
+      state.parsedMeal.foods[i].name = newName.trim() || state.parsedMeal.foods[i].name;
+    };
+
+    const deleteFood = (i) => {
+      if (!state.parsedMeal?.foods) return;
+      state.parsedMeal.foods.splice(i, 1);
+      // Recalculate summary
+      const sum = state.parsedMeal.foods.reduce((a, f) => ({
+        totalCalories: a.totalCalories + (f.calories || 0),
+        totalProtein: a.totalProtein + (f.protein || 0),
+        totalCarbs: a.totalCarbs + (f.carbs || 0),
+        totalFat: a.totalFat + (f.fat || 0)
+      }), { totalCalories: 0, totalProtein: 0, totalCarbs: 0, totalFat: 0 });
+      state.parsedMeal.summary = sum;
+      renderParsedMeal(state.parsedMeal);
+      showToast('已删除', 'info');
+    };
+
+    // Render exercise list with edit/delete
+    const renderExerciseList = () => {
+      if (!state.parsedTraining?.exercises) return;
+      document.getElementById('exerciseList').innerHTML = state.parsedTraining.exercises.map((ex, i) => {
+        const exVol = ex.sets?.reduce((s, set) => s + (set.weight || 0) * (set.reps || 0), 0) || 0;
+        return `<div class="bg-white rounded-xl p-3 border item-selectable ${editState.selectedIndices.includes(i) ? 'item-selected' : ''}" data-exercise-index="${i}" onclick="handleExerciseItemClick(${i})">
+          <div class="flex items-center justify-between mb-2">
+            <input type="text" class="font-medium text-sm bg-transparent border-none outline-none flex-1 min-w-0" value="${ex.name}" onclick="event.stopPropagation()" onchange="editExerciseName(${i}, this.value)">
+            <div class="flex items-center gap-2 ml-2">
+              <span class="text-xs text-gray-500 whitespace-nowrap">${(exVol / 1000).toFixed(1)}t</span>
+              <button onclick="event.stopPropagation(); deleteExercise(${i})" class="p-1 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors" title="删除">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+              </button>
+            </div>
+          </div>
+          <div class="flex flex-wrap gap-1">${ex.sets?.map(s => `<span class="px-2 py-0.5 bg-gray-100 rounded text-xs">${s.weight}kg×${s.reps}</span>`).join('') || ''}</div>
+        </div>`;
+      }).join('') || '';
+    };
+
+    const editExerciseName = (i, newName) => {
+      if (!state.parsedTraining?.exercises?.[i]) return;
+      state.parsedTraining.exercises[i].name = newName.trim() || state.parsedTraining.exercises[i].name;
+    };
+
+    const deleteExercise = (i) => {
+      if (!state.parsedTraining?.exercises) return;
+      state.parsedTraining.exercises.splice(i, 1);
+      // Recalculate total volume
+      let totalVol = 0;
+      state.parsedTraining.exercises.forEach(ex => ex.sets?.forEach(s => totalVol += (s.weight || 0) * (s.reps || 0)));
+      state.parsedTraining.totalVolume = totalVol;
+      document.getElementById('parsedVolume').textContent = `${(totalVol / 1000).toFixed(1)}t`;
+      renderExerciseList();
+      showToast('已删除', 'info');
+    };
 
     // ========== Quick Edit Agent Functions ==========
     const handleFoodItemClick = (index) => {
@@ -1812,11 +2513,7 @@ ${editState.context === 'meal' ? '5. 食物数据包含: name, grams, calories, 
         sourceData.forEach(ex => ex.sets?.forEach(s => totalVol += (s.weight || 0) * (s.reps || 0)));
         state.parsedTraining.totalVolume = totalVol;
         document.getElementById('parsedVolume').textContent = `${(totalVol / 1000).toFixed(1)}t`;
-        // Re-render exercise list
-        document.getElementById('exerciseList').innerHTML = sourceData.map((ex, i) => {
-          const exVol = ex.sets?.reduce((s, set) => s + (set.weight || 0) * (set.reps || 0), 0) || 0;
-          return `<div class="bg-white rounded-xl p-3 border item-selectable" data-exercise-index="${i}" onclick="handleExerciseItemClick(${i})"><div class="flex items-center justify-between mb-2"><span class="font-medium text-sm">${ex.name}</span><span class="text-xs text-gray-500">${(exVol / 1000).toFixed(1)}t</span></div><div class="flex flex-wrap gap-1">${ex.sets?.map(s => `<span class="px-2 py-0.5 bg-gray-100 rounded text-xs">${s.weight}kg×${s.reps}</span>`).join('') || ''}</div></div>`;
-        }).join('') || '';
+        renderExerciseList();
       }
 
       showToast('已更新数据', 'success');
@@ -1842,7 +2539,8 @@ ${editState.context === 'meal' ? '5. 食物数据包含: name, grams, calories, 
 
     const saveMealRecord = async () => {
       if (!state.parsedMeal || !state.selectedMealType) return; const sum = state.parsedMeal.summary || {};
-      const rec = { date: formatDate(new Date()), mealType: state.selectedMealType, foods: state.parsedMeal.foods, totalCalories: sum.totalCalories || 0, totalProtein: sum.totalProtein || 0, totalCarbs: sum.totalCarbs || 0, totalFat: sum.totalFat || 0, thumbnail: state.currentMealImage?.thumbnail, createdAt: new Date().toISOString() };
+      const selectedDate = document.getElementById('mealDatePicker').value || formatDate(new Date());
+      const rec = { date: selectedDate, mealType: state.selectedMealType, foods: state.parsedMeal.foods, totalCalories: Math.round(sum.totalCalories) || 0, totalProtein: Math.round(sum.totalProtein) || 0, totalCarbs: Math.round(sum.totalCarbs) || 0, totalFat: Math.round(sum.totalFat) || 0, thumbnail: state.currentMealImage?.thumbnail, createdAt: new Date().toISOString() };
       await db.meals.add(rec); showToast('饮食记录已保存', 'success'); closeModal('mealModal');
       state.parsedMeal = null; state.currentMealImage = null; state.selectedMealType = null; document.getElementById('mealImagePreview').classList.add('hidden'); document.getElementById('mealParseResult').classList.add('hidden'); document.getElementById('saveMeal').disabled = true; switchPage('nutrition');
     };
@@ -1898,7 +2596,7 @@ ${editState.context === 'meal' ? '5. 食物数据包含: name, grams, calories, 
       const isDeepMode = state.aiMode === 'deep';
 
       if (isDeepMode) {
-        chatMsgs.innerHTML += `<div id="${containerId}" class="step-container max-w-[85%]"></div>`;
+        chatMsgs.innerHTML += `<div id="${containerId}" class="step-container max-w-[85%]"></div><div id="${containerId}-thinking" class="thinking-dots"><span></span><span></span><span></span></div>`;
       } else {
         chatMsgs.innerHTML += `<div id="${containerId}" class="chat-bubble ai p-4"><div class="flex items-center gap-2"><div class="loader"></div><span class="text-gray-500">思考中...</span></div></div>`;
       }
@@ -1995,18 +2693,32 @@ ${editState.context === 'meal' ? '5. 食物数据包含: name, grams, calories, 
               const iconMatch = c.match(/图标[:：]\s*([\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]+)/u);
               if (iconMatch) {
                 stepData[turn - 1].stepIcon = iconMatch[1].trim();
-                console.log('[Icon Parsed]', iconMatch[1]);
               }
+
+              // Extract thinking summary for collapsed view
               const thinkMatch = c.match(/思考[:：]\s*([^\n]+)/);
-              const stepIcon = stepData[turn - 1].stepIcon;
-              let html = '<div class="space-y-2">';
               if (thinkMatch) {
-                const thinkText = thinkMatch[1].trim();
-                html += `<div class="text-xs text-gray-600 flex items-center gap-2"><span class="step-icon">${stepIcon}</span><span>${thinkText}</span></div>`;
-                // Store thinking for collapsed summary (truncate to 40 chars)
-                stepData[turn - 1].thinkingSummary = thinkText.length > 40 ? thinkText.slice(0, 40) + '...' : thinkText;
+                stepData[turn - 1].thinkingSummary = thinkMatch[1].trim();
+              } else if (c.length > 10) {
+                // Use first line as summary if no explicit thinking
+                const firstLine = c.split('\n')[0].slice(0, 60);
+                stepData[turn - 1].thinkingSummary = firstLine + (firstLine.length >= 60 ? '...' : '');
               }
-              html += '</div>';
+
+              // Render full content with markdown
+              const renderMd = text => text
+                .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+                .replace(/\*(.+?)\*/g, '<em>$1</em>')
+                .replace(/^### (.+)$/gm, '<h4 class="font-bold text-sm mt-2 mb-1">$1</h4>')
+                .replace(/^## (.+)$/gm, '<h3 class="font-bold text-base mt-2 mb-1">$1</h3>')
+                .replace(/^\* (.+)$/gm, '<li class="ml-3 list-disc text-xs">$1</li>')
+                .replace(/^\- (.+)$/gm, '<li class="ml-3 list-disc text-xs">$1</li>')
+                .replace(/\n/g, '<br>');
+
+              const stepIcon = stepData[turn - 1].stepIcon;
+              const html = `<div class="space-y-2">
+                <div class="text-xs text-gray-700 leading-relaxed">${renderMd(c)}</div>
+              </div>`;
               stepEl.innerHTML = html;
               stepData[turn - 1].fullHtml = html;
             } else if (chunk.type === 'tool_call') {
@@ -2049,9 +2761,21 @@ ${editState.context === 'meal' ? '5. 食物数据包含: name, grams, calories, 
                 // Click handler managed by event delegation
               }
 
-              // Add final answer as main bubble
-              const finalHtml = `<div class="step-bubble current" style="background:linear-gradient(135deg,#f0f9ff 0%,#e0f2fe 100%);border-left:3px solid #0ea5e9;"><div class="font-medium text-sm text-sky-700 mb-2">📋 综合分析结果</div><div class="text-sm">${chunk.full.replace(/\n/g, '<br>')}</div></div>`;
+              // Add final answer as main bubble with markdown rendering
+              const renderMd = text => text
+                .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+                .replace(/\*(.+?)\*/g, '<em>$1</em>')
+                .replace(/^### (.+)$/gm, '<h4 class="font-bold text-base mt-3 mb-1">$1</h4>')
+                .replace(/^## (.+)$/gm, '<h3 class="font-bold text-lg mt-4 mb-2">$1</h3>')
+                .replace(/^# (.+)$/gm, '<h2 class="font-bold text-xl mt-4 mb-2">$1</h2>')
+                .replace(/^\* (.+)$/gm, '<li class="ml-4 list-disc">$1</li>')
+                .replace(/^\- (.+)$/gm, '<li class="ml-4 list-disc">$1</li>')
+                .replace(/\n/g, '<br>');
+              const finalHtml = `<div class="step-bubble current" style="background:linear-gradient(135deg,#f0f9ff 0%,#e0f2fe 100%);border-left:3px solid #0ea5e9;"><div class="font-medium text-sm text-sky-700 mb-2">📋 综合分析结果</div><div class="text-sm leading-relaxed">${renderMd(chunk.full)}</div></div>`;
               container.innerHTML += finalHtml;
+              // Remove thinking dots
+              const thinkingEl = document.getElementById(`${containerId}-thinking`);
+              if (thinkingEl) thinkingEl.remove();
               state.chatHistory.push({ role: 'assistant', content: chunk.full });
             }
           } else {
@@ -2080,6 +2804,9 @@ ${editState.context === 'meal' ? '5. 食物数据包含: name, grams, calories, 
       } catch (e) {
         console.error(e);
         document.getElementById(containerId).innerHTML = `<p class="text-red-500">抱歉，出错了: ${e.message}</p><p class="text-sm text-gray-500 mt-1">请检查API配置</p>`;
+        // Remove thinking dots on error
+        const thinkingEl = document.getElementById(`${containerId}-thinking`);
+        if (thinkingEl) thinkingEl.remove();
       }
     };
 
@@ -2112,11 +2839,15 @@ ${editState.context === 'meal' ? '5. 食物数据包含: name, grams, calories, 
       const btnDeep = document.getElementById('modeDeep');
       const updateModeUI = () => {
         if (state.aiMode === 'fast') {
-          btnFast.className = 'px-3 py-2 rounded-xl text-xs font-medium transition-all bg-white shadow text-indigo-600';
-          btnDeep.className = 'px-3 py-2 rounded-xl text-xs font-medium text-gray-500 transition-all hover:text-indigo-600';
+          btnFast.className = 'mode-btn px-2 py-1 rounded-lg text-[10px] font-medium transition-all bg-white shadow text-indigo-600';
+          btnFast.innerHTML = '⚡<span class="mode-text">快速</span>';
+          btnDeep.className = 'mode-btn p-1 rounded-lg text-[10px] font-medium text-gray-400 transition-all hover:text-indigo-600';
+          btnDeep.innerHTML = '🧠';
         } else {
-          btnDeep.className = 'px-3 py-2 rounded-xl text-xs font-medium transition-all bg-white shadow text-indigo-600';
-          btnFast.className = 'px-3 py-2 rounded-xl text-xs font-medium text-gray-500 transition-all hover:text-indigo-600';
+          btnDeep.className = 'mode-btn px-2 py-1 rounded-lg text-[10px] font-medium transition-all bg-white shadow text-indigo-600';
+          btnDeep.innerHTML = '🧠<span class="mode-text">深度</span>';
+          btnFast.className = 'mode-btn p-1 rounded-lg text-[10px] font-medium text-gray-400 transition-all hover:text-indigo-600';
+          btnFast.innerHTML = '⚡';
         }
       };
       btnFast.addEventListener('click', () => { state.aiMode = 'fast'; updateModeUI(); showToast('已切换到快速模式', 'info'); });
@@ -2126,12 +2857,30 @@ ${editState.context === 'meal' ? '5. 食物数据包含: name, grams, calories, 
       const mDrop = document.getElementById('mealDropzone'), mInput = document.getElementById('mealImageInput');
       mDrop.addEventListener('click', () => mInput.click()); mDrop.addEventListener('dragover', e => { e.preventDefault(); mDrop.classList.add('border-pink-500', 'bg-pink-50'); }); mDrop.addEventListener('dragleave', () => mDrop.classList.remove('border-pink-500', 'bg-pink-50')); mDrop.addEventListener('drop', e => { e.preventDefault(); mDrop.classList.remove('border-pink-500', 'bg-pink-50'); const f = e.dataTransfer.files[0]; if (f?.type.startsWith('image/')) handleMealImage(f); }); mInput.addEventListener('change', e => { const f = e.target.files[0]; if (f) handleMealImage(f); });
       document.querySelectorAll('.meal-type-btn').forEach(b => b.addEventListener('click', () => selectMealType(b.dataset.type)));
+      // Batch upload event handlers
+      const bTrainBtn = document.getElementById('batchTraining'), bTrainInput = document.getElementById('batchTrainingInput');
+      bTrainBtn.addEventListener('click', () => bTrainInput.click());
+      bTrainInput.addEventListener('change', e => { if (e.target.files.length) { handleBatchTraining(Array.from(e.target.files)); e.target.value = ''; } });
+      const bMealBtn = document.getElementById('batchMeal'), bMealInput = document.getElementById('batchMealInput');
+      bMealBtn.addEventListener('click', () => bMealInput.click());
+      bMealInput.addEventListener('change', e => { if (e.target.files.length) { handleBatchMeal(Array.from(e.target.files)); e.target.value = ''; } });
+      document.querySelectorAll('.batch-meal-type-btn').forEach(b => b.addEventListener('click', () => selectBatchMealType(b.dataset.type)));
+      document.getElementById('saveBatchTraining').addEventListener('click', saveBatchTraining);
+      document.getElementById('saveBatchMeal').addEventListener('click', saveBatchMeal);
       const bDrop = document.getElementById('bodyDropzone'), bInput = document.getElementById('bodyImageInput');
       bDrop.addEventListener('click', () => bInput.click()); bInput.addEventListener('change', async e => { const f = e.target.files[0]; if (f) { const thumb = await createThumbnail(f); state.currentBodyImage = { thumbnail: thumb }; document.getElementById('bodyImagePreview').classList.remove('hidden'); document.getElementById('bodyPreviewImg').src = thumb; document.getElementById('saveBodyPhoto').disabled = false; } });
       document.getElementById('saveTraining').addEventListener('click', saveTrainingRecord);
       document.getElementById('saveMeal').addEventListener('click', saveMealRecord);
       document.getElementById('saveBodyPhoto').addEventListener('click', saveBodyPhotoRecord);
-      document.getElementById('saveApiConfig').addEventListener('click', async () => { const cfg = await getConfig(); cfg.api1 = { url: document.getElementById('apiUrl1').value, key: document.getElementById('apiKey1').value, model: document.getElementById('apiModel1').value }; cfg.api2 = { url: document.getElementById('apiUrl2').value, key: document.getElementById('apiKey2').value, model: document.getElementById('apiModel2').value }; await saveConfig(cfg); showToast('配置已保存', 'success'); });
+      document.getElementById('saveApiConfig').addEventListener('click', async () => {
+        const cfg = await getConfig();
+        const parseModels = str => str.split(',').map(s => s.trim()).filter(Boolean);
+        cfg.api1 = { url: document.getElementById('apiUrl1').value, key: document.getElementById('apiKey1').value, model: document.getElementById('apiModel1').value, models: parseModels(document.getElementById('apiModels1').value) };
+        cfg.api2 = { url: document.getElementById('apiUrl2').value, key: document.getElementById('apiKey2').value, model: document.getElementById('apiModel2').value, models: parseModels(document.getElementById('apiModels2').value) };
+        await saveConfig(cfg);
+        if (!state.selectedModel) { state.selectedModel = cfg.api1.model; updateModelDisplay(); }
+        showToast('配置已保存', 'success');
+      });
       document.getElementById('saveTargets').addEventListener('click', async () => {
         const cfg = await getConfig();
         cfg.nutritionTargets = { calories: parseInt(document.getElementById('targetCalories').value) || 2200, protein: parseInt(document.getElementById('targetProtein').value) || 150, carbs: parseInt(document.getElementById('targetCarbs').value) || 250, fat: parseInt(document.getElementById('targetFat').value) || 70 };
@@ -2162,9 +2911,30 @@ ${editState.context === 'meal' ? '5. 食物数据包含: name, grams, calories, 
         closeQuickEditPanel();
       }));
 
+      // Model selector event handlers
+      document.getElementById('modelSelectorBtn').addEventListener('click', toggleModelDropdown);
+      document.addEventListener('click', e => {
+        const dropdown = document.getElementById('modelDropdown');
+        const btn = document.getElementById('modelSelectorBtn');
+        if (!dropdown.contains(e.target) && !btn.contains(e.target)) {
+          dropdown.classList.add('hidden');
+        }
+      });
+
       switchPage('home');
       initMacroSlider();
-      if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(console.error);
+      // Inline Service Worker registration via Blob URL
+      if ('serviceWorker' in navigator) {
+        const swCode = `
+const CACHE_NAME = 'fitlife-v2';
+const STATIC_ASSETS = ['https://cdn.tailwindcss.com', 'https://cdn.jsdelivr.net/npm/dexie@3.2.4/dist/dexie.min.js', 'https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js', 'https://cdn.jsdelivr.net/npm/browser-image-compression@2.0.2/dist/browser-image-compression.min.js'];
+self.addEventListener('install', e => e.waitUntil(caches.open(CACHE_NAME).then(c => c.addAll(STATIC_ASSETS)).then(() => self.skipWaiting())));
+self.addEventListener('activate', e => e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))).then(() => self.clients.claim())));
+self.addEventListener('fetch', e => { const u = new URL(e.request.url); if (e.request.method !== 'GET' || u.pathname.includes('/v1/') || u.hostname.includes('api')) return; e.respondWith(caches.match(e.request).then(r => r || fetch(e.request).then(res => { if (!res || res.status !== 200) return res; const rc = res.clone(); caches.open(CACHE_NAME).then(c => c.put(e.request, rc)); return res; }).catch(() => e.request.mode === 'navigate' ? new Response('<h1>Offline</h1>', {headers: {'Content-Type': 'text/html'}}) : new Response('Offline', {status: 503})))); });
+`;
+        const blob = new Blob([swCode], { type: 'application/javascript' });
+        navigator.serviceWorker.register(URL.createObjectURL(blob)).catch(console.error);
+      }
     };
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
   </script>
